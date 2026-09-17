@@ -2,10 +2,12 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ship Visit Report</title>
 
+<link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <style>
@@ -16,230 +18,316 @@
   --vv-red-light:#E63636;
   --vv-red-deep:#CC0000;
   --vv-near-black:#1B1B1B;
-  --vv-body:#333;
+  --vv-body:#333333;
   --vv-gray:#8A8A8A;
   --vv-line:#E7E2EA;
-  --vv-bg:#FAF9FB
+  --vv-bg:#FAF9FB;
 }
 
-*{box-sizing:border-box}
+*{
+  box-sizing:border-box;
+}
+
+html,body{
+  margin:0;
+  padding:0;
+}
 
 body{
-  margin:0;
   background:var(--vv-bg);
   color:var(--vv-body);
   font-family:Arial,Calibri,sans-serif;
-  -webkit-tap-highlight-color:transparent
+  -webkit-tap-highlight-color:transparent;
 }
 
-h1,h2,h3,.eyebrow,button{
-  font-family:Poppins,Arial,sans-serif
+h1,h2,h3,button{
+  font-family:'Poppins',Arial,sans-serif;
+}
+
+button{
+  cursor:pointer;
+}
+
+.hidden{
+  display:none !important;
 }
 
 .app{
   max-width:720px;
-  margin:0 auto;
   min-height:100vh;
+  margin:0 auto;
   background:#fff;
-  box-shadow:0 0 40px rgba(0,0,0,.04)
+  box-shadow:0 0 40px rgba(0,0,0,.04);
 }
+
+/* =========================
+   HEADER
+========================= */
 
 .band{
   background-color:var(--vv-squid);
   background-image:repeating-linear-gradient(
     45deg,
-    var(--vv-squid) 0,
+    var(--vv-squid) 0px,
     var(--vv-squid) 40px,
     var(--vv-squid-stripe) 40px,
     var(--vv-squid-stripe) 80px
   );
   color:#fff;
-  padding:28px 24px 22px
+  padding:28px 24px 22px;
 }
 
-.band.compact{padding:16px 20px}
+.band.compact{
+  padding:17px 20px;
+}
 
-.band .eyebrow{
+.eyebrow{
+  font-family:'Poppins',Arial,sans-serif;
   font-size:11px;
   letter-spacing:.12em;
   font-weight:700;
-  opacity:.85
+  opacity:.85;
 }
 
 .band h1{
   font-size:24px;
   margin:6px 0 2px;
-  font-weight:800
+  font-weight:800;
 }
 
-.band.compact h1{font-size:18px}
+.band.compact h1{
+  font-size:18px;
+}
 
 .band .sub{
+  margin:0;
   font-size:13px;
   opacity:.82;
-  margin:0
 }
 
-.start,.summary,.reports{
-  padding:24px
+/* =========================
+   HOME
+========================= */
+
+.home{
+  padding:25px 24px 40px;
 }
 
-.field{
-  margin-bottom:15px
-}
-
-.field label{
-  display:block;
-  font-size:12px;
-  font-weight:700;
-  letter-spacing:.04em;
-  color:var(--vv-squid);
-  margin-bottom:6px
-}
-
-.field input,.field textarea{
-  width:100%;
-  padding:11px 12px;
-  border:1.5px solid var(--vv-line);
-  border-radius:8px;
-  font-size:15px;
-  font-family:Arial;
-  color:var(--vv-body);
-  background:#fff
-}
-
-.field input:focus,textarea:focus{
-  outline:none;
-  border-color:var(--vv-red)
-}
-
-.btn-primary{
-  width:100%;
-  background:var(--vv-red);
-  color:#fff;
-  border:none;
-  border-radius:9px;
-  padding:14px 18px;
-  font-size:15px;
-  font-weight:700;
-  cursor:pointer
-}
-
-.btn-secondary{
-  width:100%;
-  background:#fff;
-  color:var(--vv-squid);
-  border:1.5px solid var(--vv-squid);
-  border-radius:9px;
-  padding:13px 18px;
-  font-size:14px;
-  font-weight:700;
-  cursor:pointer
-}
-
-.btn-danger{
-  background:#fff;
-  color:var(--vv-red);
-  border:1.5px solid var(--vv-red);
-  border-radius:9px;
-  padding:12px 16px;
-  font-weight:700;
-  cursor:pointer
-}
-
-.home-cards{
+.home-grid{
   display:grid;
   grid-template-columns:1fr 1fr;
   gap:14px;
-  margin-top:18px
 }
 
 .home-card{
+  min-height:145px;
+  padding:20px;
+  background:#fff;
   border:1.5px solid var(--vv-line);
   border-radius:12px;
-  padding:18px;
-  background:#fff;
   text-align:left;
-  cursor:pointer;
-  min-height:130px
+  transition:.15s ease;
 }
 
 .home-card:hover{
-  border-color:var(--vv-squid)
+  border-color:var(--vv-squid);
+  box-shadow:0 4px 14px rgba(60,16,83,.08);
 }
 
-.home-card h3{
-  margin:0 0 8px;
+.home-card h2{
+  margin:0 0 10px;
   color:var(--vv-squid);
-  font-size:15px
+  font-size:17px;
 }
 
 .home-card p{
   margin:0;
   color:var(--vv-gray);
+  font-size:12.5px;
+  line-height:1.5;
+}
+
+/* =========================
+   FORM
+========================= */
+
+.page-pad{
+  padding:24px;
+}
+
+.field{
+  margin-bottom:16px;
+}
+
+.field label{
+  display:block;
+  margin-bottom:6px;
+  color:var(--vv-squid);
   font-size:12px;
-  line-height:1.45
+  font-weight:700;
+  letter-spacing:.04em;
 }
 
-.meta-card{
+.field input,
+.field textarea{
+  width:100%;
+  padding:11px 12px;
+  background:#fff;
+  border:1.5px solid var(--vv-line);
+  border-radius:8px;
+  color:var(--vv-body);
+  font-family:Arial,sans-serif;
+  font-size:15px;
+}
+
+.field input:focus,
+.field textarea:focus{
+  outline:none;
+  border-color:var(--vv-red);
+}
+
+.btn-primary{
+  width:100%;
+  padding:14px 18px;
+  background:var(--vv-red);
+  color:#fff;
+  border:0;
+  border-radius:9px;
+  font-size:15px;
+  font-weight:700;
+  letter-spacing:.02em;
+}
+
+.btn-primary:hover{
+  background:var(--vv-red-deep);
+}
+
+.btn-secondary{
+  width:100%;
+  padding:13px 18px;
+  background:#fff;
+  color:var(--vv-squid);
+  border:1.5px solid var(--vv-squid);
+  border-radius:9px;
+  font-size:14px;
+  font-weight:700;
+}
+
+/* =========================
+   META
+========================= */
+
+.meta-box{
+  margin:14px 20px;
+  padding:13px 14px;
   background:var(--vv-bg);
-  border-radius:10px;
-  padding:14px;
-  margin:16px 0
+  border-radius:9px;
+  font-size:12px;
+  line-height:1.5;
 }
 
-.meta-card strong{
-  color:var(--vv-squid)
+.meta-box strong{
+  color:var(--vv-squid);
 }
+
+/* =========================
+   REVIEWER
+========================= */
+
+.reviewer-row{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin-top:10px;
+}
+
+.reviewer-row label{
+  color:rgba(255,255,255,.78);
+  font-size:10px;
+  font-weight:700;
+  letter-spacing:.05em;
+  white-space:nowrap;
+}
+
+.reviewer-row input{
+  flex:1;
+  min-width:0;
+  padding:6px 8px;
+  background:rgba(255,255,255,.13);
+  border:1px solid rgba(255,255,255,.45);
+  border-radius:6px;
+  color:#fff;
+}
+
+.reviewer-row input::placeholder{
+  color:rgba(255,255,255,.7);
+}
+
+/* =========================
+   PROGRESS
+========================= */
 
 .progress-wrap{
-  padding:14px 20px 6px
+  padding:14px 20px 7px;
 }
 
 .progress-bar{
   height:6px;
+  overflow:hidden;
   background:var(--vv-line);
   border-radius:4px;
-  overflow:hidden
 }
 
 .progress-fill{
   height:100%;
+  width:0;
   background:var(--vv-red);
   border-radius:4px;
-  transition:width .25s
+  transition:width .2s ease;
 }
 
 .progress-label{
-  font-size:11.5px;
-  color:var(--vv-gray);
   margin-top:6px;
-  font-weight:600
+  color:var(--vv-gray);
+  font-size:11.5px;
+  font-weight:600;
 }
 
+/* =========================
+   SECTIONS
+========================= */
+
 .section{
-  border-bottom:1px solid var(--vv-line)
+  border-bottom:1px solid var(--vv-line);
 }
 
 .section-head{
   display:flex;
   align-items:center;
   justify-content:space-between;
-  padding:18px 20px;
-  cursor:pointer
+  gap:10px;
+  padding:17px 20px;
+  cursor:pointer;
+  user-select:none;
 }
 
 .section-head h2{
-  font-size:15px;
   margin:0;
   color:var(--vv-squid);
-  font-weight:700
+  font-size:15px;
+  font-weight:700;
+}
+
+.section-right{
+  display:flex;
+  align-items:center;
+  gap:10px;
 }
 
 .section-count{
-  font-size:12px;
   color:var(--vv-gray);
-  font-weight:600
+  font-size:12px;
+  font-weight:600;
 }
 
 .chevron{
@@ -248,65 +336,69 @@ h1,h2,h3,.eyebrow,button{
   border-right:2px solid var(--vv-squid);
   border-bottom:2px solid var(--vv-squid);
   transform:rotate(45deg);
-  transition:.15s
+  transition:.2s;
 }
 
 .section.open .chevron{
-  transform:rotate(-135deg)
+  transform:rotate(-135deg);
 }
 
 .section-body{
   display:none;
-  padding:0 20px 16px
+  padding:0 20px 16px;
 }
 
 .section.open .section-body{
-  display:block
+  display:block;
 }
 
 .section-note{
-  font-size:11.5px;
-  color:var(--vv-gray);
+  margin-bottom:10px;
+  padding:9px 10px;
   background:var(--vv-bg);
   border-radius:7px;
-  padding:9px 10px;
-  margin-bottom:10px;
-  line-height:1.45
+  color:var(--vv-gray);
+  font-size:11.5px;
+  line-height:1.45;
 }
+
+/* =========================
+   ITEMS
+========================= */
 
 .item{
   padding:13px 0;
-  border-top:1px solid var(--vv-line)
+  border-top:1px solid var(--vv-line);
 }
 
 .item:first-child{
-  border-top:none
+  border-top:none;
 }
 
 .item-row{
   display:flex;
   align-items:flex-start;
-  gap:10px
+  gap:10px;
 }
 
 .check-btn{
   flex:0 0 auto;
   width:24px;
   height:24px;
-  border-radius:50%;
-  border:2px solid var(--vv-gray);
+  margin-top:1px;
+  padding:0;
   background:#fff;
-  cursor:pointer;
+  border:2px solid var(--vv-gray);
+  border-radius:50%;
   position:relative;
-  margin-top:1px
 }
 
 .check-btn.checked{
   background:var(--vv-red);
-  border-color:var(--vv-red)
+  border-color:var(--vv-red);
 }
 
-.check-btn.checked:after{
+.check-btn.checked::after{
   content:'';
   position:absolute;
   left:6px;
@@ -315,310 +407,325 @@ h1,h2,h3,.eyebrow,button{
   height:11px;
   border-right:2.5px solid #fff;
   border-bottom:2.5px solid #fff;
-  transform:rotate(45deg)
+  transform:rotate(45deg);
 }
 
 .item-text{
   flex:1;
+  min-width:0;
+  padding-top:1px;
   font-size:14px;
-  line-height:1.45
+  line-height:1.45;
 }
 
 .item-actions{
+  flex:0 0 auto;
   display:flex;
   gap:6px;
-  flex:0 0 auto
 }
 
-.text-action{
+.action-btn{
+  padding:6px 8px;
   background:#fff;
+  color:var(--vv-squid);
   border:1.5px solid var(--vv-line);
   border-radius:7px;
-  padding:6px 8px;
-  color:var(--vv-squid);
   font-size:11px;
   font-weight:700;
-  cursor:pointer
 }
 
-.text-action.active{
+.action-btn.active{
   background:var(--vv-squid);
   color:#fff;
-  border-color:var(--vv-squid)
+  border-color:var(--vv-squid);
 }
 
 .item-extra{
-  margin:10px 0 0 35px
+  margin:10px 0 0 34px;
 }
 
-.item-extra textarea{
-  width:100%;
-  min-height:52px;
-  padding:8px 10px;
-  border:1.5px solid var(--vv-line);
-  border-radius:7px;
-  font-size:13px;
-  resize:vertical
+.comments-list{
+  margin-bottom:8px;
 }
 
 .comment{
+  margin-bottom:6px;
+  padding:8px 10px;
   background:var(--vv-bg);
   border-radius:7px;
-  padding:8px 10px;
   font-size:12.5px;
   line-height:1.4;
-  margin-bottom:6px
 }
 
 .comment b{
   color:var(--vv-squid);
-  font-size:11.5px
+  font-size:11.5px;
 }
 
 .comment-row{
   display:flex;
+  align-items:flex-end;
   gap:8px;
-  align-items:flex-end
 }
 
-.btn-add{
+.comment-row textarea{
+  flex:1;
+  min-height:44px;
+  padding:8px 10px;
+  border:1.5px solid var(--vv-line);
+  border-radius:7px;
+  resize:vertical;
+  font-family:Arial,sans-serif;
+  font-size:13px;
+}
+
+.add-comment{
+  height:44px;
+  padding:0 14px;
   background:var(--vv-squid);
   color:#fff;
   border:0;
   border-radius:7px;
-  padding:0 13px;
-  height:44px;
-  font-weight:700
+  font-size:12px;
+  font-weight:700;
 }
 
-.thumbs{
+.photos{
   display:flex;
   gap:8px;
+  flex-wrap:wrap;
   margin-top:8px;
-  flex-wrap:wrap
 }
 
 .thumb{
   position:relative;
   width:72px;
   height:72px;
-  border-radius:7px;
   overflow:hidden;
-  border:1px solid var(--vv-line)
+  border:1px solid var(--vv-line);
+  border-radius:7px;
 }
 
 .thumb img{
   width:100%;
   height:100%;
-  object-fit:cover
+  display:block;
+  object-fit:cover;
 }
 
-.thumb .rm{
+.thumb-remove{
   position:absolute;
   top:2px;
   right:2px;
   width:18px;
   height:18px;
+  padding:0;
+  border:0;
   border-radius:50%;
   background:rgba(27,27,27,.75);
   color:#fff;
-  border:none;
-  cursor:pointer
+  font-size:12px;
+  line-height:18px;
 }
 
-.reviewer-bar{
-  display:flex;
-  gap:8px;
-  align-items:center;
-  margin-top:10px
-}
+/* =========================
+   FOOTER
+========================= */
 
-.reviewer-bar label{
-  font-size:10px;
-  color:rgba(255,255,255,.75);
-  font-weight:700
-}
-
-.reviewer-bar input{
-  flex:1;
-  background:rgba(255,255,255,.12);
-  border:1px solid rgba(255,255,255,.45);
-  color:#fff;
-  border-radius:6px;
-  padding:6px 8px
-}
-
-.footer-bar{
+.footer{
   position:sticky;
   bottom:0;
+  z-index:10;
+  padding:14px 20px;
   background:#fff;
   border-top:1px solid var(--vv-line);
-  padding:14px 20px;
   box-shadow:0 -6px 16px rgba(0,0,0,.04);
-  z-index:5
 }
 
 .footer-grid{
   display:grid;
   grid-template-columns:1fr 1fr;
-  gap:10px
+  gap:10px;
 }
 
-.stat-row{
+/* =========================
+   SUMMARY
+========================= */
+
+.summary{
+  padding:22px 24px 120px;
+}
+
+.stats{
   display:flex;
   gap:10px;
-  margin:14px 0
+  margin:0 0 14px;
 }
 
 .stat{
   flex:1;
+  padding:10px 12px;
   background:var(--vv-bg);
   border-top:3px solid var(--vv-red);
   border-radius:6px;
-  padding:10px 12px
 }
 
-.stat .n{
+.stat-number{
+  color:var(--vv-near-black);
   font-size:22px;
   font-weight:800;
-  color:var(--vv-near-black)
 }
 
-.stat .l{
-  font-size:10.5px;
-  font-weight:700;
+.stat-label{
+  margin-top:2px;
   color:var(--vv-gray);
-  text-transform:uppercase
+  font-size:10px;
+  font-weight:700;
+  text-transform:uppercase;
 }
 
 .summary h2{
+  margin:20px 0 8px;
   color:var(--vv-squid);
   font-size:15px;
-  margin:22px 0 8px
 }
 
 .summary textarea{
   width:100%;
-  font-size:14px;
-  line-height:1.55;
+  padding:12px;
   border:1.5px solid var(--vv-line);
   border-radius:8px;
-  padding:12px;
-  resize:vertical
+  font-family:Arial,sans-serif;
+  font-size:14px;
+  line-height:1.55;
+  resize:vertical;
 }
 
 .summary-section{
-  margin-top:20px
+  margin-top:18px;
+}
+
+/* =========================
+   SUBMITTED REPORTS
+========================= */
+
+.reports{
+  padding:24px;
 }
 
 .report-card{
+  margin-bottom:12px;
+  padding:15px;
+  background:#fff;
   border:1.5px solid var(--vv-line);
   border-radius:10px;
-  padding:15px;
-  margin-bottom:12px
 }
 
 .report-card h3{
+  margin:0 0 7px;
   color:var(--vv-squid);
   font-size:15px;
-  margin:0 0 6px
 }
 
 .report-meta{
-  font-size:12px;
   color:var(--vv-gray);
-  line-height:1.55
+  font-size:12px;
+  line-height:1.6;
 }
 
 .report-actions{
-  display:flex;
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
   gap:8px;
-  margin-top:12px
+  margin-top:12px;
 }
 
 .report-actions button{
-  flex:1;
-  border:1.5px solid var(--vv-squid);
+  padding:9px 7px;
   background:#fff;
   color:var(--vv-squid);
+  border:1.5px solid var(--vv-squid);
   border-radius:7px;
-  padding:10px;
+  font-size:11px;
   font-weight:700;
-  cursor:pointer
 }
 
 .report-actions .open{
   background:var(--vv-squid);
-  color:#fff
+  color:#fff;
 }
 
 .empty{
-  padding:28px 4px;
+  padding:30px 0;
   text-align:center;
   color:var(--vv-gray);
-  font-size:13px
+  font-size:13px;
 }
 
-.hidden{
-  display:none!important
-}
-
-@media(max-width:520px){
-  .home-cards{
-    grid-template-columns:1fr
-  }
-
-  .item-row{
-    gap:8px
-  }
-
-  .item-actions{
-    flex-direction:column
-  }
-
-  .text-action{
-    padding:6px
-  }
-
-  .start,.summary,.reports{
-    padding:20px
-  }
-}
+/* =========================
+   PRINT
+========================= */
 
 @media print{
-  body{
-    background:#fff
-  }
 
-  .no-print{
-    display:none!important
+  body{
+    background:#fff;
   }
 
   .app{
     max-width:none;
-    box-shadow:none
+    box-shadow:none;
   }
 
-  .band{
-    background:var(--vv-squid)!important;
-    -webkit-print-color-adjust:exact;
-    print-color-adjust:exact
+  .no-print,
+  .footer,
+  .progress-wrap,
+  .meta-box,
+  .action-btn,
+  .check-btn{
+    display:none !important;
   }
 
   .section-body{
-    display:block!important
+    display:block !important;
   }
 
-  .footer-bar,
-  .progress-wrap,
-  .text-action,
-  .check-btn{
-    display:none!important
+  .section{
+    page-break-inside:avoid;
   }
 
   .item{
-    page-break-inside:avoid
+    page-break-inside:avoid;
   }
+
+  .band{
+    -webkit-print-color-adjust:exact;
+    print-color-adjust:exact;
+  }
+}
+
+@media(max-width:560px){
+
+  .home-grid{
+    grid-template-columns:1fr;
+  }
+
+  .item-actions{
+    flex-direction:column;
+  }
+
+  .action-btn{
+    padding:6px;
+  }
+
+  .report-actions{
+    grid-template-columns:1fr;
+  }
+
+  .footer-grid{
+    grid-template-columns:1fr;
+  }
+
 }
 </style>
 </head>
@@ -627,148 +734,278 @@ h1,h2,h3,.eyebrow,button{
 
 <div class="app">
 
-  <!-- HOME -->
-  <div id="home">
+  <!-- =========================
+       HOME SCREEN
+  ========================== -->
+
+  <section id="screen-home">
 
     <div class="band">
-      <div class="eyebrow">— VIRGIN VOYAGES</div>
-      <h1>Ship Visit Report</h1>
-      <p class="sub">Create and review ship visit reports</p>
-    </div>
 
-    <div class="start">
-
-      <div class="home-cards">
-
-        <button class="home-card" id="createReport">
-          <h3>CREATE REPORT</h3>
-          <p>
-            Start a new ship visit and complete the five operational checklists.
-          </p>
-        </button>
-
-        <button class="home-card" id="submittedReports">
-          <h3>SUBMITTED REPORTS</h3>
-          <p>
-            Open, review, print, or save previously submitted reports.
-          </p>
-        </button>
-
+      <div class="eyebrow">
+        — VIRGIN VOYAGES
       </div>
 
-    </div>
+      <h1>
+        Ship Visit Report
+      </h1>
 
-  </div>
-
-
-  <!-- SETUP -->
-  <div id="setup" class="hidden">
-
-    <div class="band compact">
-      <div class="eyebrow">— CREATE REPORT</div>
-      <h1>Ship Visit Details</h1>
       <p class="sub">
-        Enter the visit information before starting the checklists.
+        Create and review ship visit reports.
       </p>
-    </div>
-
-    <div class="start">
-
-      <div class="field">
-        <label>SHIP</label>
-        <input id="ship" placeholder="e.g. Valiant Lady">
-      </div>
-
-      <div class="field">
-        <label>DATE ON</label>
-        <input id="dateOn" type="date">
-      </div>
-
-      <div class="field">
-        <label>DATE OFF</label>
-        <input id="dateOff" type="date">
-      </div>
-
-      <div class="field">
-        <label>REVIEWER</label>
-        <input id="reviewer" placeholder="Your name">
-      </div>
-
-      <button class="btn-primary" id="startBtn">
-        Start Report
-      </button>
-
-      <div style="height:10px"></div>
-
-      <button class="btn-secondary" id="backHomeFromSetup">
-        Back
-      </button>
 
     </div>
 
-  </div>
+
+    <div class="home">
+
+      <div class="home-grid">
+
+        <button
+          type="button"
+          class="home-card"
+          id="btn-create-report"
+        >
+
+          <h2>
+            CREATE REPORT
+          </h2>
+
+          <p>
+            Start a new ship visit report and complete the five operational checklists.
+          </p>
+
+        </button>
 
 
-  <!-- CHECKLIST -->
-  <div id="checklist" class="hidden">
+        <button
+          type="button"
+          class="home-card"
+          id="btn-submitted-reports"
+        >
+
+          <h2>
+            SUBMITTED REPORTS
+          </h2>
+
+          <p>
+            Review previously submitted reports, print them, or save them as PDF.
+          </p>
+
+        </button>
+
+      </div>
+
+    </div>
+
+  </section>
+
+
+  <!-- =========================
+       CREATE REPORT SETUP
+  ========================== -->
+
+  <section
+    id="screen-setup"
+    class="hidden"
+  >
 
     <div class="band compact">
 
       <div class="eyebrow">
-        — <span id="hdrShip">SHIP</span>
+        — CREATE REPORT
       </div>
 
-      <h1>Ship Visit Report</h1>
+      <h1>
+        Ship Visit Details
+      </h1>
 
-      <div class="reviewer-bar">
-        <label>REVIEWER</label>
-        <input id="hdrReviewer">
+      <p class="sub">
+        Enter the visit information.
+      </p>
+
+    </div>
+
+
+    <div class="page-pad">
+
+      <div class="field">
+
+        <label>
+          SHIP
+        </label>
+
+        <input
+          type="text"
+          id="input-ship"
+          placeholder="e.g. Valiant Lady"
+        >
+
+      </div>
+
+
+      <div class="field">
+
+        <label>
+          DATE ON
+        </label>
+
+        <input
+          type="date"
+          id="input-date-on"
+        >
+
+      </div>
+
+
+      <div class="field">
+
+        <label>
+          DATE OFF
+        </label>
+
+        <input
+          type="date"
+          id="input-date-off"
+        >
+
+      </div>
+
+
+      <div class="field">
+
+        <label>
+          REVIEWER
+        </label>
+
+        <input
+          type="text"
+          id="input-reviewer"
+          placeholder="Your name"
+        >
+
+      </div>
+
+
+      <button
+        type="button"
+        class="btn-primary"
+        id="btn-start"
+      >
+        Start Report
+      </button>
+
+
+      <div style="height:10px"></div>
+
+
+      <button
+        type="button"
+        class="btn-secondary"
+        id="btn-setup-home"
+      >
+        Back to Home
+      </button>
+
+    </div>
+
+  </section>
+
+
+  <!-- =========================
+       CHECKLIST
+  ========================== -->
+
+  <section
+    id="screen-checklist"
+    class="hidden"
+  >
+
+    <div class="band compact">
+
+      <div class="eyebrow">
+        — <span id="header-ship"></span>
+      </div>
+
+      <h1>
+        Ship Visit Report
+      </h1>
+
+      <div class="reviewer-row">
+
+        <label>
+          REVIEWER
+        </label>
+
+        <input
+          type="text"
+          id="header-reviewer"
+        >
+
       </div>
 
     </div>
 
-    <div class="meta-card" style="margin:12px 20px 0">
-      <strong>Visit:</strong>
-      <span id="visitMeta"></span>
+
+    <div class="meta-box">
+
+      <strong>
+        Visit:
+      </strong>
+
+      <span id="header-visit"></span>
+
     </div>
+
 
     <div class="progress-wrap">
 
       <div class="progress-bar">
+
         <div
+          id="progress-fill"
           class="progress-fill"
-          id="fill"
-          style="width:0%"
         ></div>
+
       </div>
 
+
       <div
+        id="progress-label"
         class="progress-label"
-        id="progress"
       >
         0 of 0 points reviewed
       </div>
 
     </div>
 
-    <div id="sections"></div>
 
-    <div class="footer-bar no-print">
+    <div id="checklist-sections"></div>
+
+
+    <div class="footer no-print">
 
       <button
+        type="button"
         class="btn-primary"
-        id="summaryBtn"
+        id="btn-summary"
       >
         Generate Summary
       </button>
 
     </div>
 
-  </div>
+  </section>
 
 
-  <!-- SUMMARY -->
-  <div id="summary" class="hidden">
+  <!-- =========================
+       SUMMARY
+  ========================== -->
+
+  <section
+    id="screen-summary"
+    class="hidden"
+  >
 
     <div class="band compact">
 
@@ -776,71 +1013,83 @@ h1,h2,h3,.eyebrow,button{
         — REPORT SUMMARY
       </div>
 
-      <h1 id="sumTitle">
+      <h1 id="summary-title">
         Visit Summary
       </h1>
 
       <p
         class="sub"
-        id="sumMeta"
+        id="summary-meta"
       ></p>
 
     </div>
 
+
     <div class="summary">
 
       <div
-        class="stat-row"
-        id="stats"
+        class="stats"
+        id="summary-stats"
       ></div>
 
-      <h2>Overall Summary</h2>
+
+      <h2>
+        Overall Summary
+      </h2>
 
       <textarea
-        id="overall"
+        id="overall-summary"
         rows="6"
       ></textarea>
 
-      <div id="sumSections"></div>
 
-      <div style="height:10px"></div>
+      <div id="section-summaries"></div>
 
     </div>
 
-    <div class="footer-bar no-print">
+
+    <div class="footer no-print">
 
       <div class="footer-grid">
 
         <button
+          type="button"
           class="btn-secondary"
-          id="backBtn"
+          id="btn-back-checklist"
         >
           Back to Checklist
         </button>
 
+
         <button
+          type="button"
           class="btn-secondary"
-          id="pdfBtn"
+          id="btn-save-pdf"
         >
           Save PDF
         </button>
 
       </div>
 
+
       <div style="height:10px"></div>
+
 
       <div class="footer-grid">
 
         <button
+          type="button"
           class="btn-secondary"
-          id="printBtn"
+          id="btn-print"
         >
           Print Report
         </button>
 
+
         <button
+          type="button"
           class="btn-primary"
-          id="submitBtn"
+          id="btn-submit"
         >
           Submit Report
         </button>
@@ -849,11 +1098,17 @@ h1,h2,h3,.eyebrow,button{
 
     </div>
 
-  </div>
+  </section>
 
 
-  <!-- SUBMITTED REPORTS -->
-  <div id="submitted" class="hidden">
+  <!-- =========================
+       SUBMITTED REPORTS
+  ========================== -->
+
+  <section
+    id="screen-submitted"
+    class="hidden"
+  >
 
     <div class="band compact">
 
@@ -861,40 +1116,50 @@ h1,h2,h3,.eyebrow,button{
         — SUBMITTED REPORTS
       </div>
 
-      <h1>Report Archive</h1>
+      <h1>
+        Report Archive
+      </h1>
 
       <p class="sub">
-        Review previously submitted ship visit reports.
+        Review submitted ship visit reports.
       </p>
 
     </div>
 
+
     <div class="reports">
 
-      <div id="reportList"></div>
+      <div id="submitted-list"></div>
+
 
       <button
+        type="button"
         class="btn-secondary"
-        id="reportsHomeBtn"
+        id="btn-reports-home"
       >
         Back to Home
       </button>
 
     </div>
 
-  </div>
+  </section>
 
 </div>
 
 
 <script>
 
+/* =========================================================
+   CHECKLIST DATA
+========================================================= */
+
 const SECTIONS = [
 
   {
-    id:'culinary',
-    title:'CULINARY',
-    items:[
+    id: 'culinary',
+    title: 'CULINARY',
+    items: [
+
       'All recipe tablets in place in the venues',
       'All recipes followed / food quality in the venues',
       'Tasting spoons available in the kitchens',
@@ -923,14 +1188,17 @@ const SECTIONS = [
       'Meeting conducted with the Hotel Service Engineer',
       'Attend the maintenance meeting while on board',
       'Review AIMS report, outstanding maintenance follow-up'
+
     ]
   },
 
+
   {
-    id:'bar',
-    title:'BAR',
-    note:'The supplied template contains no dedicated Bar checklist lines. This section therefore uses shared FOH, SOP, equipment, meeting and cost-control checks explicitly present in the supplied template.',
-    items:[
+    id: 'bar',
+    title: 'BAR',
+    note: 'The supplied template does not contain a dedicated Bar checklist. The points below use operational checks contained in the supplied template rather than adding new requirements.',
+    items: [
+
       'All set ups FOH followed as per the latest SOP',
       'All equipment in place and in working order',
       'Missing item lists updated and communicated with Procurement',
@@ -942,13 +1210,16 @@ const SECTIONS = [
       'Review previous reports reviewed / repeat findings',
       'Budget meeting conducted',
       'Cost reduction feedback'
+
     ]
   },
 
+
   {
-    id:'restaurant',
-    title:'RESTAURANT',
-    items:[
+    id: 'restaurant',
+    title: 'RESTAURANT',
+    items: [
+
       'All set ups FOH followed as per the latest SOP',
       'Checking the Sailor flow of the restaurants',
       'Review all Hours of Operation',
@@ -966,13 +1237,16 @@ const SECTIONS = [
       'Meeting with F&B Director',
       'Meeting with Senior Executive Chef',
       'Closing meeting discussing / inspection'
+
     ]
   },
 
+
   {
-    id:'procurement',
-    title:'PROCUREMENT',
-    items:[
+    id: 'procurement',
+    title: 'PROCUREMENT',
+    items: [
+
       'Future orders',
       'All items stored properly',
       'All ERP templates followed',
@@ -988,13 +1262,16 @@ const SECTIONS = [
       'Chargeable tracker filled in correct',
       'Proper storage of fresh fish and seafood',
       'Missing item lists updated and communicated with Procurement'
+
     ]
   },
 
+
   {
-    id:'sanitation',
-    title:'SANITATION',
-    items:[
+    id: 'sanitation',
+    title: 'SANITATION',
+    items: [
+
       'Shellfish logs in place',
       'Cooling logs in place',
       'Updated and approved time control plans',
@@ -1007,93 +1284,223 @@ const SECTIONS = [
       'All SOPs followed as per VMS',
       'Proper storage and cleanliness in the Butcher shop and walk-in rooms',
       'Bandsaw in good condition and all safety parts in place'
+
     ]
   }
 
 ];
 
 
+/* =========================================================
+   STATE
+========================================================= */
+
+const STORAGE_CURRENT =
+  'vv_ship_visit_current';
+
+const STORAGE_SUBMITTED =
+  'vv_ship_visit_submitted';
+
+
 let meta = {
-  ship:'',
-  dateOn:'',
-  dateOff:'',
-  reviewer:''
+  ship: '',
+  dateOn: '',
+  dateOff: '',
+  reviewer: ''
 };
 
-let currentReviewer = 'Reviewer';
 
-let state = {};
-
-let reportId = '';
+let currentReviewer =
+  'Reviewer';
 
 
-SECTIONS.forEach(section => {
-
-  section.items.forEach((item,index) => {
-
-    state[
-      section.id + '__' + index
-    ] = {
-      checked:false,
-      comments:[],
-      photos:[]
-    };
-
-  });
-
-});
+let reportId =
+  '';
 
 
-const CURRENT = 'svr_current_report';
-const REPORTS = 'svr_submitted_reports';
+let state =
+  {};
 
 
-function esc(value){
+function createEmptyState(){
 
-  return String(value ?? '').replace(
-    /[&<>"']/g,
-    character => ({
-      '&':'&amp;',
-      '<':'&lt;',
-      '>':'&gt;',
-      '"':'&quot;',
-      "'":'&#39;'
-    }[character])
-  );
-
-}
-
-
-function resetState(){
+  const result = {};
 
   SECTIONS.forEach(section => {
 
-    section.items.forEach((item,index) => {
+    section.items.forEach((text,index) => {
 
-      state[
+      result[
         section.id + '__' + index
       ] = {
-        checked:false,
-        comments:[],
-        photos:[]
+
+        checked: false,
+
+        comments: [],
+
+        photos: []
+
       };
 
     });
 
   });
 
+  return result;
+
 }
 
 
-function getReports(){
+state =
+  createEmptyState();
+
+
+/* =========================================================
+   UTILITY
+========================================================= */
+
+function escapeHtml(value){
+
+  return String(value ?? '')
+    .replace(
+      /[&<>"']/g,
+      char => ({
+        '&':'&amp;',
+        '<':'&lt;',
+        '>':'&gt;',
+        '"':'&quot;',
+        "'":'&#39;'
+      }[char])
+    );
+
+}
+
+
+function getTotalItems(){
+
+  return SECTIONS.reduce(
+    (total,section) =>
+      total + section.items.length,
+    0
+  );
+
+}
+
+
+function getTotals(){
+
+  let total = 0;
+  let checked = 0;
+  let photos = 0;
+
+  Object.values(state).forEach(item => {
+
+    total++;
+
+    if(item.checked){
+      checked++;
+    }
+
+    photos +=
+      Array.isArray(item.photos)
+        ? item.photos.length
+        : 0;
+
+  });
+
+  return {
+    total,
+    checked,
+    photos
+  };
+
+}
+
+
+/* =========================================================
+   STORAGE
+========================================================= */
+
+function saveCurrent(){
 
   try{
 
-    return JSON.parse(
-      localStorage.getItem(REPORTS) || '[]'
+    localStorage.setItem(
+      STORAGE_CURRENT,
+      JSON.stringify({
+
+        reportId,
+
+        meta,
+
+        currentReviewer,
+
+        state,
+
+        updatedAt:
+          new Date().toISOString()
+
+      })
     );
 
   }catch(error){
+
+    console.error(
+      'Could not save current report',
+      error
+    );
+
+  }
+
+}
+
+
+function clearCurrent(){
+
+  try{
+
+    localStorage.removeItem(
+      STORAGE_CURRENT
+    );
+
+  }catch(error){
+
+    console.error(
+      'Could not clear current report',
+      error
+    );
+
+  }
+
+}
+
+
+function getSubmittedReports(){
+
+  try{
+
+    const value =
+      localStorage.getItem(
+        STORAGE_SUBMITTED
+      );
+
+    if(!value){
+      return [];
+    }
+
+    const reports =
+      JSON.parse(value);
+
+    return Array.isArray(reports)
+      ? reports
+      : [];
+
+  }catch(error){
+
+    console.error(
+      'Could not load submitted reports',
+      error
+    );
 
     return [];
 
@@ -1102,452 +1509,770 @@ function getReports(){
 }
 
 
-function saveReports(reports){
+function saveSubmittedReports(reports){
 
-  localStorage.setItem(
-    REPORTS,
-    JSON.stringify(reports)
-  );
+  try{
 
-}
+    localStorage.setItem(
+      STORAGE_SUBMITTED,
+      JSON.stringify(reports)
+    );
 
+    return true;
 
-function saveCurrent(){
+  }catch(error){
 
-  localStorage.setItem(
-    CURRENT,
-    JSON.stringify({
-      reportId,
-      meta,
-      state,
-      currentReviewer,
-      updatedAt:new Date().toISOString()
-    })
-  );
+    console.error(
+      'Could not save submitted reports',
+      error
+    );
 
-}
+    return false;
 
-
-function clearCurrent(){
-
-  localStorage.removeItem(CURRENT);
+  }
 
 }
 
 
-function switchScreen(id){
+/* =========================================================
+   NAVIGATION
+========================================================= */
 
-  [
-    'home',
-    'setup',
-    'checklist',
-    'summary',
-    'submitted'
-  ].forEach(screen => {
+function showScreen(screenName){
 
-    document
-      .getElementById(screen)
-      .classList
-      .toggle('hidden',screen !== id);
+  const screens = {
+
+    home:
+      document.getElementById(
+        'screen-home'
+      ),
+
+    setup:
+      document.getElementById(
+        'screen-setup'
+      ),
+
+    checklist:
+      document.getElementById(
+        'screen-checklist'
+      ),
+
+    summary:
+      document.getElementById(
+        'screen-summary'
+      ),
+
+    submitted:
+      document.getElementById(
+        'screen-submitted'
+      )
+
+  };
+
+
+  Object.keys(screens).forEach(name => {
+
+    screens[name]
+      .classList.toggle(
+        'hidden',
+        name !== screenName
+      );
 
   });
 
-  window.scrollTo(0,0);
+
+  window.scrollTo(
+    0,
+    0
+  );
 
 }
 
 
-function renderSections(){
+/* =========================================================
+   HOME
+========================================================= */
 
-  const wrap =
-    document.getElementById('sections');
+document
+  .getElementById('btn-create-report')
+  .addEventListener(
+    'click',
+    () => {
 
-  wrap.innerHTML = '';
+      document.getElementById(
+        'input-date-on'
+      ).value =
+        new Date()
+          .toISOString()
+          .slice(0,10);
 
-
-  SECTIONS.forEach((section,index) => {
-
-    const element =
-      document.createElement('div');
-
-    element.className =
-      'section' +
-      (index === 0 ? ' open' : '');
-
-
-    element.innerHTML = `
-
-      <div class="section-head">
-
-        <h2>${esc(section.title)}</h2>
-
-        <div style="
-          display:flex;
-          align-items:center;
-          gap:10px
-        ">
-
-          <span
-            class="section-count"
-            id="count-${section.id}"
-          ></span>
-
-          <span class="chevron"></span>
-
-        </div>
-
-      </div>
-
-      <div class="section-body"></div>
-
-    `;
-
-
-    wrap.appendChild(element);
-
-
-    element
-      .querySelector('.section-head')
-      .onclick = () => {
-
-        element.classList.toggle('open');
-
-      };
-
-
-    const body =
-      element.querySelector('.section-body');
-
-
-    if(section.note){
-
-      const note =
-        document.createElement('div');
-
-      note.className =
-        'section-note';
-
-      note.textContent =
-        section.note;
-
-      body.appendChild(note);
+      showScreen('setup');
 
     }
+  );
 
 
-    section.items.forEach((text,itemIndex) => {
+document
+  .getElementById('btn-submitted-reports')
+  .addEventListener(
+    'click',
+    () => {
 
-      const key =
-        section.id + '__' + itemIndex;
+      renderSubmittedReports();
 
+      showScreen('submitted');
 
-      const item =
-        document.createElement('div');
-
-      item.className =
-        'item';
-
-      item.id =
-        'item-' + key;
+    }
+  );
 
 
-      item.innerHTML = `
+document
+  .getElementById('btn-setup-home')
+  .addEventListener(
+    'click',
+    () => {
 
-        <div class="item-row">
+      showScreen('home');
 
-          <button
-            class="check-btn"
-            data-k="${key}"
-            aria-label="Mark reviewed"
-          ></button>
+    }
+  );
 
-          <div class="item-text">
-            ${esc(text)}
-          </div>
 
-          <div class="item-actions">
+document
+  .getElementById('btn-reports-home')
+  .addEventListener(
+    'click',
+    () => {
 
-            <button
-              class="text-action note-btn"
-              data-k="${key}"
+      showScreen('home');
+
+    }
+  );
+
+
+/* =========================================================
+   START REPORT
+========================================================= */
+
+document
+  .getElementById('btn-start')
+  .addEventListener(
+    'click',
+    () => {
+
+      meta.ship =
+        document
+          .getElementById('input-ship')
+          .value
+          .trim();
+
+
+      meta.dateOn =
+        document
+          .getElementById('input-date-on')
+          .value;
+
+
+      meta.dateOff =
+        document
+          .getElementById('input-date-off')
+          .value;
+
+
+      meta.reviewer =
+        document
+          .getElementById('input-reviewer')
+          .value
+          .trim();
+
+
+      if(!meta.ship){
+
+        alert(
+          'Please enter the ship name.'
+        );
+
+        return;
+
+      }
+
+
+      if(!meta.reviewer){
+
+        alert(
+          'Please enter the reviewer name.'
+        );
+
+        return;
+
+      }
+
+
+      state =
+        createEmptyState();
+
+
+      reportId =
+        Date.now().toString();
+
+
+      currentReviewer =
+        meta.reviewer;
+
+
+      updateChecklistHeader();
+
+      renderChecklist();
+
+      showScreen('checklist');
+
+      saveCurrent();
+
+    }
+  );
+
+
+/* =========================================================
+   CHECKLIST HEADER
+========================================================= */
+
+function updateChecklistHeader(){
+
+  document.getElementById(
+    'header-ship'
+  ).textContent =
+    (
+      meta.ship ||
+      ''
+    ).toUpperCase();
+
+
+  document.getElementById(
+    'header-reviewer'
+  ).value =
+    currentReviewer;
+
+
+  document.getElementById(
+    'header-visit'
+  ).textContent =
+    `${meta.dateOn || ''}` +
+    (
+      meta.dateOff
+        ? ` → ${meta.dateOff}`
+        : ''
+    );
+
+}
+
+
+/* =========================================================
+   RENDER CHECKLIST
+========================================================= */
+
+function renderChecklist(){
+
+  const container =
+    document.getElementById(
+      'checklist-sections'
+    );
+
+
+  container.innerHTML =
+    '';
+
+
+  SECTIONS.forEach(
+    (section,sectionIndex) => {
+
+      const sectionElement =
+        document.createElement(
+          'div'
+        );
+
+
+      sectionElement.className =
+        'section' +
+        (
+          sectionIndex === 0
+            ? ' open'
+            : ''
+        );
+
+
+      sectionElement.innerHTML = `
+
+        <div class="section-head">
+
+          <h2>
+            ${escapeHtml(section.title)}
+          </h2>
+
+          <div class="section-right">
+
+            <span
+              class="section-count"
+              id="count-${section.id}"
             >
-              Comment
-            </button>
+              0/${section.items.length}
+            </span>
 
-            <button
-              class="text-action photo-btn"
-              data-k="${key}"
-            >
-              Photo
-            </button>
+            <span class="chevron"></span>
 
           </div>
 
         </div>
 
-
-        <div
-          class="item-extra hidden"
-          id="extra-${key}"
-        >
-
-          <div id="comments-${key}"></div>
-
-          <div class="comment-row">
-
-            <textarea
-              id="input-${key}"
-              placeholder="Add a comment"
-            ></textarea>
-
-            <button
-              class="btn-add"
-              data-k="${key}"
-            >
-              Add
-            </button>
-
-          </div>
-
-          <div
-            class="thumbs"
-            id="thumbs-${key}"
-          ></div>
-
-          <input
-            class="hidden"
-            type="file"
-            accept="image/*"
-            capture="environment"
-            id="file-${key}"
-          >
-
-        </div>
+        <div class="section-body"></div>
 
       `;
 
 
-      body.appendChild(item);
-
-    });
-
-  });
+      container.appendChild(
+        sectionElement
+      );
 
 
-  bindItems();
+      sectionElement
+        .querySelector('.section-head')
+        .addEventListener(
+          'click',
+          () => {
 
-  refresh();
+            sectionElement
+              .classList
+              .toggle('open');
+
+          }
+        );
+
+
+      const body =
+        sectionElement
+          .querySelector(
+            '.section-body'
+          );
+
+
+      if(section.note){
+
+        const note =
+          document.createElement(
+            'div'
+          );
+
+        note.className =
+          'section-note';
+
+        note.textContent =
+          section.note;
+
+        body.appendChild(
+          note
+        );
+
+      }
+
+
+      section.items.forEach(
+        (text,index) => {
+
+          const key =
+            section.id +
+            '__' +
+            index;
+
+
+          const item =
+            document.createElement(
+              'div'
+            );
+
+
+          item.className =
+            'item';
+
+
+          item.id =
+            'item-' + key;
+
+
+          item.innerHTML = `
+
+            <div class="item-row">
+
+              <button
+                type="button"
+                class="check-btn"
+                data-key="${key}"
+                aria-label="Mark reviewed"
+              ></button>
+
+              <div class="item-text">
+                ${escapeHtml(text)}
+              </div>
+
+              <div class="item-actions">
+
+                <button
+                  type="button"
+                  class="action-btn note-action"
+                  data-key="${key}"
+                >
+                  Comment
+                </button>
+
+                <button
+                  type="button"
+                  class="action-btn photo-action"
+                  data-key="${key}"
+                >
+                  Photo
+                </button>
+
+              </div>
+
+            </div>
+
+
+            <div
+              class="item-extra hidden"
+              id="extra-${key}"
+            >
+
+              <div
+                class="comments-list"
+                id="comments-${key}"
+              ></div>
+
+
+              <div class="comment-row">
+
+                <textarea
+                  id="comment-${key}"
+                  placeholder="Add a comment"
+                ></textarea>
+
+                <button
+                  type="button"
+                  class="add-comment"
+                  data-key="${key}"
+                >
+                  Add
+                </button>
+
+              </div>
+
+
+              <div
+                class="photos"
+                id="photos-${key}"
+              ></div>
+
+
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                id="photo-input-${key}"
+                class="hidden"
+              >
+
+            </div>
+
+          `;
+
+
+          body.appendChild(
+            item
+          );
+
+        }
+
+      );
+
+    }
+  );
+
+
+  bindChecklistEvents();
+
+  refreshChecklist();
 
 }
 
 
-function bindItems(){
+/* =========================================================
+   CHECKLIST EVENTS
+========================================================= */
+
+function bindChecklistEvents(){
 
   document
     .querySelectorAll('.check-btn')
     .forEach(button => {
 
-      button.onclick = () => {
+      button.addEventListener(
+        'click',
+        () => {
 
-        const key = button.dataset.k;
+          const key =
+            button.dataset.key;
 
-        state[key].checked =
-          !state[key].checked;
 
-        refresh();
+          state[key].checked =
+            !state[key].checked;
 
-        saveCurrent();
 
-      };
+          refreshChecklist();
+
+          saveCurrent();
+
+        }
+      );
 
     });
 
 
   document
-    .querySelectorAll('.note-btn')
+    .querySelectorAll('.note-action')
     .forEach(button => {
 
-      button.onclick = () => {
+      button.addEventListener(
+        'click',
+        () => {
 
-        const key = button.dataset.k;
-
-        document
-          .getElementById('extra-' + key)
-          .classList.toggle('hidden');
-
-        button.classList.toggle('active');
-
-      };
-
-    });
+          const key =
+            button.dataset.key;
 
 
-  document
-    .querySelectorAll('.photo-btn')
-    .forEach(button => {
-
-      button.onclick = () => {
-
-        document
-          .getElementById(
-            'file-' + button.dataset.k
-          )
-          .click();
-
-      };
-
-    });
+          const extra =
+            document.getElementById(
+              'extra-' + key
+            );
 
 
-  document
-    .querySelectorAll('input[type=file]')
-    .forEach(input => {
-
-      input.onchange = event => {
-
-        addPhoto(
-          event,
-          input.dataset.k
-        );
-
-      };
-
-    });
-
-
-  document
-    .querySelectorAll('.btn-add')
-    .forEach(button => {
-
-      button.onclick = () => {
-
-        const key =
-          button.dataset.k;
-
-        const textarea =
-          document.getElementById(
-            'input-' + key
+          extra.classList.toggle(
+            'hidden'
           );
 
-        const text =
-          textarea.value.trim();
 
-        if(!text){
-          return;
+          button.classList.toggle(
+            'active'
+          );
+
         }
+      );
 
-        state[key].comments.push({
-          name:currentReviewer,
-          text:text,
-          ts:Date.now()
-        });
+    });
 
-        textarea.value = '';
 
-        renderComments(key);
+  document
+    .querySelectorAll('.photo-action')
+    .forEach(button => {
 
-        saveCurrent();
+      button.addEventListener(
+        'click',
+        () => {
 
-      };
+          document
+            .getElementById(
+              'photo-input-' +
+              button.dataset.key
+            )
+            .click();
+
+        }
+      );
+
+    });
+
+
+  document
+    .querySelectorAll(
+      'input[type="file"]'
+    )
+    .forEach(input => {
+
+      input.addEventListener(
+        'change',
+        event => {
+
+          handlePhoto(
+            event,
+            input.dataset.key
+          );
+
+        }
+      );
+
+    });
+
+
+  document
+    .querySelectorAll('.add-comment')
+    .forEach(button => {
+
+      button.addEventListener(
+        'click',
+        () => {
+
+          const key =
+            button.dataset.key;
+
+
+          const textarea =
+            document.getElementById(
+              'comment-' + key
+            );
+
+
+          const text =
+            textarea.value.trim();
+
+
+          if(!text){
+            return;
+          }
+
+
+          state[key].comments.push({
+
+            name:
+              currentReviewer,
+
+            text,
+
+            timestamp:
+              new Date().toISOString()
+
+          });
+
+
+          textarea.value =
+            '';
+
+
+          renderComments(key);
+
+          saveCurrent();
+
+        }
+      );
 
     });
 
 }
 
 
-function refresh(){
+/* =========================================================
+   REFRESH CHECKLIST
+========================================================= */
 
-  let total = 0;
-  let done = 0;
+function refreshChecklist(){
+
+  const totals =
+    getTotals();
+
+
+  const percentage =
+    totals.total
+      ? Math.round(
+          (
+            totals.checked /
+            totals.total
+          ) * 100
+        )
+      : 0;
+
+
+  document.getElementById(
+    'progress-fill'
+  ).style.width =
+    percentage + '%';
+
+
+  document.getElementById(
+    'progress-label'
+  ).textContent =
+    `${totals.checked} of ${totals.total} points reviewed`;
 
 
   SECTIONS.forEach(section => {
 
-    let sectionDone = 0;
+    let checked =
+      0;
 
 
-    section.items.forEach((item,index) => {
+    section.items.forEach(
+      (item,index) => {
 
-      total++;
+        const key =
+          section.id +
+          '__' +
+          index;
 
 
-      if(
-        state[
-          section.id + '__' + index
-        ].checked
-      ){
+        const itemState =
+          state[key];
 
-        sectionDone++;
-        done++;
+
+        if(itemState.checked){
+
+          checked++;
+
+        }
+
+
+        const checkButton =
+          document.querySelector(
+            `.check-btn[data-key="${key}"]`
+          );
+
+
+        if(checkButton){
+
+          checkButton.classList.toggle(
+            'checked',
+            itemState.checked
+          );
+
+        }
+
+
+        renderComments(key);
+
+        renderPhotos(key);
+
+
+        if(
+          itemState.comments.length ||
+          itemState.photos.length
+        ){
+
+          document
+            .getElementById(
+              'extra-' + key
+            )
+            ?.classList
+            .remove('hidden');
+
+        }
 
       }
+    );
 
-    });
 
-
-    const countElement =
+    const count =
       document.getElementById(
         'count-' + section.id
       );
 
 
-    if(countElement){
+    if(count){
 
-      countElement.textContent =
-        `${sectionDone}/${section.items.length}`;
-
-    }
-
-  });
-
-
-  const percentage =
-    total
-      ? Math.round(done / total * 100)
-      : 0;
-
-
-  document.getElementById('fill')
-    .style.width =
-    percentage + '%';
-
-
-  document.getElementById('progress')
-    .textContent =
-    `${done} of ${total} points reviewed`;
-
-
-  Object.keys(state).forEach(key => {
-
-    const button =
-      document.querySelector(
-        `.check-btn[data-k="${key}"]`
-      );
-
-
-    if(button){
-
-      button.classList.toggle(
-        'checked',
-        state[key].checked
-      );
-
-    }
-
-
-    renderComments(key);
-
-    renderPhotos(key);
-
-
-    if(
-      (state[key].comments || []).length ||
-      (state[key].photos || []).length
-    ){
-
-      document
-        .getElementById('extra-' + key)
-        ?.classList.remove('hidden');
+      count.textContent =
+        `${checked}/${section.items.length}`;
 
     }
 
@@ -1556,26 +2281,43 @@ function refresh(){
 }
 
 
+/* =========================================================
+   COMMENTS
+========================================================= */
+
 function renderComments(key){
 
-  const wrap =
+  const container =
     document.getElementById(
       'comments-' + key
     );
 
-  if(!wrap){
+
+  if(!container){
     return;
   }
 
 
-  wrap.innerHTML =
-    (state[key].comments || [])
+  const comments =
+    state[key].comments || [];
+
+
+  container.innerHTML =
+    comments
       .map(comment => `
 
         <div class="comment">
 
-          <b>${esc(comment.name)}:</b>
-          ${esc(comment.text)}
+          <b>
+            ${escapeHtml(
+              comment.name ||
+              'Reviewer'
+            )}:
+          </b>
+
+          ${escapeHtml(
+            comment.text
+          )}
 
         </div>
 
@@ -1585,10 +2327,18 @@ function renderComments(key){
 }
 
 
-function addPhoto(event,key){
+/* =========================================================
+   PHOTOS
+========================================================= */
+
+function handlePhoto(
+  event,
+  key
+){
 
   const file =
     event.target.files[0];
+
 
   if(!file){
     return;
@@ -1599,124 +2349,72 @@ function addPhoto(event,key){
     new FileReader();
 
 
-  reader.onload = function(loadEvent){
+  reader.onload =
+    loadEvent => {
 
-    const image =
-      new Image();
-
-
-    image.onload = function(){
-
-      const maxWidth = 1000;
-
-      const scale =
-        Math.min(
-          1,
-          maxWidth / image.width
-        );
+      const image =
+        new Image();
 
 
-      const canvas =
-        document.createElement('canvas');
+      image.onload =
+        () => {
+
+          const maxWidth =
+            1000;
 
 
-      canvas.width =
-        Math.round(image.width * scale);
+          const scale =
+            Math.min(
+              1,
+              maxWidth /
+              image.width
+            );
 
 
-      canvas.height =
-        Math.round(image.height * scale);
+          const canvas =
+            document.createElement(
+              'canvas'
+            );
 
 
-      canvas
-        .getContext('2d')
-        .drawImage(
-          image,
-          0,
-          0,
-          canvas.width,
-          canvas.height
-        );
+          canvas.width =
+            Math.round(
+              image.width * scale
+            );
 
 
-      state[key].photos.push(
-        canvas.toDataURL(
-          'image/jpeg',
-          .8
-        )
-      );
+          canvas.height =
+            Math.round(
+              image.height * scale
+            );
 
 
-      renderPhotos(key);
+          const context =
+            canvas.getContext(
+              '2d'
+            );
 
 
-      document
-        .getElementById('extra-' + key)
-        .classList.remove('hidden');
-
-
-      saveCurrent();
-
-    };
-
-
-    image.src =
-      loadEvent.target.result;
-
-  };
-
-
-  reader.readAsDataURL(file);
-
-  event.target.value = '';
-
-}
-
-
-function renderPhotos(key){
-
-  const wrap =
-    document.getElementById(
-      'thumbs-' + key
-    );
-
-  if(!wrap){
-    return;
-  }
-
-
-  wrap.innerHTML = '';
-
-
-  (state[key].photos || [])
-    .forEach((src,index) => {
-
-      const item =
-        document.createElement('div');
-
-      item.className =
-        'thumb';
-
-
-      item.innerHTML = `
-
-        <img src="${src}">
-
-        <button class="rm">
-          ×
-        </button>
-
-      `;
-
-
-      item
-        .querySelector('.rm')
-        .onclick = () => {
-
-          state[key].photos.splice(
-            index,
-            1
+          context.drawImage(
+            image,
+            0,
+            0,
+            canvas.width,
+            canvas.height
           );
+
+
+          const photo =
+            canvas.toDataURL(
+              'image/jpeg',
+              .78
+            );
+
+
+          state[key].photos.push(
+            photo
+          );
+
 
           renderPhotos(key);
 
@@ -1725,187 +2423,559 @@ function renderPhotos(key){
         };
 
 
-      wrap.appendChild(item);
+      image.src =
+        loadEvent.target.result;
 
-    });
+    };
+
+
+  reader.readAsDataURL(file);
+
+  event.target.value =
+    '';
+
+}
+
+
+function renderPhotos(key){
+
+  const container =
+    document.getElementById(
+      'photos-' + key
+    );
+
+
+  if(!container){
+    return;
+  }
+
+
+  container.innerHTML =
+    '';
+
+
+  state[key].photos.forEach(
+    (photo,index) => {
+
+      const thumb =
+        document.createElement(
+          'div'
+        );
+
+
+      thumb.className =
+        'thumb';
+
+
+      thumb.innerHTML = `
+
+        <img
+          src="${photo}"
+          alt="Checklist photo"
+        >
+
+        <button
+          type="button"
+          class="thumb-remove"
+        >
+          ×
+        </button>
+
+      `;
+
+
+      thumb
+        .querySelector(
+          '.thumb-remove'
+        )
+        .addEventListener(
+          'click',
+          () => {
+
+            state[key]
+              .photos
+              .splice(
+                index,
+                1
+              );
+
+
+            renderPhotos(key);
+
+            saveCurrent();
+
+          }
+        );
+
+
+      container.appendChild(
+        thumb
+      );
+
+    }
+  );
 
 }
 
 
-function totals(){
+/* =========================================================
+   REVIEWER
+========================================================= */
 
-  let total = 0;
-  let done = 0;
-  let photos = 0;
+document
+  .getElementById('header-reviewer')
+  .addEventListener(
+    'change',
+    event => {
 
-
-  SECTIONS.forEach(section => {
-
-    section.items.forEach((item,index) => {
-
-      const value =
-        state[
-          section.id + '__' + index
-        ];
+      currentReviewer =
+        event.target.value.trim() ||
+        'Reviewer';
 
 
-      total++;
+      meta.reviewer =
+        currentReviewer;
 
 
-      if(value.checked){
-        done++;
-      }
+      saveCurrent();
+
+    }
+  );
 
 
-      photos +=
-        (value.photos || []).length;
+/* =========================================================
+   SUMMARY
+========================================================= */
 
-    });
+document
+  .getElementById('btn-summary')
+  .addEventListener(
+    'click',
+    () => {
 
-  });
+      buildSummary();
 
+      showScreen(
+        'summary'
+      );
 
-  return {
-    total,
-    done,
-    photos
-  };
-
-}
+    }
+  );
 
 
 function buildSummary(){
 
-  const totalData =
-    totals();
+  const totals =
+    getTotals();
 
 
-  document.getElementById('stats')
-    .innerHTML = `
+  document.getElementById(
+    'summary-title'
+  ).textContent =
+    meta.ship ||
+    'Visit Summary';
 
-      <div class="stat">
 
-        <div class="n">
-          ${totalData.done}/${totalData.total}
-        </div>
+  document.getElementById(
+    'summary-meta'
+  ).textContent =
+    `${meta.dateOn || ''}` +
+    (
+      meta.dateOff
+        ? ` → ${meta.dateOff}`
+        : ''
+    ) +
+    ` • Reviewed by ${meta.reviewer || ''}`;
 
-        <div class="l">
-          Points Confirmed
-        </div>
 
+  document.getElementById(
+    'summary-stats'
+  ).innerHTML = `
+
+    <div class="stat">
+
+      <div class="stat-number">
+        ${totals.checked}/${totals.total}
       </div>
 
-
-      <div class="stat">
-
-        <div class="n">
-          ${totalData.photos}
-        </div>
-
-        <div class="l">
-          Photos
-        </div>
-
+      <div class="stat-label">
+        Points Confirmed
       </div>
 
-    `;
+    </div>
 
 
-  document.getElementById('sumTitle')
-    .textContent =
-    meta.ship || 'Visit Summary';
+    <div class="stat">
+
+      <div class="stat-number">
+        ${totals.photos}
+      </div>
+
+      <div class="stat-label">
+        Photos
+      </div>
+
+    </div>
+
+  `;
 
 
-  document.getElementById('sumMeta')
-    .textContent =
-    `${meta.dateOn || ''}` +
-    `${meta.dateOff ? ' → ' + meta.dateOff : ''}` +
-    ` • Reviewed by ${meta.reviewer}`;
-
-
-  document.getElementById('overall')
-    .value =
-    `Ship visit report for ${meta.ship}, ` +
-    `${meta.dateOn || ''}` +
-    `${meta.dateOff ? ' to ' + meta.dateOff : ''}, ` +
-    `reviewed by ${meta.reviewer}. ` +
-    `${totalData.done} of ${totalData.total} ` +
+  document.getElementById(
+    'overall-summary'
+  ).value =
+    `Ship visit report for ${meta.ship} ` +
+    `on ${meta.dateOn || ''}` +
+    (
+      meta.dateOff
+        ? ` through ${meta.dateOff}`
+        : ''
+    ) +
+    `, reviewed by ${meta.reviewer || ''}. ` +
+    `${totals.checked} of ${totals.total} ` +
     `review points were confirmed during the visit.`;
 
 
-  const wrap =
-    document.getElementById('sumSections');
+  const container =
+    document.getElementById(
+      'section-summaries'
+    );
 
 
-  wrap.innerHTML = '';
+  container.innerHTML =
+    '';
 
 
   SECTIONS.forEach(section => {
 
-    const confirmed =
-      section.items.filter(
-        (item,index) =>
-          state[
-            section.id + '__' + index
-          ].checked
-      ).length;
+    let checked =
+      0;
+
+    let unchecked =
+      [];
 
 
-    const flagged =
-      section.items.filter(
-        (item,index) =>
-          !state[
-            section.id + '__' + index
-          ].checked
+    section.items.forEach(
+      (item,index) => {
+
+        const key =
+          section.id +
+          '__' +
+          index;
+
+
+        if(state[key].checked){
+
+          checked++;
+
+        }else{
+
+          unchecked.push(item);
+
+        }
+
+      }
+    );
+
+
+    const block =
+      document.createElement(
+        'div'
       );
 
 
-    const div =
-      document.createElement('div');
-
-
-    div.className =
+    block.className =
       'summary-section';
 
 
-    div.innerHTML = `
+    const text =
+      `${checked} of ${section.items.length} ` +
+      `points confirmed. ` +
+      (
+        unchecked.length
+          ? `Follow-up needed on: ${unchecked.join('; ')}`
+          : 'No unchecked points.'
+      );
 
-      <h2>${esc(section.title)}</h2>
 
-      <textarea rows="4">${
-        esc(
-          confirmed +
-          ' of ' +
-          section.items.length +
-          ' points confirmed. ' +
+    block.innerHTML = `
 
-          (
-            flagged.length
-              ? 'Follow-up needed on: ' +
-                flagged.join('; ')
-              : 'No unchecked points.'
-          )
-        )
-      }</textarea>
+      <h2>
+        ${escapeHtml(section.title)}
+      </h2>
+
+      <textarea
+        rows="4"
+      >${escapeHtml(text)}</textarea>
 
     `;
 
 
-    wrap.appendChild(div);
+    container.appendChild(
+      block
+    );
 
   });
 
 }
 
 
-function pdf(){
+/* =========================================================
+   BACK TO CHECKLIST
+========================================================= */
+
+document
+  .getElementById('btn-back-checklist')
+  .addEventListener(
+    'click',
+    () => {
+
+      updateChecklistHeader();
+
+      showScreen(
+        'checklist'
+      );
+
+    }
+  );
+
+
+/* =========================================================
+   SUBMIT REPORT
+   THIS IS THE IMPORTANT PART
+========================================================= */
+
+document
+  .getElementById('btn-submit')
+  .addEventListener(
+    'click',
+    submitReport
+  );
+
+
+function submitReport(){
+
+  try{
+
+    /*
+      Make sure the latest reviewer
+      name is captured.
+    */
+
+    currentReviewer =
+      document
+        .getElementById(
+          'header-reviewer'
+        )
+        .value
+        .trim() ||
+      meta.reviewer ||
+      'Reviewer';
+
+
+    meta.reviewer =
+      currentReviewer;
+
+
+    /*
+      Create a complete saved report.
+    */
+
+    const submittedReport = {
+
+      id:
+        reportId ||
+        Date.now().toString(),
+
+      meta:{
+        ship:
+          meta.ship,
+
+        dateOn:
+          meta.dateOn,
+
+        dateOff:
+          meta.dateOff,
+
+        reviewer:
+          meta.reviewer
+
+      },
+
+      state:
+        JSON.parse(
+          JSON.stringify(state)
+        ),
+
+      submittedAt:
+        new Date().toISOString()
+
+    };
+
+
+    /*
+      Load existing submitted reports.
+    */
+
+    const reports =
+      getSubmittedReports();
+
+
+    /*
+      Avoid duplicates when
+      submitting an existing report.
+    */
+
+    const existingIndex =
+      reports.findIndex(
+        report =>
+          report.id ===
+          submittedReport.id
+      );
+
+
+    if(existingIndex >= 0){
+
+      reports[existingIndex] =
+        submittedReport;
+
+    }else{
+
+      reports.unshift(
+        submittedReport
+      );
+
+    }
+
+
+    /*
+      SAVE FIRST.
+    */
+
+    const saved =
+      saveSubmittedReports(
+        reports
+      );
+
+
+    if(!saved){
+
+      alert(
+        'The report could not be saved. Please try again.'
+      );
+
+      return;
+
+    }
+
+
+    /*
+      Remove the active/current report.
+      This prevents the app from reopening
+      the completed report.
+    */
+
+    clearCurrent();
+
+
+    /*
+      Reset everything for the next report.
+    */
+
+    reportId = '';
+
+    meta = {
+      ship:'',
+      dateOn:'',
+      dateOff:'',
+      reviewer:''
+    };
+
+    currentReviewer =
+      'Reviewer';
+
+    state =
+      createEmptyState();
+
+
+    /*
+      Clear the setup fields.
+    */
+
+    document.getElementById(
+      'input-ship'
+    ).value = '';
+
+    document.getElementById(
+      'input-date-on'
+    ).value = '';
+
+    document.getElementById(
+      'input-date-off'
+    ).value = '';
+
+    document.getElementById(
+      'input-reviewer'
+    ).value = '';
+
+
+    /*
+      MOST IMPORTANT:
+      explicitly return to HOME.
+    */
+
+    showScreen(
+      'home'
+    );
+
+
+    window.scrollTo(
+      0,
+      0
+    );
+
+
+  }catch(error){
+
+    console.error(
+      'Submit report failed:',
+      error
+    );
+
+
+    alert(
+      'There was a problem submitting the report. Please try again.'
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   PDF
+========================================================= */
+
+document
+  .getElementById('btn-save-pdf')
+  .addEventListener(
+    'click',
+    () => {
+
+      buildPdf();
+
+    }
+  );
+
+
+function buildPdf(){
 
   if(
-    typeof window.jspdf === 'undefined'
+    typeof window.jspdf ===
+    'undefined'
   ){
 
     alert(
-      'PDF library could not be loaded. Check your internet connection and try again.'
+      'PDF library could not be loaded. Please check your internet connection.'
     );
 
     return;
@@ -1913,7 +2983,10 @@ function pdf(){
   }
 
 
-  const {jsPDF} = window.jspdf;
+  const {
+    jsPDF
+  } =
+    window.jspdf;
 
 
   const doc =
@@ -1923,23 +2996,28 @@ function pdf(){
     });
 
 
-  const W =
+  const pageWidth =
     doc.internal.pageSize.getWidth();
 
-  const H =
+  const pageHeight =
     doc.internal.pageSize.getHeight();
 
 
-  const margin = 42;
+  const margin =
+    42;
 
-  let y = 84;
+
+  let y =
+    82;
 
 
   const squid =
     [60,16,83];
 
+
   const red =
     [225,10,10];
+
 
   const dark =
     [27,27,27];
@@ -1947,13 +3025,15 @@ function pdf(){
 
   function header(title){
 
-    doc.setFillColor(...squid);
+    doc.setFillColor(
+      ...squid
+    );
 
     doc.rect(
       0,
       0,
-      W,
-      66,
+      pageWidth,
+      68,
       'F'
     );
 
@@ -1963,45 +3043,53 @@ function pdf(){
       255,
       255
     );
-
 
     doc.setFont(
       'helvetica',
       'bold'
     );
 
-    doc.setFontSize(10);
+    doc.setFontSize(
+      10
+    );
+
 
     doc.text(
       '— VIRGIN VOYAGES',
       margin,
-      24
+      25
     );
 
 
-    doc.setFontSize(16);
+    doc.setFontSize(
+      16
+    );
+
 
     doc.text(
       title,
       margin,
-      46
+      47
     );
 
 
-    y = 84;
+    y =
+      86;
 
   }
 
 
   function footer(){
 
-    doc.setFillColor(...dark);
+    doc.setFillColor(
+      ...dark
+    );
 
     doc.rect(
       0,
-      H - 24,
-      W,
-      24,
+      pageHeight - 25,
+      pageWidth,
+      25,
       'F'
     );
 
@@ -2012,26 +3100,30 @@ function pdf(){
       255
     );
 
-    doc.setFontSize(8);
-
     doc.setFont(
       'helvetica',
       'normal'
+    );
+
+    doc.setFontSize(
+      8
     );
 
 
     doc.text(
       'INTERNAL USE ONLY',
       margin,
-      H - 9
+      pageHeight - 10
     );
 
 
     doc.text(
       `${meta.ship} • ${meta.dateOn || ''}`,
-      W - margin,
-      H - 9,
-      {align:'right'}
+      pageWidth - margin,
+      pageHeight - 10,
+      {
+        align:'right'
+      }
     );
 
   }
@@ -2039,7 +3131,10 @@ function pdf(){
 
   function ensureSpace(height){
 
-    if(y + height > H - 38){
+    if(
+      y + height >
+      pageHeight - 38
+    ){
 
       footer();
 
@@ -2054,10 +3149,11 @@ function pdf(){
   }
 
 
-  function textLines(
+  function addWrapped(
     text,
     size,
-    maxW
+    width,
+    x = margin
   ){
 
     doc.setFont(
@@ -2065,7 +3161,9 @@ function pdf(){
       'normal'
     );
 
-    doc.setFontSize(size);
+    doc.setFontSize(
+      size
+    );
 
     doc.setTextColor(
       55,
@@ -2074,10 +3172,31 @@ function pdf(){
     );
 
 
-    return doc.splitTextToSize(
-      text,
-      maxW
-    );
+    const lines =
+      doc.splitTextToSize(
+        String(text || ''),
+        width
+      );
+
+
+    lines.forEach(line => {
+
+      ensureSpace(
+        size + 4
+      );
+
+
+      doc.text(
+        line,
+        x,
+        y
+      );
+
+
+      y +=
+        size + 4;
+
+    });
 
   }
 
@@ -2087,14 +3206,19 @@ function pdf(){
   );
 
 
-  doc.setTextColor(...dark);
+  doc.setTextColor(
+    ...dark
+  );
+
 
   doc.setFont(
     'helvetica',
     'bold'
   );
 
-  doc.setFontSize(11);
+  doc.setFontSize(
+    11
+  );
 
 
   doc.text(
@@ -2125,40 +3249,48 @@ function pdf(){
 
 
   doc.text(
-    `Review By: ${meta.reviewer}`,
+    `Reviewer: ${meta.reviewer || ''}`,
     margin,
     y
   );
 
-  y += 24;
+  y += 22;
 
 
-  const totalData =
-    totals();
+  const totals =
+    getTotals();
 
 
-  doc.setTextColor(...red);
+  doc.setTextColor(
+    ...red
+  );
 
-  doc.setFontSize(9);
+  doc.setFontSize(
+    9
+  );
 
 
   doc.text(
-    `${totalData.done} / ${totalData.total} POINTS CONFIRMED • ${totalData.photos} PHOTOS`,
+    `${totals.checked}/${totals.total} POINTS CONFIRMED • ${totals.photos} PHOTOS`,
     margin,
     y
   );
 
-  y += 24;
+  y += 22;
 
+
+  doc.setTextColor(
+    ...squid
+  );
 
   doc.setFont(
     'helvetica',
     'bold'
   );
 
-  doc.setFontSize(12);
-
-  doc.setTextColor(...squid);
+  doc.setFontSize(
+    12
+  );
 
 
   doc.text(
@@ -2170,86 +3302,151 @@ function pdf(){
   y += 16;
 
 
-  textLines(
-    document.getElementById('overall').value,
-    10.5,
-    W - margin * 2
-  ).forEach(line => {
-
-    ensureSpace(14);
-
-    doc.text(
-      line,
-      margin,
-      y
-    );
-
-    y += 14;
-
-  });
+  addWrapped(
+    document.getElementById(
+      'overall-summary'
+    ).value,
+    10,
+    pageWidth - margin * 2
+  );
 
 
   y += 8;
 
 
-  SECTIONS.forEach(
-    (section,sectionIndex) => {
+  SECTIONS.forEach(section => {
 
-      ensureSpace(28);
-
-
-      doc.setDrawColor(...red);
-
-      doc.line(
-        margin,
-        y,
-        margin + 38,
-        y
-      );
-
-      y += 13;
+    ensureSpace(
+      28
+    );
 
 
-      doc.setFont(
-        'helvetica',
-        'bold'
-      );
-
-      doc.setFontSize(12);
-
-      doc.setTextColor(...squid);
+    doc.setDrawColor(
+      ...red
+    );
 
 
-      doc.text(
-        section.title,
-        margin,
-        y
-      );
+    doc.line(
+      margin,
+      y,
+      margin + 38,
+      y
+    );
 
-      y += 16;
+
+    y += 14;
 
 
-      const summaryTextareas =
-        document.querySelectorAll(
-          '#sumSections textarea'
+    doc.setFont(
+      'helvetica',
+      'bold'
+    );
+
+    doc.setFontSize(
+      12
+    );
+
+    doc.setTextColor(
+      ...squid
+    );
+
+
+    doc.text(
+      section.title,
+      margin,
+      y
+    );
+
+
+    y += 16;
+
+
+    let checked =
+      0;
+
+
+    let unchecked =
+      [];
+
+
+    section.items.forEach(
+      (item,index) => {
+
+        const key =
+          section.id +
+          '__' +
+          index;
+
+
+        if(state[key].checked){
+
+          checked++;
+
+        }else{
+
+          unchecked.push(
+            item
+          );
+
+        }
+
+      }
+    );
+
+
+    addWrapped(
+      `${checked} of ${section.items.length} points confirmed.`,
+      9.8,
+      pageWidth - margin * 2
+    );
+
+
+    y += 4;
+
+
+    section.items.forEach(
+      (item,index) => {
+
+        const key =
+          section.id +
+          '__' +
+          index;
+
+
+        const itemState =
+          state[key];
+
+
+        ensureSpace(
+          14
         );
 
 
-      const textarea =
-        summaryTextareas[
-          sectionIndex
-        ];
+        doc.setFont(
+          'helvetica',
+          'bold'
+        );
+
+        doc.setFontSize(
+          9.2
+        );
 
 
-      textLines(
-        textarea
-          ? textarea.value
-          : '',
-        10.3,
-        W - margin * 2
-      ).forEach(line => {
+        doc.setTextColor(
+          ...(itemState.checked
+            ? [75,75,75]
+            : red)
+        );
 
-        ensureSpace(14);
+
+        doc.text(
+          itemState.checked
+            ? '[x]'
+            : '[ ]',
+          margin,
+          y
+        );
+
 
         doc.setFont(
           'helvetica',
@@ -2257,779 +3454,695 @@ function pdf(){
         );
 
         doc.setTextColor(
-          55,
-          55,
-          55
+          60,
+          60,
+          60
         );
 
 
-        doc.text(
-          line,
-          margin,
-          y
+        const lines =
+          doc.splitTextToSize(
+            item,
+            pageWidth -
+            margin * 2 -
+            24
+          );
+
+
+        lines.forEach(
+          (line,lineIndex) => {
+
+            ensureSpace(
+              12
+            );
+
+
+            doc.text(
+              line,
+              margin + 21,
+              y
+            );
+
+
+            y += 12;
+
+          }
         );
 
-        y += 14;
 
-      });
-
-
-      y += 5;
+        y += 2;
 
 
-      section.items.forEach(
-        (text,itemIndex) => {
+        (
+          itemState.comments ||
+          []
+        ).forEach(comment => {
 
-          const value =
-            state[
-              section.id +
-              '__' +
-              itemIndex
-            ];
-
-
-          ensureSpace(14);
-
-
-          doc.setFont(
-            'helvetica',
-            'bold'
-          );
-
-          doc.setFontSize(9.5);
-
-          doc.setTextColor(
-            ...(value.checked
-              ? [80,80,80]
-              : red)
-          );
-
-
-          doc.text(
-            value.checked
-              ? '[x]'
-              : '[ ]',
-            margin,
-            y
+          ensureSpace(
+            12
           );
 
 
           doc.setFont(
             'helvetica',
-            'normal'
+            'italic'
+          );
+
+          doc.setFontSize(
+            8.8
           );
 
           doc.setTextColor(
-            60,
-            60,
-            60
+            120,
+            120,
+            120
           );
 
 
-          const lines =
-            textLines(
-              text,
-              9.2,
-              W - margin * 2 - 24
+          const commentLines =
+            doc.splitTextToSize(
+              `— ${comment.name}: ${comment.text}`,
+              pageWidth -
+              margin * 2 -
+              30
             );
 
 
-          lines.forEach(
-            (line,lineIndex) => {
+          commentLines.forEach(
+            line => {
 
-              ensureSpace(12);
+              ensureSpace(
+                11
+              );
+
 
               doc.text(
                 line,
-                margin + 21,
+                margin + 22,
                 y
               );
 
 
-              if(
-                lineIndex <
-                lines.length - 1
-              ){
-
-                y += 12;
-
-              }
+              y += 11;
 
             }
           );
 
+        });
 
-          y += 11;
+
+        (
+          itemState.photos ||
+          []
+        ).forEach(photo => {
+
+          ensureSpace(
+            165
+          );
 
 
-          (
-            value.comments || []
-          ).forEach(comment => {
+          try{
 
-            ensureSpace(12);
-
-            doc.setFont(
-              'helvetica',
-              'italic'
+            doc.addImage(
+              photo,
+              'JPEG',
+              margin + 22,
+              y,
+              145,
+              145
             );
 
-            doc.setFontSize(9);
 
-            doc.setTextColor(
-              120,
-              120,
-              120
+            y +=
+              153;
+
+          }catch(error){
+
+            console.error(
+              'Could not add photo to PDF',
+              error
             );
 
+          }
 
-            textLines(
-              '— ' +
-              comment.name +
-              ': ' +
-              comment.text,
-              9,
-              W - margin * 2 - 24
-            ).forEach(line => {
-
-              doc.text(
-                line,
-                margin + 21,
-                y
-              );
-
-              y += 12;
-
-            });
-
-          });
+        });
 
 
-          (
-            value.photos || []
-          ).forEach(source => {
+        y += 4;
 
-            ensureSpace(170);
-
-            try{
-
-              doc.addImage(
-                source,
-                'JPEG',
-                margin + 21,
-                y,
-                150,
-                150
-              );
-
-              y += 158;
-
-            }catch(error){
-
-              console.error(
-                'Could not add image to PDF',
-                error
-              );
-
-            }
-
-          });
+      }
+    );
 
 
-          y += 2;
+    y += 8;
 
-        }
-      );
-
-    }
-  );
+  });
 
 
   footer();
 
 
+  const safeShip =
+    (
+      meta.ship ||
+      'Ship'
+    )
+    .replace(
+      /\s+/g,
+      '_'
+    )
+    .replace(
+      /[^a-zA-Z0-9_-]/g,
+      ''
+    );
+
+
+  const filename =
+    `Ship_Visit_Report_${safeShip}_${meta.dateOn || 'date'}.pdf`;
+
+
   doc.save(
-    `Ship_Visit_Report_${(
-      meta.ship || 'Ship'
-    ).replace(/\s+/g,'_')}_${
-      meta.dateOn || 'date'
-    }.pdf`
+    filename
   );
 
 }
 
 
-function submit(){
+/* =========================================================
+   PRINT
+========================================================= */
 
-  const reports =
-    getReports();
+document
+  .getElementById('btn-print')
+  .addEventListener(
+    'click',
+    () => {
 
+      window.print();
 
-  const snapshot = {
-
-    id:
-      reportId ||
-      Date.now().toString(),
-
-    meta:{
-      ...meta
-    },
-
-    state:
-      JSON.parse(
-        JSON.stringify(state)
-      ),
-
-    submittedAt:
-      new Date().toISOString()
-
-  };
-
-
-  const existingIndex =
-    reports.findIndex(
-      report =>
-        report.id === snapshot.id
-    );
-
-
-  if(existingIndex >= 0){
-
-    reports[existingIndex] =
-      snapshot;
-
-  }else{
-
-    reports.unshift(
-      snapshot
-    );
-
-  }
-
-
-  saveReports(
-    reports
+    }
   );
 
 
-  reportId =
-    snapshot.id;
+/* =========================================================
+   SUBMITTED REPORTS
+========================================================= */
 
+function renderSubmittedReports(){
 
-  saveCurrent();
-
-
-  alert(
-    'Report submitted successfully. It is now available under Submitted Reports.'
-  );
-
-
-  /*
-    IMPORTANT:
-    After submitting, return directly
-    to the first screen.
-  */
-
-  switchScreen(
-    'home'
-  );
-
-
-  window.scrollTo(
-    0,
-    0
-  );
-
-}
-
-
-function renderReports(){
-
-  const wrap =
+  const container =
     document.getElementById(
-      'reportList'
+      'submitted-list'
     );
 
 
   const reports =
-    getReports();
+    getSubmittedReports();
 
 
   if(!reports.length){
 
-    wrap.innerHTML =
-      '<div class="empty">No submitted reports yet.</div>';
+    container.innerHTML = `
+
+      <div class="empty">
+        No submitted reports yet.
+      </div>
+
+    `;
 
     return;
 
   }
 
 
-  wrap.innerHTML =
-    reports.map(report => `
+  container.innerHTML =
+    reports
+      .map(report => {
 
-      <div class="report-card">
-
-        <h3>
-          ${esc(
-            report.meta?.ship ||
-            'Unnamed Ship'
-          )}
-        </h3>
-
-
-        <div class="report-meta">
-
-          <b>Date:</b>
-          ${esc(
-            report.meta?.dateOn ||
-            ''
-          )}
-
-          ${
-            report.meta?.dateOff
-              ? ' → ' +
-                esc(report.meta.dateOff)
-              : ''
-          }
-
-          <br>
-
-          <b>Reviewer:</b>
-          ${esc(
-            report.meta?.reviewer ||
-            ''
-          )}
-
-          <br>
-
-          <b>Submitted:</b>
-          ${
-            report.submittedAt
-              ? new Date(
-                  report.submittedAt
-                ).toLocaleString()
-              : ''
-          }
-
-        </div>
+        const reportDate =
+          report.submittedAt
+            ? new Date(
+                report.submittedAt
+              ).toLocaleString()
+            : '';
 
 
-        <div class="report-actions">
+        return `
 
-          <button
-            class="open"
-            data-id="${report.id}"
-          >
-            Open Report
-          </button>
+          <div class="report-card">
 
-
-          <button
-            data-pdf="${report.id}"
-          >
-            Save PDF
-          </button>
+            <h3>
+              ${escapeHtml(
+                report.meta?.ship ||
+                'Unnamed Ship'
+              )}
+            </h3>
 
 
-          <button
-            data-print="${report.id}"
-          >
-            Print
-          </button>
+            <div class="report-meta">
 
-        </div>
+              <b>Date:</b>
+              ${escapeHtml(
+                report.meta?.dateOn ||
+                ''
+              )}
 
-      </div>
+              ${
+                report.meta?.dateOff
+                  ? ` → ${escapeHtml(
+                      report.meta.dateOff
+                    )}`
+                  : ''
+              }
 
-    `).join('');
+              <br>
+
+              <b>Reviewer:</b>
+              ${escapeHtml(
+                report.meta?.reviewer ||
+                ''
+              )}
+
+              <br>
+
+              <b>Submitted:</b>
+              ${escapeHtml(
+                reportDate
+              )}
+
+            </div>
 
 
-  wrap
-    .querySelectorAll('[data-id]')
+            <div class="report-actions">
+
+              <button
+                type="button"
+                class="open"
+                data-open-report="${escapeHtml(report.id)}"
+              >
+                Open Report
+              </button>
+
+
+              <button
+                type="button"
+                data-pdf-report="${escapeHtml(report.id)}"
+              >
+                Save PDF
+              </button>
+
+
+              <button
+                type="button"
+                data-print-report="${escapeHtml(report.id)}"
+              >
+                Print
+              </button>
+
+            </div>
+
+          </div>
+
+        `;
+
+      })
+      .join('');
+
+
+  container
+    .querySelectorAll(
+      '[data-open-report]'
+    )
     .forEach(button => {
 
-      button.onclick = () => {
+      button.addEventListener(
+        'click',
+        () => {
 
-        openReport(
-          button.dataset.id
-        );
+          const report =
+            findSubmittedReport(
+              button.dataset.openReport
+            );
 
-      };
+
+          if(!report){
+            return;
+          }
+
+
+          loadReport(
+            report
+          );
+
+
+          buildSummary();
+
+          showScreen(
+            'summary'
+          );
+
+        }
+      );
 
     });
 
 
-  wrap
-    .querySelectorAll('[data-pdf]')
+  container
+    .querySelectorAll(
+      '[data-pdf-report]'
+    )
     .forEach(button => {
 
-      button.onclick = () => {
+      button.addEventListener(
+        'click',
+        () => {
 
-        openReport(
-          button.dataset.pdf,
-          true
-        );
+          const report =
+            findSubmittedReport(
+              button.dataset.pdfReport
+            );
 
-      };
+
+          if(!report){
+            return;
+          }
+
+
+          loadReport(
+            report
+          );
+
+
+          buildSummary();
+
+          showScreen(
+            'summary'
+          );
+
+
+          setTimeout(
+            () => buildPdf(),
+            100
+          );
+
+        }
+      );
 
     });
 
 
-  wrap
-    .querySelectorAll('[data-print]')
+  container
+    .querySelectorAll(
+      '[data-print-report]'
+    )
     .forEach(button => {
 
-      button.onclick = () => {
+      button.addEventListener(
+        'click',
+        () => {
 
-        openReport(
-          button.dataset.print
-        );
+          const report =
+            findSubmittedReport(
+              button.dataset.printReport
+            );
 
 
-        setTimeout(
-          () => window.print(),
-          120
-        );
+          if(!report){
+            return;
+          }
 
-      };
+
+          loadReport(
+            report
+          );
+
+
+          buildSummary();
+
+          showScreen(
+            'summary'
+          );
+
+
+          setTimeout(
+            () => window.print(),
+            150
+          );
+
+        }
+      );
 
     });
 
 }
 
 
-function restore(report){
+function findSubmittedReport(id){
 
-  meta =
-    {
-      ...report.meta
-    };
-
-
-  state =
-    JSON.parse(
-      JSON.stringify(
-        report.state || {}
-      )
+  return getSubmittedReports()
+    .find(
+      report =>
+        report.id === id
     );
 
+}
+
+
+/* =========================================================
+   LOAD SAVED REPORT
+========================================================= */
+
+function loadReport(report){
 
   reportId =
     report.id;
 
 
+  meta =
+    {
+      ship:
+        report.meta?.ship || '',
+
+      dateOn:
+        report.meta?.dateOn || '',
+
+      dateOff:
+        report.meta?.dateOff || '',
+
+      reviewer:
+        report.meta?.reviewer || 'Reviewer'
+    };
+
+
   currentReviewer =
-    meta.reviewer ||
-    'Reviewer';
+    meta.reviewer;
 
 
-  document.getElementById('ship')
-    .value =
-    meta.ship || '';
+  state =
+    createEmptyState();
 
 
-  document.getElementById('dateOn')
-    .value =
-    meta.dateOn || '';
+  Object.keys(
+    report.state || {}
+  ).forEach(key => {
+
+    if(
+      Object.prototype.hasOwnProperty
+        .call(state,key)
+    ){
+
+      state[key] =
+        normalizeItem(
+          report.state[key]
+        );
+
+    }
+
+  });
 
 
-  document.getElementById('dateOff')
-    .value =
-    meta.dateOff || '';
+  updateChecklistHeader();
 
-
-  document.getElementById('reviewer')
-    .value =
-    meta.reviewer || '';
-
-
-  document.getElementById('hdrShip')
-    .textContent =
-    (
-      meta.ship ||
-      ''
-    ).toUpperCase();
-
-
-  document.getElementById('hdrReviewer')
-    .value =
-    currentReviewer;
-
-
-  document.getElementById('visitMeta')
-    .textContent =
-    `${meta.dateOn || ''}` +
-    `${
-      meta.dateOff
-        ? ' → ' + meta.dateOff
-        : ''
-    }`;
-
-
-  renderSections();
-
-
-  switchScreen(
-    'checklist'
-  );
-
+  renderChecklist();
 
   saveCurrent();
 
 }
 
 
-function openReport(
-  id,
-  makePdf = false
-){
+function normalizeItem(item){
 
-  const report =
-    getReports().find(
-      item =>
-        item.id === id
-    );
+  if(!item){
 
+    return {
+      checked:false,
+      comments:[],
+      photos:[]
+    };
 
-  if(!report){
-    return;
   }
 
 
-  restore(
-    report
-  );
+  return {
 
+    checked:
+      Boolean(item.checked),
 
-  setTimeout(
-    () => {
+    comments:
+      Array.isArray(item.comments)
+        ? item.comments
+        : [],
 
-      buildSummary();
+    photos:
+      Array.isArray(item.photos)
+        ? item.photos
+        : []
 
-      switchScreen(
-        'summary'
-      );
-
-
-      if(makePdf){
-
-        setTimeout(
-          () => pdf(),
-          100
-        );
-
-      }
-
-    },
-    60
-  );
+  };
 
 }
 
 
-/* -------------------------------------------------
-   HOME NAVIGATION
-------------------------------------------------- */
+/* =========================================================
+   RESTORE ACTIVE REPORT
+========================================================= */
 
-document
-  .getElementById('createReport')
-  .onclick = () => {
+function restoreCurrentReport(){
 
-    switchScreen(
-      'setup'
-    );
+  try{
 
-  };
-
-
-document
-  .getElementById('submittedReports')
-  .onclick = () => {
-
-    renderReports();
-
-    switchScreen(
-      'submitted'
-    );
-
-  };
+    const value =
+      localStorage.getItem(
+        STORAGE_CURRENT
+      );
 
 
-document
-  .getElementById('backHomeFromSetup')
-  .onclick = () => {
-
-    switchScreen(
-      'home'
-    );
-
-  };
+    if(!value){
+      return false;
+    }
 
 
-document
-  .getElementById('reportsHomeBtn')
-  .onclick = () => {
-
-    switchScreen(
-      'home'
-    );
-
-  };
+    const record =
+      JSON.parse(value);
 
 
-/* -------------------------------------------------
-   START NEW REPORT
-------------------------------------------------- */
+    if(
+      !record ||
+      !record.meta ||
+      !record.state
+    ){
 
-document
-  .getElementById('startBtn')
-  .onclick = () => {
+      clearCurrent();
 
-    resetState();
+      return false;
 
-
-    meta.ship =
-      document.getElementById('ship')
-        .value.trim() ||
-      'Unnamed Ship';
-
-
-    meta.dateOn =
-      document.getElementById('dateOn')
-        .value ||
-      new Date()
-        .toISOString()
-        .slice(0,10);
-
-
-    meta.dateOff =
-      document.getElementById('dateOff')
-        .value ||
-      '';
-
-
-    meta.reviewer =
-      document.getElementById('reviewer')
-        .value.trim() ||
-      'Reviewer';
-
-
-    currentReviewer =
-      meta.reviewer;
+    }
 
 
     reportId =
+      record.reportId ||
       Date.now().toString();
 
 
-    document.getElementById('hdrShip')
-      .textContent =
-      meta.ship.toUpperCase();
+    meta =
+      {
+        ship:
+          record.meta.ship || '',
 
+        dateOn:
+          record.meta.dateOn || '',
 
-    document.getElementById('hdrReviewer')
-      .value =
-      currentReviewer;
+        dateOff:
+          record.meta.dateOff || '',
 
+        reviewer:
+          record.meta.reviewer || 'Reviewer'
+      };
 
-    document.getElementById('visitMeta')
-      .textContent =
-      `${meta.dateOn}` +
-      `${
-        meta.dateOff
-          ? ' → ' + meta.dateOff
-          : ''
-      }`;
-
-
-    renderSections();
-
-
-    switchScreen(
-      'checklist'
-    );
-
-
-    saveCurrent();
-
-  };
-
-
-/* -------------------------------------------------
-   REVIEWER
-------------------------------------------------- */
-
-document
-  .getElementById('hdrReviewer')
-  .onchange = event => {
 
     currentReviewer =
-      event.target.value.trim() ||
-      meta.reviewer;
+      record.currentReviewer ||
+      meta.reviewer ||
+      'Reviewer';
 
 
-    meta.reviewer =
-      currentReviewer;
+    state =
+      createEmptyState();
 
 
-    saveCurrent();
+    Object.keys(
+      record.state || {}
+    ).forEach(key => {
 
-  };
+      if(
+        Object.prototype.hasOwnProperty
+          .call(state,key)
+      ){
 
+        state[key] =
+          normalizeItem(
+            record.state[key]
+          );
 
-/* -------------------------------------------------
-   SUMMARY / PDF / PRINT / SUBMIT
-------------------------------------------------- */
+      }
 
-document
-  .getElementById('summaryBtn')
-  .onclick = () => {
-
-    buildSummary();
-
-    switchScreen(
-      'summary'
-    );
-
-  };
+    });
 
 
-document
-  .getElementById('backBtn')
-  .onclick = () => {
+    updateChecklistHeader();
 
-    switchScreen(
+    renderChecklist();
+
+    showScreen(
       'checklist'
     );
 
-  };
+
+    return true;
+
+  }catch(error){
+
+    console.error(
+      'Could not restore current report',
+      error
+    );
 
 
-document
-  .getElementById('pdfBtn')
-  .onclick = () => {
+    clearCurrent();
 
-    pdf();
+    return false;
 
-  };
+  }
 
-
-document
-  .getElementById('printBtn')
-  .onclick = () => {
-
-    window.print();
-
-  };
+}
 
 
-document
-  .getElementById('submitBtn')
-  .onclick = () => {
+/* =========================================================
+   INITIALIZE
+========================================================= */
 
-    submit();
+(function init(){
 
-  };
+  /*
+    We deliberately do NOT automatically open a
+    previously submitted report.
+
+    Only an unfinished current report is restored.
+  */
+
+  const restored =
+    restoreCurrentReport();
+
+
+  if(!restored){
+
+    showScreen(
+      'home'
+    );
+
+  }
+
+})();
 
 </script>
 
