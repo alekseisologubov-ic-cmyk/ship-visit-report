@@ -4,119 +4,3034 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>Ship Visit Report</title>
+
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
 <style>
-:root{--vv-squid:#3C1053;--vv-squid-stripe:#461D5C;--vv-red:#E10A0A;--vv-red-light:#E63636;--vv-red-deep:#CC0000;--vv-near-black:#1B1B1B;--vv-body:#333;--vv-gray:#8A8A8A;--vv-line:#E7E2EA;--vv-bg:#FAF9FB}
-*{box-sizing:border-box}body{margin:0;background:var(--vv-bg);color:var(--vv-body);font-family:Arial,Calibri,sans-serif;-webkit-tap-highlight-color:transparent}h1,h2,h3,.eyebrow,button{font-family:Poppins,Arial,sans-serif}.app{max-width:720px;margin:0 auto;min-height:100vh;background:#fff;box-shadow:0 0 40px rgba(0,0,0,.04)}
-.band{background-color:var(--vv-squid);background-image:repeating-linear-gradient(45deg,var(--vv-squid) 0,var(--vv-squid) 40px,var(--vv-squid-stripe) 40px,var(--vv-squid-stripe) 80px);color:#fff;padding:28px 24px 22px}.band.compact{padding:16px 20px}.band .eyebrow{font-size:11px;letter-spacing:.12em;font-weight:700;opacity:.85}.band h1{font-size:24px;margin:6px 0 2px;font-weight:800}.band.compact h1{font-size:18px}.band .sub{font-size:13px;opacity:.82;margin:0}
-.start,.summary,.reports{padding:24px}.field{margin-bottom:15px}.field label{display:block;font-size:12px;font-weight:700;letter-spacing:.04em;color:var(--vv-squid);margin-bottom:6px}.field input,.field textarea{width:100%;padding:11px 12px;border:1.5px solid var(--vv-line);border-radius:8px;font-size:15px;font-family:Arial;color:var(--vv-body);background:#fff}.field input:focus,textarea:focus{outline:none;border-color:var(--vv-red)}
-.btn-primary{width:100%;background:var(--vv-red);color:#fff;border:none;border-radius:9px;padding:14px 18px;font-size:15px;font-weight:700;cursor:pointer}.btn-secondary{width:100%;background:#fff;color:var(--vv-squid);border:1.5px solid var(--vv-squid);border-radius:9px;padding:13px 18px;font-size:14px;font-weight:700;cursor:pointer}.btn-danger{background:#fff;color:var(--vv-red);border:1.5px solid var(--vv-red);border-radius:9px;padding:12px 16px;font-weight:700;cursor:pointer}
-.home-cards{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px}.home-card{border:1.5px solid var(--vv-line);border-radius:12px;padding:18px;background:#fff;text-align:left;cursor:pointer;min-height:130px}.home-card:hover{border-color:var(--vv-squid)}.home-card h3{margin:0 0 8px;color:var(--vv-squid);font-size:15px}.home-card p{margin:0;color:var(--vv-gray);font-size:12px;line-height:1.45}
-.meta-card{background:var(--vv-bg);border-radius:10px;padding:14px;margin:16px 0}.meta-card strong{color:var(--vv-squid)}
-.progress-wrap{padding:14px 20px 6px}.progress-bar{height:6px;background:var(--vv-line);border-radius:4px;overflow:hidden}.progress-fill{height:100%;background:var(--vv-red);border-radius:4px;transition:width .25s}.progress-label{font-size:11.5px;color:var(--vv-gray);margin-top:6px;font-weight:600}
-.section{border-bottom:1px solid var(--vv-line)}.section-head{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;cursor:pointer}.section-head h2{font-size:15px;margin:0;color:var(--vv-squid);font-weight:700}.section-count{font-size:12px;color:var(--vv-gray);font-weight:600}.chevron{width:9px;height:9px;border-right:2px solid var(--vv-squid);border-bottom:2px solid var(--vv-squid);transform:rotate(45deg);transition:.15s}.section.open .chevron{transform:rotate(-135deg)}.section-body{display:none;padding:0 20px 16px}.section.open .section-body{display:block}.section-note{font-size:11.5px;color:var(--vv-gray);background:var(--vv-bg);border-radius:7px;padding:9px 10px;margin-bottom:10px;line-height:1.45}
-.item{padding:13px 0;border-top:1px solid var(--vv-line)}.item:first-child{border-top:none}.item-row{display:flex;align-items:flex-start;gap:10px}.check-btn{flex:0 0 auto;width:24px;height:24px;border-radius:50%;border:2px solid var(--vv-gray);background:#fff;cursor:pointer;position:relative;margin-top:1px}.check-btn.checked{background:var(--vv-red);border-color:var(--vv-red)}.check-btn.checked:after{content:'';position:absolute;left:6px;top:2px;width:6px;height:11px;border-right:2.5px solid #fff;border-bottom:2.5px solid #fff;transform:rotate(45deg)}.item-text{flex:1;font-size:14px;line-height:1.45}.item-actions{display:flex;gap:6px;flex:0 0 auto}.text-action{background:#fff;border:1.5px solid var(--vv-line);border-radius:7px;padding:6px 8px;color:var(--vv-squid);font-size:11px;font-weight:700;cursor:pointer}.text-action.active{background:var(--vv-squid);color:#fff;border-color:var(--vv-squid)}.item-extra{margin:10px 0 0 35px}.item-extra textarea{width:100%;min-height:52px;padding:8px 10px;border:1.5px solid var(--vv-line);border-radius:7px;font-size:13px;resize:vertical}.comment{background:var(--vv-bg);border-radius:7px;padding:8px 10px;font-size:12.5px;line-height:1.4;margin-bottom:6px}.comment b{color:var(--vv-squid);font-size:11.5px}.comment-row{display:flex;gap:8px;align-items:flex-end}.btn-add{background:var(--vv-squid);color:#fff;border:0;border-radius:7px;padding:0 13px;height:44px;font-weight:700}.thumbs{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}.thumb{position:relative;width:72px;height:72px;border-radius:7px;overflow:hidden;border:1px solid var(--vv-line)}.thumb img{width:100%;height:100%;object-fit:cover}.thumb .rm{position:absolute;top:2px;right:2px;width:18px;height:18px;border-radius:50%;background:rgba(27,27,27,.75);color:#fff;border:none;cursor:pointer}
-.reviewer-bar{display:flex;gap:8px;align-items:center;margin-top:10px}.reviewer-bar label{font-size:10px;color:rgba(255,255,255,.75);font-weight:700}.reviewer-bar input{flex:1;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.45);color:#fff;border-radius:6px;padding:6px 8px}
-.footer-bar{position:sticky;bottom:0;background:#fff;border-top:1px solid var(--vv-line);padding:14px 20px;box-shadow:0 -6px 16px rgba(0,0,0,.04);z-index:5}.footer-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.stat-row{display:flex;gap:10px;margin:14px 0}.stat{flex:1;background:var(--vv-bg);border-top:3px solid var(--vv-red);border-radius:6px;padding:10px 12px}.stat .n{font-size:22px;font-weight:800;color:var(--vv-near-black)}.stat .l{font-size:10.5px;font-weight:700;color:var(--vv-gray);text-transform:uppercase}.summary h2{color:var(--vv-squid);font-size:15px;margin:22px 0 8px}.summary textarea{width:100%;font-size:14px;line-height:1.55;border:1.5px solid var(--vv-line);border-radius:8px;padding:12px;resize:vertical}.summary-section{margin-top:20px}.report-card{border:1.5px solid var(--vv-line);border-radius:10px;padding:15px;margin-bottom:12px}.report-card h3{color:var(--vv-squid);font-size:15px;margin:0 0 6px}.report-meta{font-size:12px;color:var(--vv-gray);line-height:1.55}.report-actions{display:flex;gap:8px;margin-top:12px}.report-actions button{flex:1;border:1.5px solid var(--vv-squid);background:#fff;color:var(--vv-squid);border-radius:7px;padding:10px;font-weight:700;cursor:pointer}.report-actions .open{background:var(--vv-squid);color:#fff}.empty{padding:28px 4px;text-align:center;color:var(--vv-gray);font-size:13px}.hidden{display:none!important}
-@media(max-width:520px){.home-cards{grid-template-columns:1fr}.item-row{gap:8px}.item-actions{flex-direction:column}.text-action{padding:6px}.start,.summary,.reports{padding:20px}}
-@media print{body{background:#fff}.no-print{display:none!important}.app{max-width:none;box-shadow:none}.band{background:var(--vv-squid)!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}.section-body{display:block!important}.footer-bar,.progress-wrap,.text-action,.check-btn{display:none!important}.item{page-break-inside:avoid}}
+:root{
+  --vv-squid:#3C1053;
+  --vv-squid-stripe:#461D5C;
+  --vv-red:#E10A0A;
+  --vv-red-light:#E63636;
+  --vv-red-deep:#CC0000;
+  --vv-near-black:#1B1B1B;
+  --vv-body:#333;
+  --vv-gray:#8A8A8A;
+  --vv-line:#E7E2EA;
+  --vv-bg:#FAF9FB
+}
+
+*{box-sizing:border-box}
+
+body{
+  margin:0;
+  background:var(--vv-bg);
+  color:var(--vv-body);
+  font-family:Arial,Calibri,sans-serif;
+  -webkit-tap-highlight-color:transparent
+}
+
+h1,h2,h3,.eyebrow,button{
+  font-family:Poppins,Arial,sans-serif
+}
+
+.app{
+  max-width:720px;
+  margin:0 auto;
+  min-height:100vh;
+  background:#fff;
+  box-shadow:0 0 40px rgba(0,0,0,.04)
+}
+
+.band{
+  background-color:var(--vv-squid);
+  background-image:repeating-linear-gradient(
+    45deg,
+    var(--vv-squid) 0,
+    var(--vv-squid) 40px,
+    var(--vv-squid-stripe) 40px,
+    var(--vv-squid-stripe) 80px
+  );
+  color:#fff;
+  padding:28px 24px 22px
+}
+
+.band.compact{padding:16px 20px}
+
+.band .eyebrow{
+  font-size:11px;
+  letter-spacing:.12em;
+  font-weight:700;
+  opacity:.85
+}
+
+.band h1{
+  font-size:24px;
+  margin:6px 0 2px;
+  font-weight:800
+}
+
+.band.compact h1{font-size:18px}
+
+.band .sub{
+  font-size:13px;
+  opacity:.82;
+  margin:0
+}
+
+.start,.summary,.reports{
+  padding:24px
+}
+
+.field{
+  margin-bottom:15px
+}
+
+.field label{
+  display:block;
+  font-size:12px;
+  font-weight:700;
+  letter-spacing:.04em;
+  color:var(--vv-squid);
+  margin-bottom:6px
+}
+
+.field input,.field textarea{
+  width:100%;
+  padding:11px 12px;
+  border:1.5px solid var(--vv-line);
+  border-radius:8px;
+  font-size:15px;
+  font-family:Arial;
+  color:var(--vv-body);
+  background:#fff
+}
+
+.field input:focus,textarea:focus{
+  outline:none;
+  border-color:var(--vv-red)
+}
+
+.btn-primary{
+  width:100%;
+  background:var(--vv-red);
+  color:#fff;
+  border:none;
+  border-radius:9px;
+  padding:14px 18px;
+  font-size:15px;
+  font-weight:700;
+  cursor:pointer
+}
+
+.btn-secondary{
+  width:100%;
+  background:#fff;
+  color:var(--vv-squid);
+  border:1.5px solid var(--vv-squid);
+  border-radius:9px;
+  padding:13px 18px;
+  font-size:14px;
+  font-weight:700;
+  cursor:pointer
+}
+
+.btn-danger{
+  background:#fff;
+  color:var(--vv-red);
+  border:1.5px solid var(--vv-red);
+  border-radius:9px;
+  padding:12px 16px;
+  font-weight:700;
+  cursor:pointer
+}
+
+.home-cards{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:14px;
+  margin-top:18px
+}
+
+.home-card{
+  border:1.5px solid var(--vv-line);
+  border-radius:12px;
+  padding:18px;
+  background:#fff;
+  text-align:left;
+  cursor:pointer;
+  min-height:130px
+}
+
+.home-card:hover{
+  border-color:var(--vv-squid)
+}
+
+.home-card h3{
+  margin:0 0 8px;
+  color:var(--vv-squid);
+  font-size:15px
+}
+
+.home-card p{
+  margin:0;
+  color:var(--vv-gray);
+  font-size:12px;
+  line-height:1.45
+}
+
+.meta-card{
+  background:var(--vv-bg);
+  border-radius:10px;
+  padding:14px;
+  margin:16px 0
+}
+
+.meta-card strong{
+  color:var(--vv-squid)
+}
+
+.progress-wrap{
+  padding:14px 20px 6px
+}
+
+.progress-bar{
+  height:6px;
+  background:var(--vv-line);
+  border-radius:4px;
+  overflow:hidden
+}
+
+.progress-fill{
+  height:100%;
+  background:var(--vv-red);
+  border-radius:4px;
+  transition:width .25s
+}
+
+.progress-label{
+  font-size:11.5px;
+  color:var(--vv-gray);
+  margin-top:6px;
+  font-weight:600
+}
+
+.section{
+  border-bottom:1px solid var(--vv-line)
+}
+
+.section-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:18px 20px;
+  cursor:pointer
+}
+
+.section-head h2{
+  font-size:15px;
+  margin:0;
+  color:var(--vv-squid);
+  font-weight:700
+}
+
+.section-count{
+  font-size:12px;
+  color:var(--vv-gray);
+  font-weight:600
+}
+
+.chevron{
+  width:9px;
+  height:9px;
+  border-right:2px solid var(--vv-squid);
+  border-bottom:2px solid var(--vv-squid);
+  transform:rotate(45deg);
+  transition:.15s
+}
+
+.section.open .chevron{
+  transform:rotate(-135deg)
+}
+
+.section-body{
+  display:none;
+  padding:0 20px 16px
+}
+
+.section.open .section-body{
+  display:block
+}
+
+.section-note{
+  font-size:11.5px;
+  color:var(--vv-gray);
+  background:var(--vv-bg);
+  border-radius:7px;
+  padding:9px 10px;
+  margin-bottom:10px;
+  line-height:1.45
+}
+
+.item{
+  padding:13px 0;
+  border-top:1px solid var(--vv-line)
+}
+
+.item:first-child{
+  border-top:none
+}
+
+.item-row{
+  display:flex;
+  align-items:flex-start;
+  gap:10px
+}
+
+.check-btn{
+  flex:0 0 auto;
+  width:24px;
+  height:24px;
+  border-radius:50%;
+  border:2px solid var(--vv-gray);
+  background:#fff;
+  cursor:pointer;
+  position:relative;
+  margin-top:1px
+}
+
+.check-btn.checked{
+  background:var(--vv-red);
+  border-color:var(--vv-red)
+}
+
+.check-btn.checked:after{
+  content:'';
+  position:absolute;
+  left:6px;
+  top:2px;
+  width:6px;
+  height:11px;
+  border-right:2.5px solid #fff;
+  border-bottom:2.5px solid #fff;
+  transform:rotate(45deg)
+}
+
+.item-text{
+  flex:1;
+  font-size:14px;
+  line-height:1.45
+}
+
+.item-actions{
+  display:flex;
+  gap:6px;
+  flex:0 0 auto
+}
+
+.text-action{
+  background:#fff;
+  border:1.5px solid var(--vv-line);
+  border-radius:7px;
+  padding:6px 8px;
+  color:var(--vv-squid);
+  font-size:11px;
+  font-weight:700;
+  cursor:pointer
+}
+
+.text-action.active{
+  background:var(--vv-squid);
+  color:#fff;
+  border-color:var(--vv-squid)
+}
+
+.item-extra{
+  margin:10px 0 0 35px
+}
+
+.item-extra textarea{
+  width:100%;
+  min-height:52px;
+  padding:8px 10px;
+  border:1.5px solid var(--vv-line);
+  border-radius:7px;
+  font-size:13px;
+  resize:vertical
+}
+
+.comment{
+  background:var(--vv-bg);
+  border-radius:7px;
+  padding:8px 10px;
+  font-size:12.5px;
+  line-height:1.4;
+  margin-bottom:6px
+}
+
+.comment b{
+  color:var(--vv-squid);
+  font-size:11.5px
+}
+
+.comment-row{
+  display:flex;
+  gap:8px;
+  align-items:flex-end
+}
+
+.btn-add{
+  background:var(--vv-squid);
+  color:#fff;
+  border:0;
+  border-radius:7px;
+  padding:0 13px;
+  height:44px;
+  font-weight:700
+}
+
+.thumbs{
+  display:flex;
+  gap:8px;
+  margin-top:8px;
+  flex-wrap:wrap
+}
+
+.thumb{
+  position:relative;
+  width:72px;
+  height:72px;
+  border-radius:7px;
+  overflow:hidden;
+  border:1px solid var(--vv-line)
+}
+
+.thumb img{
+  width:100%;
+  height:100%;
+  object-fit:cover
+}
+
+.thumb .rm{
+  position:absolute;
+  top:2px;
+  right:2px;
+  width:18px;
+  height:18px;
+  border-radius:50%;
+  background:rgba(27,27,27,.75);
+  color:#fff;
+  border:none;
+  cursor:pointer
+}
+
+.reviewer-bar{
+  display:flex;
+  gap:8px;
+  align-items:center;
+  margin-top:10px
+}
+
+.reviewer-bar label{
+  font-size:10px;
+  color:rgba(255,255,255,.75);
+  font-weight:700
+}
+
+.reviewer-bar input{
+  flex:1;
+  background:rgba(255,255,255,.12);
+  border:1px solid rgba(255,255,255,.45);
+  color:#fff;
+  border-radius:6px;
+  padding:6px 8px
+}
+
+.footer-bar{
+  position:sticky;
+  bottom:0;
+  background:#fff;
+  border-top:1px solid var(--vv-line);
+  padding:14px 20px;
+  box-shadow:0 -6px 16px rgba(0,0,0,.04);
+  z-index:5
+}
+
+.footer-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px
+}
+
+.stat-row{
+  display:flex;
+  gap:10px;
+  margin:14px 0
+}
+
+.stat{
+  flex:1;
+  background:var(--vv-bg);
+  border-top:3px solid var(--vv-red);
+  border-radius:6px;
+  padding:10px 12px
+}
+
+.stat .n{
+  font-size:22px;
+  font-weight:800;
+  color:var(--vv-near-black)
+}
+
+.stat .l{
+  font-size:10.5px;
+  font-weight:700;
+  color:var(--vv-gray);
+  text-transform:uppercase
+}
+
+.summary h2{
+  color:var(--vv-squid);
+  font-size:15px;
+  margin:22px 0 8px
+}
+
+.summary textarea{
+  width:100%;
+  font-size:14px;
+  line-height:1.55;
+  border:1.5px solid var(--vv-line);
+  border-radius:8px;
+  padding:12px;
+  resize:vertical
+}
+
+.summary-section{
+  margin-top:20px
+}
+
+.report-card{
+  border:1.5px solid var(--vv-line);
+  border-radius:10px;
+  padding:15px;
+  margin-bottom:12px
+}
+
+.report-card h3{
+  color:var(--vv-squid);
+  font-size:15px;
+  margin:0 0 6px
+}
+
+.report-meta{
+  font-size:12px;
+  color:var(--vv-gray);
+  line-height:1.55
+}
+
+.report-actions{
+  display:flex;
+  gap:8px;
+  margin-top:12px
+}
+
+.report-actions button{
+  flex:1;
+  border:1.5px solid var(--vv-squid);
+  background:#fff;
+  color:var(--vv-squid);
+  border-radius:7px;
+  padding:10px;
+  font-weight:700;
+  cursor:pointer
+}
+
+.report-actions .open{
+  background:var(--vv-squid);
+  color:#fff
+}
+
+.empty{
+  padding:28px 4px;
+  text-align:center;
+  color:var(--vv-gray);
+  font-size:13px
+}
+
+.hidden{
+  display:none!important
+}
+
+@media(max-width:520px){
+  .home-cards{
+    grid-template-columns:1fr
+  }
+
+  .item-row{
+    gap:8px
+  }
+
+  .item-actions{
+    flex-direction:column
+  }
+
+  .text-action{
+    padding:6px
+  }
+
+  .start,.summary,.reports{
+    padding:20px
+  }
+}
+
+@media print{
+  body{
+    background:#fff
+  }
+
+  .no-print{
+    display:none!important
+  }
+
+  .app{
+    max-width:none;
+    box-shadow:none
+  }
+
+  .band{
+    background:var(--vv-squid)!important;
+    -webkit-print-color-adjust:exact;
+    print-color-adjust:exact
+  }
+
+  .section-body{
+    display:block!important
+  }
+
+  .footer-bar,
+  .progress-wrap,
+  .text-action,
+  .check-btn{
+    display:none!important
+  }
+
+  .item{
+    page-break-inside:avoid
+  }
+}
 </style>
 </head>
+
 <body>
+
 <div class="app">
+
+  <!-- HOME -->
   <div id="home">
-    <div class="band"><div class="eyebrow">— VIRGIN VOYAGES</div><h1>Ship Visit Report</h1><p class="sub">Create and review ship visit reports</p></div>
+
+    <div class="band">
+      <div class="eyebrow">— VIRGIN VOYAGES</div>
+      <h1>Ship Visit Report</h1>
+      <p class="sub">Create and review ship visit reports</p>
+    </div>
+
     <div class="start">
+
       <div class="home-cards">
-        <button class="home-card" id="createReport"><h3>CREATE REPORT</h3><p>Start a new ship visit and complete the five operational checklists.</p></button>
-        <button class="home-card" id="submittedReports"><h3>SUBMITTED REPORTS</h3><p>Open, review, print, or save previously submitted reports.</p></button>
+
+        <button class="home-card" id="createReport">
+          <h3>CREATE REPORT</h3>
+          <p>
+            Start a new ship visit and complete the five operational checklists.
+          </p>
+        </button>
+
+        <button class="home-card" id="submittedReports">
+          <h3>SUBMITTED REPORTS</h3>
+          <p>
+            Open, review, print, or save previously submitted reports.
+          </p>
+        </button>
+
       </div>
+
     </div>
+
   </div>
 
+
+  <!-- SETUP -->
   <div id="setup" class="hidden">
-    <div class="band compact"><div class="eyebrow">— CREATE REPORT</div><h1>Ship Visit Details</h1><p class="sub">Enter the visit information before starting the checklists.</p></div>
+
+    <div class="band compact">
+      <div class="eyebrow">— CREATE REPORT</div>
+      <h1>Ship Visit Details</h1>
+      <p class="sub">
+        Enter the visit information before starting the checklists.
+      </p>
+    </div>
+
     <div class="start">
-      <div class="field"><label>SHIP</label><input id="ship" placeholder="e.g. Valiant Lady"></div>
-      <div class="field"><label>DATE ON</label><input id="dateOn" type="date"></div>
-      <div class="field"><label>DATE OFF</label><input id="dateOff" type="date"></div>
-      <div class="field"><label>REVIEWER</label><input id="reviewer" placeholder="Your name"></div>
-      <button class="btn-primary" id="startBtn">Start Report</button>
-      <div style="height:10px"></div><button class="btn-secondary" id="backHomeFromSetup">Back</button>
-    </div>
-  </div>
 
-  <div id="checklist" class="hidden">
-    <div class="band compact"><div class="eyebrow">— <span id="hdrShip">SHIP</span></div><h1>Ship Visit Report</h1><div class="reviewer-bar"><label>REVIEWER</label><input id="hdrReviewer"></div></div>
-    <div class="meta-card" style="margin:12px 20px 0"><strong>Visit:</strong> <span id="visitMeta"></span></div>
-    <div class="progress-wrap"><div class="progress-bar"><div class="progress-fill" id="fill" style="width:0%"></div></div><div class="progress-label" id="progress">0 of 0 points reviewed</div></div>
-    <div id="sections"></div>
-    <div class="footer-bar no-print"><button class="btn-primary" id="summaryBtn">Generate Summary</button></div>
-  </div>
+      <div class="field">
+        <label>SHIP</label>
+        <input id="ship" placeholder="e.g. Valiant Lady">
+      </div>
 
-  <div id="summary" class="hidden">
-    <div class="band compact"><div class="eyebrow">— REPORT SUMMARY</div><h1 id="sumTitle">Visit Summary</h1><p class="sub" id="sumMeta"></p></div>
-    <div class="summary">
-      <div class="stat-row" id="stats"></div>
-      <h2>Overall Summary</h2><textarea id="overall" rows="6"></textarea>
-      <div id="sumSections"></div>
+      <div class="field">
+        <label>DATE ON</label>
+        <input id="dateOn" type="date">
+      </div>
+
+      <div class="field">
+        <label>DATE OFF</label>
+        <input id="dateOff" type="date">
+      </div>
+
+      <div class="field">
+        <label>REVIEWER</label>
+        <input id="reviewer" placeholder="Your name">
+      </div>
+
+      <button class="btn-primary" id="startBtn">
+        Start Report
+      </button>
+
       <div style="height:10px"></div>
+
+      <button class="btn-secondary" id="backHomeFromSetup">
+        Back
+      </button>
+
     </div>
-    <div class="footer-bar no-print"><div class="footer-grid"><button class="btn-secondary" id="backBtn">Back to Checklist</button><button class="btn-secondary" id="pdfBtn">Save PDF</button></div><div style="height:10px"></div><div class="footer-grid"><button class="btn-secondary" id="printBtn">Print Report</button><button class="btn-primary" id="submitBtn">Submit Report</button></div></div>
+
   </div>
 
-  <div id="submitted" class="hidden">
-    <div class="band compact"><div class="eyebrow">— SUBMITTED REPORTS</div><h1>Report Archive</h1><p class="sub">Review previously submitted ship visit reports.</p></div>
-    <div class="reports"><div id="reportList"></div><button class="btn-secondary" id="reportsHomeBtn">Back to Home</button></div>
+
+  <!-- CHECKLIST -->
+  <div id="checklist" class="hidden">
+
+    <div class="band compact">
+
+      <div class="eyebrow">
+        — <span id="hdrShip">SHIP</span>
+      </div>
+
+      <h1>Ship Visit Report</h1>
+
+      <div class="reviewer-bar">
+        <label>REVIEWER</label>
+        <input id="hdrReviewer">
+      </div>
+
+    </div>
+
+    <div class="meta-card" style="margin:12px 20px 0">
+      <strong>Visit:</strong>
+      <span id="visitMeta"></span>
+    </div>
+
+    <div class="progress-wrap">
+
+      <div class="progress-bar">
+        <div
+          class="progress-fill"
+          id="fill"
+          style="width:0%"
+        ></div>
+      </div>
+
+      <div
+        class="progress-label"
+        id="progress"
+      >
+        0 of 0 points reviewed
+      </div>
+
+    </div>
+
+    <div id="sections"></div>
+
+    <div class="footer-bar no-print">
+
+      <button
+        class="btn-primary"
+        id="summaryBtn"
+      >
+        Generate Summary
+      </button>
+
+    </div>
+
   </div>
+
+
+  <!-- SUMMARY -->
+  <div id="summary" class="hidden">
+
+    <div class="band compact">
+
+      <div class="eyebrow">
+        — REPORT SUMMARY
+      </div>
+
+      <h1 id="sumTitle">
+        Visit Summary
+      </h1>
+
+      <p
+        class="sub"
+        id="sumMeta"
+      ></p>
+
+    </div>
+
+    <div class="summary">
+
+      <div
+        class="stat-row"
+        id="stats"
+      ></div>
+
+      <h2>Overall Summary</h2>
+
+      <textarea
+        id="overall"
+        rows="6"
+      ></textarea>
+
+      <div id="sumSections"></div>
+
+      <div style="height:10px"></div>
+
+    </div>
+
+    <div class="footer-bar no-print">
+
+      <div class="footer-grid">
+
+        <button
+          class="btn-secondary"
+          id="backBtn"
+        >
+          Back to Checklist
+        </button>
+
+        <button
+          class="btn-secondary"
+          id="pdfBtn"
+        >
+          Save PDF
+        </button>
+
+      </div>
+
+      <div style="height:10px"></div>
+
+      <div class="footer-grid">
+
+        <button
+          class="btn-secondary"
+          id="printBtn"
+        >
+          Print Report
+        </button>
+
+        <button
+          class="btn-primary"
+          id="submitBtn"
+        >
+          Submit Report
+        </button>
+
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <!-- SUBMITTED REPORTS -->
+  <div id="submitted" class="hidden">
+
+    <div class="band compact">
+
+      <div class="eyebrow">
+        — SUBMITTED REPORTS
+      </div>
+
+      <h1>Report Archive</h1>
+
+      <p class="sub">
+        Review previously submitted ship visit reports.
+      </p>
+
+    </div>
+
+    <div class="reports">
+
+      <div id="reportList"></div>
+
+      <button
+        class="btn-secondary"
+        id="reportsHomeBtn"
+      >
+        Back to Home
+      </button>
+
+    </div>
+
+  </div>
+
 </div>
+
+
 <script>
-const SECTIONS=[
- {id:'culinary',title:'CULINARY',items:[
-  'All recipe tablets in place in the venues','All recipes followed / food quality in the venues','Tasting spoons available in the kitchens','All equipment in place and in working order','Missing item lists updated and communicated with Procurement','Food cost discussions','Walk-in freezers not being overloaded','Proper explanation of the Treat Yourself program','Matrix for The Galley followed up','Galley walk-up manning in place / SOP being followed','Review EXC, EXSC, CDC and SC positions','Overtime discussion for the ship','Review promotion / step-up file and follow-up','Conducted a crew round table','Appreciation of the Culinary crew','Uniforms for the Culinary crew','Shoe wear for the Culinary crew','Galley fire safety training in place for all culinary crew','Monthly training file checking and regularity of trainings','Attendance of trainings','Overall food cost budget met','Galley equipment budget met','Budget meeting conducted','Cost reduction feedback','All galley equipment in proper condition','Meeting conducted with the Hotel Service Engineer','Attend the maintenance meeting while on board','Review AIMS report, outstanding maintenance follow-up'
- ]},
- {id:'bar',title:'BAR',note:'The supplied template contains no dedicated Bar checklist lines. This section therefore uses shared FOH, SOP, equipment, meeting and cost-control checks that are explicitly present in the template.',items:[
-  'All set ups FOH followed as per the latest SOP','All equipment in place and in working order','Missing item lists updated and communicated with Procurement','Review all Hours of Operation','Conducted a crew round table','Morning meetings in place','Meetings held with F&B Director / team','All SOPs followed as per VMS','Review previous reports reviewed / repeat findings','Budget meeting conducted','Cost reduction feedback'
- ]},
- {id:'restaurant',title:'RESTAURANT',items:[
-  'All set ups FOH followed as per the latest SOP','Checking the Sailor flow of the restaurants','Review all Hours of Operation','Checking the quality of Ship Eats','Quality of the Treat Yourself dishes','Waiter knowledge and waiter meeting / tasting','All recipe tablets in place in the venues','All recipes followed / food quality in the venues','Variety of the menu','Proper cooking methods used for the crew','Cleanliness in The Kitchen Table area','Labels in The Kitchen Table followed up','Production meeting in place','Meeting with General Manager','Meeting with F&B Director','Meeting with Senior Executive Chef','Closing meeting discussing / inspection'
- ]},
- {id:'procurement',title:'PROCUREMENT',items:[
-  'Future orders','All items stored properly','All ERP templates followed','Fruit and Vegetables rooms, FIFO in place','All Fruit and Vegetables boxes maintained','Deck 2 galley equipment inventory done as per SOP','Proper storing of flagged items (caviar)','Expiry, none and slow list moving followed up','Conduct a Spot Check','Meat ordering sheet and proper charging in place','Butcher amounts for venues / Kitchen Table followed up','Chargeables charging properly followed up','Chargeable tracker filled in correct','Proper storage of fresh fish and seafood','Missing item lists updated and communicated with Procurement'
- ]},
- {id:'sanitation',title:'SANITATION',items:[
-  'Shellfish logs in place','Cooling logs in place','Updated and approved time control plans','3 bucket system in place with sanitation checking','Inspections done properly','Conducted inspections within the inspection grid','Findings from the inspections properly followed up on','Fridge Thermometers in place','Food Thermometers in place and used','All SOPs followed as per VMS','Proper storage and cleanliness in the Butcher shop and walk-in rooms','Bandsaw in good condition and all safety parts in place'
- ]}
+
+const SECTIONS = [
+
+  {
+    id:'culinary',
+    title:'CULINARY',
+    items:[
+      'All recipe tablets in place in the venues',
+      'All recipes followed / food quality in the venues',
+      'Tasting spoons available in the kitchens',
+      'All equipment in place and in working order',
+      'Missing item lists updated and communicated with Procurement',
+      'Food cost discussions',
+      'Walk-in freezers not being overloaded',
+      'Proper explanation of the Treat Yourself program',
+      'Matrix for The Galley followed up',
+      'Galley walk-up manning in place / SOP being followed',
+      'Review EXC, EXSC, CDC and SC positions',
+      'Overtime discussion for the ship',
+      'Review promotion / step-up file and follow-up',
+      'Conducted a crew round table',
+      'Appreciation of the Culinary crew',
+      'Uniforms for the Culinary crew',
+      'Shoe wear for the Culinary crew',
+      'Galley fire safety training in place for all culinary crew',
+      'Monthly training file checking and regularity of trainings',
+      'Attendance of trainings',
+      'Overall food cost budget met',
+      'Galley equipment budget met',
+      'Budget meeting conducted',
+      'Cost reduction feedback',
+      'All galley equipment in proper condition',
+      'Meeting conducted with the Hotel Service Engineer',
+      'Attend the maintenance meeting while on board',
+      'Review AIMS report, outstanding maintenance follow-up'
+    ]
+  },
+
+  {
+    id:'bar',
+    title:'BAR',
+    note:'The supplied template contains no dedicated Bar checklist lines. This section therefore uses shared FOH, SOP, equipment, meeting and cost-control checks explicitly present in the supplied template.',
+    items:[
+      'All set ups FOH followed as per the latest SOP',
+      'All equipment in place and in working order',
+      'Missing item lists updated and communicated with Procurement',
+      'Review all Hours of Operation',
+      'Conducted a crew round table',
+      'Morning meetings in place',
+      'Meetings held with F&B Director / team',
+      'All SOPs followed as per VMS',
+      'Review previous reports reviewed / repeat findings',
+      'Budget meeting conducted',
+      'Cost reduction feedback'
+    ]
+  },
+
+  {
+    id:'restaurant',
+    title:'RESTAURANT',
+    items:[
+      'All set ups FOH followed as per the latest SOP',
+      'Checking the Sailor flow of the restaurants',
+      'Review all Hours of Operation',
+      'Checking the quality of Ship Eats',
+      'Quality of the Treat Yourself dishes',
+      'Waiter knowledge and waiter meeting / tasting',
+      'All recipe tablets in place in the venues',
+      'All recipes followed / food quality in the venues',
+      'Variety of the menu',
+      'Proper cooking methods used for the crew',
+      'Cleanliness in The Kitchen Table area',
+      'Labels in The Kitchen Table followed up',
+      'Production meeting in place',
+      'Meeting with General Manager',
+      'Meeting with F&B Director',
+      'Meeting with Senior Executive Chef',
+      'Closing meeting discussing / inspection'
+    ]
+  },
+
+  {
+    id:'procurement',
+    title:'PROCUREMENT',
+    items:[
+      'Future orders',
+      'All items stored properly',
+      'All ERP templates followed',
+      'Fruit and Vegetables rooms, FIFO in place',
+      'All Fruit and Vegetables boxes maintained',
+      'Deck 2 galley equipment inventory done as per SOP',
+      'Proper storing of flagged items (caviar)',
+      'Expiry, none and slow list moving followed up',
+      'Conduct a Spot Check',
+      'Meat ordering sheet and proper charging in place',
+      'Butcher amounts for venues / Kitchen Table followed up',
+      'Chargeables charging properly followed up',
+      'Chargeable tracker filled in correct',
+      'Proper storage of fresh fish and seafood',
+      'Missing item lists updated and communicated with Procurement'
+    ]
+  },
+
+  {
+    id:'sanitation',
+    title:'SANITATION',
+    items:[
+      'Shellfish logs in place',
+      'Cooling logs in place',
+      'Updated and approved time control plans',
+      '3 bucket system in place with sanitation checking',
+      'Inspections done properly',
+      'Conducted inspections within the inspection grid',
+      'Findings from the inspections properly followed up on',
+      'Fridge Thermometers in place',
+      'Food Thermometers in place and used',
+      'All SOPs followed as per VMS',
+      'Proper storage and cleanliness in the Butcher shop and walk-in rooms',
+      'Bandsaw in good condition and all safety parts in place'
+    ]
+  }
+
 ];
-let meta={ship:'',dateOn:'',dateOff:'',reviewer:''};let currentReviewer='Reviewer';let state={};let reportId='';
-SECTIONS.forEach(s=>s.items.forEach((_,i)=>state[s.id+'__'+i]={checked:false,comments:[],photos:[]}));
-const CURRENT='svr_current_report', REPORTS='svr_submitted_reports';
-const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-function resetState(){SECTIONS.forEach(s=>s.items.forEach((_,i)=>state[s.id+'__'+i]={checked:false,comments:[],photos:[]}));}
-function getReports(){try{return JSON.parse(localStorage.getItem(REPORTS)||'[]')}catch(e){return []}}
-function saveReports(x){localStorage.setItem(REPORTS,JSON.stringify(x))}
-function saveCurrent(){localStorage.setItem(CURRENT,JSON.stringify({reportId,meta,state,currentReviewer,updatedAt:new Date().toISOString()}))}
-function clearCurrent(){localStorage.removeItem(CURRENT)}
-function switchScreen(id){['home','setup','checklist','summary','submitted'].forEach(x=>document.getElementById(x).classList.toggle('hidden',x!==id));window.scrollTo(0,0)}
-function renderSections(){const wrap=document.getElementById('sections');wrap.innerHTML='';SECTIONS.forEach((sec,si)=>{const el=document.createElement('div');el.className='section'+(si===0?' open':'');el.innerHTML=`<div class="section-head"><h2>${sec.title}</h2><div style="display:flex;align-items:center;gap:10px"><span class="section-count" id="count-${sec.id}"></span><span class="chevron"></span></div></div><div class="section-body"></div>`;wrap.appendChild(el);el.querySelector('.section-head').onclick=()=>el.classList.toggle('open');const body=el.querySelector('.section-body');if(sec.note){const n=document.createElement('div');n.className='section-note';n.textContent=sec.note;body.appendChild(n)}sec.items.forEach((text,i)=>{const k=sec.id+'__'+i;const d=document.createElement('div');d.className='item';d.id='item-'+k;d.innerHTML=`<div class="item-row"><button class="check-btn" data-k="${k}" aria-label="mark reviewed"></button><div class="item-text">${esc(text)}</div><div class="item-actions"><button class="text-action note-btn" data-k="${k}">Comment</button><button class="text-action photo-btn" data-k="${k}">Photo</button></div></div><div class="item-extra hidden" id="extra-${k}"><div id="comments-${k}"></div><div class="comment-row"><textarea id="input-${k}" placeholder="Add a comment"></textarea><button class="btn-add" data-k="${k}">Add</button></div><div class="thumbs" id="thumbs-${k}"></div><input class="hidden" type="file" accept="image/*" capture="environment" id="file-${k}"></div>`;body.appendChild(d)})});bindItems();refresh()}
-function bindItems(){document.querySelectorAll('.check-btn').forEach(b=>b.onclick=()=>{const k=b.dataset.k;state[k].checked=!state[k].checked;refresh();saveCurrent()});document.querySelectorAll('.note-btn').forEach(b=>b.onclick=()=>{const k=b.dataset.k;document.getElementById('extra-'+k).classList.toggle('hidden');b.classList.toggle('active')});document.querySelectorAll('.photo-btn').forEach(b=>b.onclick=()=>document.getElementById('file-'+b.dataset.k).click());document.querySelectorAll('input[type=file]').forEach(i=>i.onchange=e=>addPhoto(e,i.dataset.k));document.querySelectorAll('.btn-add').forEach(b=>b.onclick=()=>{const k=b.dataset.k;const ta=document.getElementById('input-'+k);const txt=ta.value.trim();if(!txt)return;state[k].comments.push({name:currentReviewer,text:txt,ts:Date.now()});ta.value='';renderComments(k);saveCurrent()});}
-function refresh(){let total=0,done=0;SECTIONS.forEach(s=>{let c=0;s.items.forEach((_,i)=>{total++;if(state[s.id+'__'+i].checked){c++;done++}});const el=document.getElementById('count-'+s.id);if(el)el.textContent=`${c}/${s.items.length}`});const pct=total?Math.round(done/total*100):0;document.getElementById('fill').style.width=pct+'%';document.getElementById('progress').textContent=`${done} of ${total} points reviewed`;Object.keys(state).forEach(k=>{const b=document.querySelector(`.check-btn[data-k="${k}"]`);if(b)b.classList.toggle('checked',state[k].checked);renderComments(k);renderPhotos(k);if((state[k].comments||[]).length||(state[k].photos||[]).length)document.getElementById('extra-'+k)?.classList.remove('hidden')})}
-function renderComments(k){const w=document.getElementById('comments-'+k);if(!w)return;w.innerHTML=(state[k].comments||[]).map(c=>`<div class="comment"><b>${esc(c.name)}:</b> ${esc(c.text)}</div>`).join('')}
-function addPhoto(e,k){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{const img=new Image();img.onload=()=>{const max=1000,sc=Math.min(1,max/img.width),can=document.createElement('canvas');can.width=Math.round(img.width*sc);can.height=Math.round(img.height*sc);can.getContext('2d').drawImage(img,0,0,can.width,can.height);state[k].photos.push(can.toDataURL('image/jpeg',.8));renderPhotos(k);document.getElementById('extra-'+k).classList.remove('hidden');saveCurrent()};img.src=ev.target.result};r.readAsDataURL(f);e.target.value=''}
-function renderPhotos(k){const w=document.getElementById('thumbs-'+k);if(!w)return;w.innerHTML='';(state[k].photos||[]).forEach((src,i)=>{const d=document.createElement('div');d.className='thumb';d.innerHTML=`<img src="${src}"><button class="rm">×</button>`;d.querySelector('.rm').onclick=()=>{state[k].photos.splice(i,1);renderPhotos(k);saveCurrent()};w.appendChild(d)})}
-function totals(){let total=0,done=0,photos=0;SECTIONS.forEach(s=>s.items.forEach((_,i)=>{const x=state[s.id+'__'+i];total++;if(x.checked)done++;photos+=(x.photos||[]).length}));return{total,done,photos}}
-function buildSummary(){const t=totals();document.getElementById('stats').innerHTML=`<div class="stat"><div class="n">${t.done}/${t.total}</div><div class="l">Points Confirmed</div></div><div class="stat"><div class="n">${t.photos}</div><div class="l">Photos</div></div>`;document.getElementById('sumTitle').textContent=meta.ship||'Visit Summary';document.getElementById('sumMeta').textContent=`${meta.dateOn||''}${meta.dateOff?' → '+meta.dateOff:''} • Reviewed by ${meta.reviewer}`;document.getElementById('overall').value=`Ship visit report for ${meta.ship}, ${meta.dateOn||''} to ${meta.dateOff||''}, reviewed by ${meta.reviewer}. ${t.done} of ${t.total} review points were confirmed during the visit.`;const w=document.getElementById('sumSections');w.innerHTML='';SECTIONS.forEach(s=>{const c=s.items.filter((_,i)=>state[s.id+'__'+i].checked).length;const flags=s.items.filter((_,i)=>!state[s.id+'__'+i].checked);const div=document.createElement('div');div.className='summary-section';div.innerHTML=`<h2>${s.title}</h2><textarea rows="4">${esc(c+' of '+s.items.length+' points confirmed. '+(flags.length?'Follow-up needed on: '+flags.join('; '):'No unchecked points.'))}</textarea>`;w.appendChild(div)})}
-function pdf(){const {jsPDF}=window.jspdf;const doc=new jsPDF({unit:'pt',format:'a4'});const W=doc.internal.pageSize.getWidth(),H=doc.internal.pageSize.getHeight(),m=42;let y=84;const squid=[60,16,83],red=[225,10,10],dark=[27,27,27];function header(t){doc.setFillColor(...squid);doc.rect(0,0,W,66,'F');doc.setTextColor(255,255,255);doc.setFont('helvetica','bold');doc.setFontSize(10);doc.text('— VIRGIN VOYAGES',m,24);doc.setFontSize(16);doc.text(t,m,46);y=84}function footer(){doc.setFillColor(...dark);doc.rect(0,H-24,W,24,'F');doc.setTextColor(255,255,255);doc.setFontSize(8);doc.setFont('helvetica','normal');doc.text('INTERNAL USE ONLY',m,H-9);doc.text(`${meta.ship} • ${meta.dateOn||''}`,W-m,H-9,{align:'right'})}function space(h){if(y+h>H-38){footer();doc.addPage();header('Ship Visit Report')}}function textLines(txt,size,maxW){doc.setFont('helvetica','normal');doc.setFontSize(size);doc.setTextColor(55,55,55);return doc.splitTextToSize(txt,maxW)}header('Ship Visit Report');doc.setTextColor(...dark);doc.setFont('helvetica','bold');doc.setFontSize(11);doc.text(`Ship: ${meta.ship}`,m,y);y+=16;doc.text(`Date On: ${meta.dateOn||''}`,m,y);y+=16;doc.text(`Date Off: ${meta.dateOff||''}`,m,y);y+=16;doc.text(`Review By: ${meta.reviewer}`,m,y);y+=24;const t=totals();doc.setTextColor(...red);doc.setFontSize(9);doc.text(`${t.done} / ${t.total} POINTS CONFIRMED • ${t.photos} PHOTOS`,m,y);y+=24;doc.setFont('helvetica','bold');doc.setFontSize(12);doc.setTextColor(...squid);doc.text('Overall Summary',m,y);y+=16;textLines(document.getElementById('overall').value,10.5,W-m*2).forEach(l=>{space(14);doc.text(l,m,y);y+=14});y+=8;SECTIONS.forEach((s,si)=>{space(28);doc.setDrawColor(...red);doc.line(m,y,m+38,y);y+=13;doc.setFont('helvetica','bold');doc.setFontSize(12);doc.setTextColor(...squid);doc.text(s.title,m,y);y+=16;const ta=document.querySelectorAll('#sumSections textarea')[si];textLines(ta?ta.value:'',10.3,W-m*2).forEach(l=>{space(14);doc.setFont('helvetica','normal');doc.setTextColor(55,55,55);doc.text(l,m,y);y+=14});y+=5;s.items.forEach((item,i)=>{const x=state[s.id+'__'+i];space(14);doc.setFont('helvetica','bold');doc.setFontSize(9.5);doc.setTextColor(...(x.checked?[80,80,80]:red));doc.text(x.checked?'[x]':'[ ]',m,y);doc.setFont('helvetica','normal');doc.setTextColor(60,60,60);const ls=textLines(item,9.2,W-m*2-24);ls.forEach((l,j)=>{space(12);doc.text(l,m+21,y);if(j<ls.length-1)y+=12});y+=11;(x.comments||[]).forEach(c=>{space(12);doc.setFont('helvetica','italic');doc.setFontSize(9);doc.setTextColor(120,120,120);textLines('— '+c.name+': '+c.text,9,W-m*2-24).forEach(l=>{doc.text(l,m+21,y);y+=12})});(x.photos||[]).forEach(src=>{space(170);try{doc.addImage(src,'JPEG',m+21,y,150,150);y+=158}catch(e){}});y+=2})});footer();doc.save(`Ship_Visit_Report_${(meta.ship||'Ship').replace(/\s+/g,'_')}_${meta.dateOn||'date'}.pdf`)}
-function submit(){const reports=getReports();const snap={id:reportId||Date.now().toString(),meta:{...meta},state:JSON.parse(JSON.stringify(state)),submittedAt:new Date().toISOString()};const idx=reports.findIndex(r=>r.id===snap.id);if(idx>=0)reports[idx]=snap;else reports.unshift(snap);saveReports(reports);reportId=snap.id;saveCurrent();alert('Report submitted successfully. It is now available under Submitted Reports.')}
-function renderReports(){const w=document.getElementById('reportList'),rs=getReports();if(!rs.length){w.innerHTML='<div class="empty">No submitted reports yet.</div>';return}w.innerHTML=rs.map(r=>`<div class="report-card"><h3>${esc(r.meta?.ship||'Unnamed Ship')}</h3><div class="report-meta"><b>Date:</b> ${esc(r.meta?.dateOn||'')} ${r.meta?.dateOff?'→ '+esc(r.meta.dateOff):''}<br><b>Reviewer:</b> ${esc(r.meta?.reviewer||'')}<br><b>Submitted:</b> ${new Date(r.submittedAt).toLocaleString()}</div><div class="report-actions"><button class="open" data-id="${r.id}">Open Report</button><button data-pdf="${r.id}">Save PDF</button><button data-print="${r.id}">Print</button></div></div>`).join('');w.querySelectorAll('[data-id]').forEach(b=>b.onclick=()=>openReport(b.dataset.id));w.querySelectorAll('[data-pdf]').forEach(b=>b.onclick=()=>openReport(b.dataset.pdf,true));w.querySelectorAll('[data-print]').forEach(b=>b.onclick=()=>{openReport(b.dataset.print);setTimeout(()=>window.print(),80)})}
-function restore(r){meta={...r.meta};state=JSON.parse(JSON.stringify(r.state||{}));reportId=r.id;currentReviewer=meta.reviewer||'Reviewer';document.getElementById('ship').value=meta.ship||'';document.getElementById('dateOn').value=meta.dateOn||'';document.getElementById('dateOff').value=meta.dateOff||'';document.getElementById('reviewer').value=meta.reviewer||'';document.getElementById('hdrShip').textContent=(meta.ship||'').toUpperCase();document.getElementById('hdrReviewer').value=currentReviewer;document.getElementById('visitMeta').textContent=`${meta.dateOn||''}${meta.dateOff?' → '+meta.dateOff:''}`;renderSections();switchScreen('checklist');saveCurrent()}
-function openReport(id,makePdf){const r=getReports().find(x=>x.id===id);if(!r)return;restore(r);setTimeout(()=>{buildSummary();switchScreen('summary');if(makePdf)setTimeout(pdf,100)},60)}
-// Home
-createReport.onclick=()=>switchScreen('setup');submittedReports.onclick=()=>{renderReports();switchScreen('submitted')};backHomeFromSetup.onclick=()=>switchScreen('home');reportsHomeBtn.onclick=()=>switchScreen('home');
-startBtn.onclick=()=>{resetState();meta.ship=document.getElementById('ship').value.trim()||'Unnamed Ship';meta.dateOn=document.getElementById('dateOn').value||new Date().toISOString().slice(0,10);meta.dateOff=document.getElementById('dateOff').value||'';meta.reviewer=document.getElementById('reviewer').value.trim()||'Reviewer';currentReviewer=meta.reviewer;reportId=Date.now().toString();document.getElementById('hdrShip').textContent=meta.ship.toUpperCase();document.getElementById('hdrReviewer').value=currentReviewer;document.getElementById('visitMeta').textContent=`${meta.dateOn}${meta.dateOff?' → '+meta.dateOff:''}`;renderSections();switchScreen('checklist');saveCurrent()};hdrReviewer.onchange=e=>{currentReviewer=e.target.value.trim()||meta.reviewer;meta.reviewer=currentReviewer;saveCurrent()};summaryBtn.onclick=()=>{buildSummary();switchScreen('summary')};backBtn.onclick=()=>switchScreen('checklist');pdfBtn.onclick=pdf;printBtn.onclick=()=>window.print();submitBtn.onclick=()=>submit();
-// Resume current report only when user explicitly chooses Create Report again; do not interrupt Home.
+
+
+let meta = {
+  ship:'',
+  dateOn:'',
+  dateOff:'',
+  reviewer:''
+};
+
+let currentReviewer = 'Reviewer';
+
+let state = {};
+
+let reportId = '';
+
+
+SECTIONS.forEach(section => {
+
+  section.items.forEach((item,index) => {
+
+    state[
+      section.id + '__' + index
+    ] = {
+      checked:false,
+      comments:[],
+      photos:[]
+    };
+
+  });
+
+});
+
+
+const CURRENT = 'svr_current_report';
+const REPORTS = 'svr_submitted_reports';
+
+
+function esc(value){
+
+  return String(value ?? '').replace(
+    /[&<>"']/g,
+    character => ({
+      '&':'&amp;',
+      '<':'&lt;',
+      '>':'&gt;',
+      '"':'&quot;',
+      "'":'&#39;'
+    }[character])
+  );
+
+}
+
+
+function resetState(){
+
+  SECTIONS.forEach(section => {
+
+    section.items.forEach((item,index) => {
+
+      state[
+        section.id + '__' + index
+      ] = {
+        checked:false,
+        comments:[],
+        photos:[]
+      };
+
+    });
+
+  });
+
+}
+
+
+function getReports(){
+
+  try{
+
+    return JSON.parse(
+      localStorage.getItem(REPORTS) || '[]'
+    );
+
+  }catch(error){
+
+    return [];
+
+  }
+
+}
+
+
+function saveReports(reports){
+
+  localStorage.setItem(
+    REPORTS,
+    JSON.stringify(reports)
+  );
+
+}
+
+
+function saveCurrent(){
+
+  localStorage.setItem(
+    CURRENT,
+    JSON.stringify({
+      reportId,
+      meta,
+      state,
+      currentReviewer,
+      updatedAt:new Date().toISOString()
+    })
+  );
+
+}
+
+
+function clearCurrent(){
+
+  localStorage.removeItem(CURRENT);
+
+}
+
+
+function switchScreen(id){
+
+  [
+    'home',
+    'setup',
+    'checklist',
+    'summary',
+    'submitted'
+  ].forEach(screen => {
+
+    document
+      .getElementById(screen)
+      .classList
+      .toggle('hidden',screen !== id);
+
+  });
+
+  window.scrollTo(0,0);
+
+}
+
+
+function renderSections(){
+
+  const wrap =
+    document.getElementById('sections');
+
+  wrap.innerHTML = '';
+
+
+  SECTIONS.forEach((section,index) => {
+
+    const element =
+      document.createElement('div');
+
+    element.className =
+      'section' +
+      (index === 0 ? ' open' : '');
+
+
+    element.innerHTML = `
+
+      <div class="section-head">
+
+        <h2>${esc(section.title)}</h2>
+
+        <div style="
+          display:flex;
+          align-items:center;
+          gap:10px
+        ">
+
+          <span
+            class="section-count"
+            id="count-${section.id}"
+          ></span>
+
+          <span class="chevron"></span>
+
+        </div>
+
+      </div>
+
+      <div class="section-body"></div>
+
+    `;
+
+
+    wrap.appendChild(element);
+
+
+    element
+      .querySelector('.section-head')
+      .onclick = () => {
+
+        element.classList.toggle('open');
+
+      };
+
+
+    const body =
+      element.querySelector('.section-body');
+
+
+    if(section.note){
+
+      const note =
+        document.createElement('div');
+
+      note.className =
+        'section-note';
+
+      note.textContent =
+        section.note;
+
+      body.appendChild(note);
+
+    }
+
+
+    section.items.forEach((text,itemIndex) => {
+
+      const key =
+        section.id + '__' + itemIndex;
+
+
+      const item =
+        document.createElement('div');
+
+      item.className =
+        'item';
+
+      item.id =
+        'item-' + key;
+
+
+      item.innerHTML = `
+
+        <div class="item-row">
+
+          <button
+            class="check-btn"
+            data-k="${key}"
+            aria-label="Mark reviewed"
+          ></button>
+
+          <div class="item-text">
+            ${esc(text)}
+          </div>
+
+          <div class="item-actions">
+
+            <button
+              class="text-action note-btn"
+              data-k="${key}"
+            >
+              Comment
+            </button>
+
+            <button
+              class="text-action photo-btn"
+              data-k="${key}"
+            >
+              Photo
+            </button>
+
+          </div>
+
+        </div>
+
+
+        <div
+          class="item-extra hidden"
+          id="extra-${key}"
+        >
+
+          <div id="comments-${key}"></div>
+
+          <div class="comment-row">
+
+            <textarea
+              id="input-${key}"
+              placeholder="Add a comment"
+            ></textarea>
+
+            <button
+              class="btn-add"
+              data-k="${key}"
+            >
+              Add
+            </button>
+
+          </div>
+
+          <div
+            class="thumbs"
+            id="thumbs-${key}"
+          ></div>
+
+          <input
+            class="hidden"
+            type="file"
+            accept="image/*"
+            capture="environment"
+            id="file-${key}"
+          >
+
+        </div>
+
+      `;
+
+
+      body.appendChild(item);
+
+    });
+
+  });
+
+
+  bindItems();
+
+  refresh();
+
+}
+
+
+function bindItems(){
+
+  document
+    .querySelectorAll('.check-btn')
+    .forEach(button => {
+
+      button.onclick = () => {
+
+        const key = button.dataset.k;
+
+        state[key].checked =
+          !state[key].checked;
+
+        refresh();
+
+        saveCurrent();
+
+      };
+
+    });
+
+
+  document
+    .querySelectorAll('.note-btn')
+    .forEach(button => {
+
+      button.onclick = () => {
+
+        const key = button.dataset.k;
+
+        document
+          .getElementById('extra-' + key)
+          .classList.toggle('hidden');
+
+        button.classList.toggle('active');
+
+      };
+
+    });
+
+
+  document
+    .querySelectorAll('.photo-btn')
+    .forEach(button => {
+
+      button.onclick = () => {
+
+        document
+          .getElementById(
+            'file-' + button.dataset.k
+          )
+          .click();
+
+      };
+
+    });
+
+
+  document
+    .querySelectorAll('input[type=file]')
+    .forEach(input => {
+
+      input.onchange = event => {
+
+        addPhoto(
+          event,
+          input.dataset.k
+        );
+
+      };
+
+    });
+
+
+  document
+    .querySelectorAll('.btn-add')
+    .forEach(button => {
+
+      button.onclick = () => {
+
+        const key =
+          button.dataset.k;
+
+        const textarea =
+          document.getElementById(
+            'input-' + key
+          );
+
+        const text =
+          textarea.value.trim();
+
+        if(!text){
+          return;
+        }
+
+        state[key].comments.push({
+          name:currentReviewer,
+          text:text,
+          ts:Date.now()
+        });
+
+        textarea.value = '';
+
+        renderComments(key);
+
+        saveCurrent();
+
+      };
+
+    });
+
+}
+
+
+function refresh(){
+
+  let total = 0;
+  let done = 0;
+
+
+  SECTIONS.forEach(section => {
+
+    let sectionDone = 0;
+
+
+    section.items.forEach((item,index) => {
+
+      total++;
+
+
+      if(
+        state[
+          section.id + '__' + index
+        ].checked
+      ){
+
+        sectionDone++;
+        done++;
+
+      }
+
+    });
+
+
+    const countElement =
+      document.getElementById(
+        'count-' + section.id
+      );
+
+
+    if(countElement){
+
+      countElement.textContent =
+        `${sectionDone}/${section.items.length}`;
+
+    }
+
+  });
+
+
+  const percentage =
+    total
+      ? Math.round(done / total * 100)
+      : 0;
+
+
+  document.getElementById('fill')
+    .style.width =
+    percentage + '%';
+
+
+  document.getElementById('progress')
+    .textContent =
+    `${done} of ${total} points reviewed`;
+
+
+  Object.keys(state).forEach(key => {
+
+    const button =
+      document.querySelector(
+        `.check-btn[data-k="${key}"]`
+      );
+
+
+    if(button){
+
+      button.classList.toggle(
+        'checked',
+        state[key].checked
+      );
+
+    }
+
+
+    renderComments(key);
+
+    renderPhotos(key);
+
+
+    if(
+      (state[key].comments || []).length ||
+      (state[key].photos || []).length
+    ){
+
+      document
+        .getElementById('extra-' + key)
+        ?.classList.remove('hidden');
+
+    }
+
+  });
+
+}
+
+
+function renderComments(key){
+
+  const wrap =
+    document.getElementById(
+      'comments-' + key
+    );
+
+  if(!wrap){
+    return;
+  }
+
+
+  wrap.innerHTML =
+    (state[key].comments || [])
+      .map(comment => `
+
+        <div class="comment">
+
+          <b>${esc(comment.name)}:</b>
+          ${esc(comment.text)}
+
+        </div>
+
+      `)
+      .join('');
+
+}
+
+
+function addPhoto(event,key){
+
+  const file =
+    event.target.files[0];
+
+  if(!file){
+    return;
+  }
+
+
+  const reader =
+    new FileReader();
+
+
+  reader.onload = function(loadEvent){
+
+    const image =
+      new Image();
+
+
+    image.onload = function(){
+
+      const maxWidth = 1000;
+
+      const scale =
+        Math.min(
+          1,
+          maxWidth / image.width
+        );
+
+
+      const canvas =
+        document.createElement('canvas');
+
+
+      canvas.width =
+        Math.round(image.width * scale);
+
+
+      canvas.height =
+        Math.round(image.height * scale);
+
+
+      canvas
+        .getContext('2d')
+        .drawImage(
+          image,
+          0,
+          0,
+          canvas.width,
+          canvas.height
+        );
+
+
+      state[key].photos.push(
+        canvas.toDataURL(
+          'image/jpeg',
+          .8
+        )
+      );
+
+
+      renderPhotos(key);
+
+
+      document
+        .getElementById('extra-' + key)
+        .classList.remove('hidden');
+
+
+      saveCurrent();
+
+    };
+
+
+    image.src =
+      loadEvent.target.result;
+
+  };
+
+
+  reader.readAsDataURL(file);
+
+  event.target.value = '';
+
+}
+
+
+function renderPhotos(key){
+
+  const wrap =
+    document.getElementById(
+      'thumbs-' + key
+    );
+
+  if(!wrap){
+    return;
+  }
+
+
+  wrap.innerHTML = '';
+
+
+  (state[key].photos || [])
+    .forEach((src,index) => {
+
+      const item =
+        document.createElement('div');
+
+      item.className =
+        'thumb';
+
+
+      item.innerHTML = `
+
+        <img src="${src}">
+
+        <button class="rm">
+          ×
+        </button>
+
+      `;
+
+
+      item
+        .querySelector('.rm')
+        .onclick = () => {
+
+          state[key].photos.splice(
+            index,
+            1
+          );
+
+          renderPhotos(key);
+
+          saveCurrent();
+
+        };
+
+
+      wrap.appendChild(item);
+
+    });
+
+}
+
+
+function totals(){
+
+  let total = 0;
+  let done = 0;
+  let photos = 0;
+
+
+  SECTIONS.forEach(section => {
+
+    section.items.forEach((item,index) => {
+
+      const value =
+        state[
+          section.id + '__' + index
+        ];
+
+
+      total++;
+
+
+      if(value.checked){
+        done++;
+      }
+
+
+      photos +=
+        (value.photos || []).length;
+
+    });
+
+  });
+
+
+  return {
+    total,
+    done,
+    photos
+  };
+
+}
+
+
+function buildSummary(){
+
+  const totalData =
+    totals();
+
+
+  document.getElementById('stats')
+    .innerHTML = `
+
+      <div class="stat">
+
+        <div class="n">
+          ${totalData.done}/${totalData.total}
+        </div>
+
+        <div class="l">
+          Points Confirmed
+        </div>
+
+      </div>
+
+
+      <div class="stat">
+
+        <div class="n">
+          ${totalData.photos}
+        </div>
+
+        <div class="l">
+          Photos
+        </div>
+
+      </div>
+
+    `;
+
+
+  document.getElementById('sumTitle')
+    .textContent =
+    meta.ship || 'Visit Summary';
+
+
+  document.getElementById('sumMeta')
+    .textContent =
+    `${meta.dateOn || ''}` +
+    `${meta.dateOff ? ' → ' + meta.dateOff : ''}` +
+    ` • Reviewed by ${meta.reviewer}`;
+
+
+  document.getElementById('overall')
+    .value =
+    `Ship visit report for ${meta.ship}, ` +
+    `${meta.dateOn || ''}` +
+    `${meta.dateOff ? ' to ' + meta.dateOff : ''}, ` +
+    `reviewed by ${meta.reviewer}. ` +
+    `${totalData.done} of ${totalData.total} ` +
+    `review points were confirmed during the visit.`;
+
+
+  const wrap =
+    document.getElementById('sumSections');
+
+
+  wrap.innerHTML = '';
+
+
+  SECTIONS.forEach(section => {
+
+    const confirmed =
+      section.items.filter(
+        (item,index) =>
+          state[
+            section.id + '__' + index
+          ].checked
+      ).length;
+
+
+    const flagged =
+      section.items.filter(
+        (item,index) =>
+          !state[
+            section.id + '__' + index
+          ].checked
+      );
+
+
+    const div =
+      document.createElement('div');
+
+
+    div.className =
+      'summary-section';
+
+
+    div.innerHTML = `
+
+      <h2>${esc(section.title)}</h2>
+
+      <textarea rows="4">${
+        esc(
+          confirmed +
+          ' of ' +
+          section.items.length +
+          ' points confirmed. ' +
+
+          (
+            flagged.length
+              ? 'Follow-up needed on: ' +
+                flagged.join('; ')
+              : 'No unchecked points.'
+          )
+        )
+      }</textarea>
+
+    `;
+
+
+    wrap.appendChild(div);
+
+  });
+
+}
+
+
+function pdf(){
+
+  if(
+    typeof window.jspdf === 'undefined'
+  ){
+
+    alert(
+      'PDF library could not be loaded. Check your internet connection and try again.'
+    );
+
+    return;
+
+  }
+
+
+  const {jsPDF} = window.jspdf;
+
+
+  const doc =
+    new jsPDF({
+      unit:'pt',
+      format:'a4'
+    });
+
+
+  const W =
+    doc.internal.pageSize.getWidth();
+
+  const H =
+    doc.internal.pageSize.getHeight();
+
+
+  const margin = 42;
+
+  let y = 84;
+
+
+  const squid =
+    [60,16,83];
+
+  const red =
+    [225,10,10];
+
+  const dark =
+    [27,27,27];
+
+
+  function header(title){
+
+    doc.setFillColor(...squid);
+
+    doc.rect(
+      0,
+      0,
+      W,
+      66,
+      'F'
+    );
+
+
+    doc.setTextColor(
+      255,
+      255,
+      255
+    );
+
+
+    doc.setFont(
+      'helvetica',
+      'bold'
+    );
+
+    doc.setFontSize(10);
+
+    doc.text(
+      '— VIRGIN VOYAGES',
+      margin,
+      24
+    );
+
+
+    doc.setFontSize(16);
+
+    doc.text(
+      title,
+      margin,
+      46
+    );
+
+
+    y = 84;
+
+  }
+
+
+  function footer(){
+
+    doc.setFillColor(...dark);
+
+    doc.rect(
+      0,
+      H - 24,
+      W,
+      24,
+      'F'
+    );
+
+
+    doc.setTextColor(
+      255,
+      255,
+      255
+    );
+
+    doc.setFontSize(8);
+
+    doc.setFont(
+      'helvetica',
+      'normal'
+    );
+
+
+    doc.text(
+      'INTERNAL USE ONLY',
+      margin,
+      H - 9
+    );
+
+
+    doc.text(
+      `${meta.ship} • ${meta.dateOn || ''}`,
+      W - margin,
+      H - 9,
+      {align:'right'}
+    );
+
+  }
+
+
+  function ensureSpace(height){
+
+    if(y + height > H - 38){
+
+      footer();
+
+      doc.addPage();
+
+      header(
+        'Ship Visit Report'
+      );
+
+    }
+
+  }
+
+
+  function textLines(
+    text,
+    size,
+    maxW
+  ){
+
+    doc.setFont(
+      'helvetica',
+      'normal'
+    );
+
+    doc.setFontSize(size);
+
+    doc.setTextColor(
+      55,
+      55,
+      55
+    );
+
+
+    return doc.splitTextToSize(
+      text,
+      maxW
+    );
+
+  }
+
+
+  header(
+    'Ship Visit Report'
+  );
+
+
+  doc.setTextColor(...dark);
+
+  doc.setFont(
+    'helvetica',
+    'bold'
+  );
+
+  doc.setFontSize(11);
+
+
+  doc.text(
+    `Ship: ${meta.ship}`,
+    margin,
+    y
+  );
+
+  y += 16;
+
+
+  doc.text(
+    `Date On: ${meta.dateOn || ''}`,
+    margin,
+    y
+  );
+
+  y += 16;
+
+
+  doc.text(
+    `Date Off: ${meta.dateOff || ''}`,
+    margin,
+    y
+  );
+
+  y += 16;
+
+
+  doc.text(
+    `Review By: ${meta.reviewer}`,
+    margin,
+    y
+  );
+
+  y += 24;
+
+
+  const totalData =
+    totals();
+
+
+  doc.setTextColor(...red);
+
+  doc.setFontSize(9);
+
+
+  doc.text(
+    `${totalData.done} / ${totalData.total} POINTS CONFIRMED • ${totalData.photos} PHOTOS`,
+    margin,
+    y
+  );
+
+  y += 24;
+
+
+  doc.setFont(
+    'helvetica',
+    'bold'
+  );
+
+  doc.setFontSize(12);
+
+  doc.setTextColor(...squid);
+
+
+  doc.text(
+    'Overall Summary',
+    margin,
+    y
+  );
+
+  y += 16;
+
+
+  textLines(
+    document.getElementById('overall').value,
+    10.5,
+    W - margin * 2
+  ).forEach(line => {
+
+    ensureSpace(14);
+
+    doc.text(
+      line,
+      margin,
+      y
+    );
+
+    y += 14;
+
+  });
+
+
+  y += 8;
+
+
+  SECTIONS.forEach(
+    (section,sectionIndex) => {
+
+      ensureSpace(28);
+
+
+      doc.setDrawColor(...red);
+
+      doc.line(
+        margin,
+        y,
+        margin + 38,
+        y
+      );
+
+      y += 13;
+
+
+      doc.setFont(
+        'helvetica',
+        'bold'
+      );
+
+      doc.setFontSize(12);
+
+      doc.setTextColor(...squid);
+
+
+      doc.text(
+        section.title,
+        margin,
+        y
+      );
+
+      y += 16;
+
+
+      const summaryTextareas =
+        document.querySelectorAll(
+          '#sumSections textarea'
+        );
+
+
+      const textarea =
+        summaryTextareas[
+          sectionIndex
+        ];
+
+
+      textLines(
+        textarea
+          ? textarea.value
+          : '',
+        10.3,
+        W - margin * 2
+      ).forEach(line => {
+
+        ensureSpace(14);
+
+        doc.setFont(
+          'helvetica',
+          'normal'
+        );
+
+        doc.setTextColor(
+          55,
+          55,
+          55
+        );
+
+
+        doc.text(
+          line,
+          margin,
+          y
+        );
+
+        y += 14;
+
+      });
+
+
+      y += 5;
+
+
+      section.items.forEach(
+        (text,itemIndex) => {
+
+          const value =
+            state[
+              section.id +
+              '__' +
+              itemIndex
+            ];
+
+
+          ensureSpace(14);
+
+
+          doc.setFont(
+            'helvetica',
+            'bold'
+          );
+
+          doc.setFontSize(9.5);
+
+          doc.setTextColor(
+            ...(value.checked
+              ? [80,80,80]
+              : red)
+          );
+
+
+          doc.text(
+            value.checked
+              ? '[x]'
+              : '[ ]',
+            margin,
+            y
+          );
+
+
+          doc.setFont(
+            'helvetica',
+            'normal'
+          );
+
+          doc.setTextColor(
+            60,
+            60,
+            60
+          );
+
+
+          const lines =
+            textLines(
+              text,
+              9.2,
+              W - margin * 2 - 24
+            );
+
+
+          lines.forEach(
+            (line,lineIndex) => {
+
+              ensureSpace(12);
+
+              doc.text(
+                line,
+                margin + 21,
+                y
+              );
+
+
+              if(
+                lineIndex <
+                lines.length - 1
+              ){
+
+                y += 12;
+
+              }
+
+            }
+          );
+
+
+          y += 11;
+
+
+          (
+            value.comments || []
+          ).forEach(comment => {
+
+            ensureSpace(12);
+
+            doc.setFont(
+              'helvetica',
+              'italic'
+            );
+
+            doc.setFontSize(9);
+
+            doc.setTextColor(
+              120,
+              120,
+              120
+            );
+
+
+            textLines(
+              '— ' +
+              comment.name +
+              ': ' +
+              comment.text,
+              9,
+              W - margin * 2 - 24
+            ).forEach(line => {
+
+              doc.text(
+                line,
+                margin + 21,
+                y
+              );
+
+              y += 12;
+
+            });
+
+          });
+
+
+          (
+            value.photos || []
+          ).forEach(source => {
+
+            ensureSpace(170);
+
+            try{
+
+              doc.addImage(
+                source,
+                'JPEG',
+                margin + 21,
+                y,
+                150,
+                150
+              );
+
+              y += 158;
+
+            }catch(error){
+
+              console.error(
+                'Could not add image to PDF',
+                error
+              );
+
+            }
+
+          });
+
+
+          y += 2;
+
+        }
+      );
+
+    }
+  );
+
+
+  footer();
+
+
+  doc.save(
+    `Ship_Visit_Report_${(
+      meta.ship || 'Ship'
+    ).replace(/\s+/g,'_')}_${
+      meta.dateOn || 'date'
+    }.pdf`
+  );
+
+}
+
+
+function submit(){
+
+  const reports =
+    getReports();
+
+
+  const snapshot = {
+
+    id:
+      reportId ||
+      Date.now().toString(),
+
+    meta:{
+      ...meta
+    },
+
+    state:
+      JSON.parse(
+        JSON.stringify(state)
+      ),
+
+    submittedAt:
+      new Date().toISOString()
+
+  };
+
+
+  const existingIndex =
+    reports.findIndex(
+      report =>
+        report.id === snapshot.id
+    );
+
+
+  if(existingIndex >= 0){
+
+    reports[existingIndex] =
+      snapshot;
+
+  }else{
+
+    reports.unshift(
+      snapshot
+    );
+
+  }
+
+
+  saveReports(
+    reports
+  );
+
+
+  reportId =
+    snapshot.id;
+
+
+  saveCurrent();
+
+
+  alert(
+    'Report submitted successfully. It is now available under Submitted Reports.'
+  );
+
+
+  /*
+    IMPORTANT:
+    After submitting, return directly
+    to the first screen.
+  */
+
+  switchScreen(
+    'home'
+  );
+
+
+  window.scrollTo(
+    0,
+    0
+  );
+
+}
+
+
+function renderReports(){
+
+  const wrap =
+    document.getElementById(
+      'reportList'
+    );
+
+
+  const reports =
+    getReports();
+
+
+  if(!reports.length){
+
+    wrap.innerHTML =
+      '<div class="empty">No submitted reports yet.</div>';
+
+    return;
+
+  }
+
+
+  wrap.innerHTML =
+    reports.map(report => `
+
+      <div class="report-card">
+
+        <h3>
+          ${esc(
+            report.meta?.ship ||
+            'Unnamed Ship'
+          )}
+        </h3>
+
+
+        <div class="report-meta">
+
+          <b>Date:</b>
+          ${esc(
+            report.meta?.dateOn ||
+            ''
+          )}
+
+          ${
+            report.meta?.dateOff
+              ? ' → ' +
+                esc(report.meta.dateOff)
+              : ''
+          }
+
+          <br>
+
+          <b>Reviewer:</b>
+          ${esc(
+            report.meta?.reviewer ||
+            ''
+          )}
+
+          <br>
+
+          <b>Submitted:</b>
+          ${
+            report.submittedAt
+              ? new Date(
+                  report.submittedAt
+                ).toLocaleString()
+              : ''
+          }
+
+        </div>
+
+
+        <div class="report-actions">
+
+          <button
+            class="open"
+            data-id="${report.id}"
+          >
+            Open Report
+          </button>
+
+
+          <button
+            data-pdf="${report.id}"
+          >
+            Save PDF
+          </button>
+
+
+          <button
+            data-print="${report.id}"
+          >
+            Print
+          </button>
+
+        </div>
+
+      </div>
+
+    `).join('');
+
+
+  wrap
+    .querySelectorAll('[data-id]')
+    .forEach(button => {
+
+      button.onclick = () => {
+
+        openReport(
+          button.dataset.id
+        );
+
+      };
+
+    });
+
+
+  wrap
+    .querySelectorAll('[data-pdf]')
+    .forEach(button => {
+
+      button.onclick = () => {
+
+        openReport(
+          button.dataset.pdf,
+          true
+        );
+
+      };
+
+    });
+
+
+  wrap
+    .querySelectorAll('[data-print]')
+    .forEach(button => {
+
+      button.onclick = () => {
+
+        openReport(
+          button.dataset.print
+        );
+
+
+        setTimeout(
+          () => window.print(),
+          120
+        );
+
+      };
+
+    });
+
+}
+
+
+function restore(report){
+
+  meta =
+    {
+      ...report.meta
+    };
+
+
+  state =
+    JSON.parse(
+      JSON.stringify(
+        report.state || {}
+      )
+    );
+
+
+  reportId =
+    report.id;
+
+
+  currentReviewer =
+    meta.reviewer ||
+    'Reviewer';
+
+
+  document.getElementById('ship')
+    .value =
+    meta.ship || '';
+
+
+  document.getElementById('dateOn')
+    .value =
+    meta.dateOn || '';
+
+
+  document.getElementById('dateOff')
+    .value =
+    meta.dateOff || '';
+
+
+  document.getElementById('reviewer')
+    .value =
+    meta.reviewer || '';
+
+
+  document.getElementById('hdrShip')
+    .textContent =
+    (
+      meta.ship ||
+      ''
+    ).toUpperCase();
+
+
+  document.getElementById('hdrReviewer')
+    .value =
+    currentReviewer;
+
+
+  document.getElementById('visitMeta')
+    .textContent =
+    `${meta.dateOn || ''}` +
+    `${
+      meta.dateOff
+        ? ' → ' + meta.dateOff
+        : ''
+    }`;
+
+
+  renderSections();
+
+
+  switchScreen(
+    'checklist'
+  );
+
+
+  saveCurrent();
+
+}
+
+
+function openReport(
+  id,
+  makePdf = false
+){
+
+  const report =
+    getReports().find(
+      item =>
+        item.id === id
+    );
+
+
+  if(!report){
+    return;
+  }
+
+
+  restore(
+    report
+  );
+
+
+  setTimeout(
+    () => {
+
+      buildSummary();
+
+      switchScreen(
+        'summary'
+      );
+
+
+      if(makePdf){
+
+        setTimeout(
+          () => pdf(),
+          100
+        );
+
+      }
+
+    },
+    60
+  );
+
+}
+
+
+/* -------------------------------------------------
+   HOME NAVIGATION
+------------------------------------------------- */
+
+document
+  .getElementById('createReport')
+  .onclick = () => {
+
+    switchScreen(
+      'setup'
+    );
+
+  };
+
+
+document
+  .getElementById('submittedReports')
+  .onclick = () => {
+
+    renderReports();
+
+    switchScreen(
+      'submitted'
+    );
+
+  };
+
+
+document
+  .getElementById('backHomeFromSetup')
+  .onclick = () => {
+
+    switchScreen(
+      'home'
+    );
+
+  };
+
+
+document
+  .getElementById('reportsHomeBtn')
+  .onclick = () => {
+
+    switchScreen(
+      'home'
+    );
+
+  };
+
+
+/* -------------------------------------------------
+   START NEW REPORT
+------------------------------------------------- */
+
+document
+  .getElementById('startBtn')
+  .onclick = () => {
+
+    resetState();
+
+
+    meta.ship =
+      document.getElementById('ship')
+        .value.trim() ||
+      'Unnamed Ship';
+
+
+    meta.dateOn =
+      document.getElementById('dateOn')
+        .value ||
+      new Date()
+        .toISOString()
+        .slice(0,10);
+
+
+    meta.dateOff =
+      document.getElementById('dateOff')
+        .value ||
+      '';
+
+
+    meta.reviewer =
+      document.getElementById('reviewer')
+        .value.trim() ||
+      'Reviewer';
+
+
+    currentReviewer =
+      meta.reviewer;
+
+
+    reportId =
+      Date.now().toString();
+
+
+    document.getElementById('hdrShip')
+      .textContent =
+      meta.ship.toUpperCase();
+
+
+    document.getElementById('hdrReviewer')
+      .value =
+      currentReviewer;
+
+
+    document.getElementById('visitMeta')
+      .textContent =
+      `${meta.dateOn}` +
+      `${
+        meta.dateOff
+          ? ' → ' + meta.dateOff
+          : ''
+      }`;
+
+
+    renderSections();
+
+
+    switchScreen(
+      'checklist'
+    );
+
+
+    saveCurrent();
+
+  };
+
+
+/* -------------------------------------------------
+   REVIEWER
+------------------------------------------------- */
+
+document
+  .getElementById('hdrReviewer')
+  .onchange = event => {
+
+    currentReviewer =
+      event.target.value.trim() ||
+      meta.reviewer;
+
+
+    meta.reviewer =
+      currentReviewer;
+
+
+    saveCurrent();
+
+  };
+
+
+/* -------------------------------------------------
+   SUMMARY / PDF / PRINT / SUBMIT
+------------------------------------------------- */
+
+document
+  .getElementById('summaryBtn')
+  .onclick = () => {
+
+    buildSummary();
+
+    switchScreen(
+      'summary'
+    );
+
+  };
+
+
+document
+  .getElementById('backBtn')
+  .onclick = () => {
+
+    switchScreen(
+      'checklist'
+    );
+
+  };
+
+
+document
+  .getElementById('pdfBtn')
+  .onclick = () => {
+
+    pdf();
+
+  };
+
+
+document
+  .getElementById('printBtn')
+  .onclick = () => {
+
+    window.print();
+
+  };
+
+
+document
+  .getElementById('submitBtn')
+  .onclick = () => {
+
+    submit();
+
+  };
+
 </script>
+
 </body>
 </html>
