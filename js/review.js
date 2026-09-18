@@ -25,16 +25,16 @@ import {
 } from './supabase.js';
 
 
-/* =========================================================
-   CALLBACKS
-========================================================= */
-
 let callbacks = {
 
   sentToShip:null
 
 };
 
+
+/* =========================================================
+   CALLBACKS
+========================================================= */
 
 export function setReviewCallbacks(
   newCallbacks={}
@@ -66,9 +66,13 @@ function escapeHtml(
     character => ({
 
       '&':'&amp;',
+
       '<':'&lt;',
+
       '>':'&gt;',
+
       '"':'&quot;',
+
       "'":'&#39;'
 
     }[character])
@@ -107,11 +111,6 @@ export function getCheckedReviewPoints(){
           const item =
             state[key];
 
-
-          /*
-            Only points marked checked
-            are sent to Ship Review.
-          */
 
           if(
             !item ||
@@ -173,7 +172,7 @@ export function getCheckedReviewPoints(){
 
 
 /* =========================================================
-   RENDER
+   RENDER REVIEW
 ========================================================= */
 
 export function renderShipReview(){
@@ -184,9 +183,7 @@ export function renderShipReview(){
     );
 
 
-  if(
-    !container
-  ){
+  if(!container){
 
     return;
 
@@ -239,12 +236,18 @@ export function renderShipReview(){
       >
 
         <b>Ship:</b>
-        ${escapeHtml(meta.ship)}
+
+        ${escapeHtml(
+          meta.ship
+        )}
 
         <br>
 
         <b>Visit:</b>
-        ${escapeHtml(meta.dateOn)}
+
+        ${escapeHtml(
+          meta.dateOn
+        )}
 
         ${
           meta.dateOff
@@ -255,6 +258,7 @@ export function renderShipReview(){
         <br>
 
         <b>Reviewer:</b>
+
         ${escapeHtml(
           getReviewer() ||
           meta.reviewer
@@ -273,9 +277,7 @@ export function renderShipReview(){
 
     html += `
 
-      <div
-        class="empty"
-      >
+      <div class="empty">
 
         No checklist points have been checked.
 
@@ -340,9 +342,7 @@ export function renderShipReview(){
         );
 
 
-      if(
-        !group
-      ){
+      if(!group){
 
         group = {
 
@@ -420,9 +420,7 @@ export function renderShipReview(){
     );
 
 
-  if(
-    bottom
-  ){
+  if(bottom){
 
     bottom.innerHTML = `
 
@@ -456,10 +454,10 @@ export function renderShipReview(){
           "
         >
 
-          After sending, this report will appear
+          After sending, the report will appear
           in Ship Response Report. The ship will
-          enter the response for each follow-up
-          point and submit the report.
+          complete the follow-up responses and submit
+          the report.
 
         </div>
 
@@ -480,7 +478,7 @@ function renderReviewPoint(
   point
 ){
 
-  let html = `
+  return `
 
     <div
       style="
@@ -516,7 +514,9 @@ function renderReviewPoint(
             font-weight:800;
           "
         >
+
           ✓
+
         </div>
 
 
@@ -537,148 +537,132 @@ function renderReviewPoint(
 
       </div>
 
-  `;
+
+      ${
+        point.followUpNeeded
+          ? `
+
+            <div
+              style="
+                margin-top:9px;
+              "
+            >
+
+              <span class="status blue">
+
+                FOLLOW-UP NEEDED FROM SHIP
+
+              </span>
+
+            </div>
+
+          `
+          : ''
+      }
 
 
-  if(
-    point.followUpNeeded
-  ){
+      ${
+        point.comments.length
+          ? `
 
-    html += `
+            <div
+              style="
+                margin-top:10px;
+              "
+            >
 
-      <div
-        style="
-          margin-top:9px;
-        "
-      >
+              <div class="response-label">
 
-        <span class="status blue">
+                REVIEWER COMMENTS
 
-          FOLLOW-UP NEEDED FROM SHIP
-
-        </span>
-
-      </div>
-
-    `;
-
-  }
+              </div>
 
 
-  if(
-    point.comments.length
-  ){
+              ${
+                point.comments
+                  .map(
+                    comment => `
 
-    html += `
+                      <div class="comment">
 
-      <div
-        style="
-          margin-top:10px;
-        "
-      >
+                        <strong>
 
-        <div
-          class="response-label"
-        >
+                          ${escapeHtml(
+                            comment.name ||
+                            'Reviewer'
+                          )}:
 
-          REVIEWER COMMENTS
-
-        </div>
+                        </strong>
 
 
-        ${
-          point.comments
-            .map(
-              comment => `
+                        ${escapeHtml(
+                          comment.text ||
+                          ''
+                        )}
 
-                <div class="comment">
+                      </div>
 
-                  <strong>
+                    `
+                  )
+                  .join('')
+              }
 
-                    ${escapeHtml(
-                      comment.name ||
-                      'Reviewer'
-                    )}:
+            </div>
 
-                  </strong>
-
-
-                  ${escapeHtml(
-                    comment.text ||
-                    ''
-                  )}
-
-                </div>
-
-              `
-            )
-            .join('')
-        }
-
-      </div>
-
-    `;
-
-  }
+          `
+          : ''
+      }
 
 
-  if(
-    point.photos.length
-  ){
+      ${
+        point.photos.length
+          ? `
 
-    html += `
+            <div
+              style="
+                margin-top:10px;
+              "
+            >
 
-      <div
-        style="
-          margin-top:10px;
-        "
-      >
+              <div class="response-label">
 
-        <div class="response-label">
+                ATTACHED PHOTOS
 
-          ATTACHED PHOTOS
-
-        </div>
+              </div>
 
 
-        <div class="response-photos">
+              <div class="response-photos">
 
-          ${
-            point.photos
-              .map(
-                photo => `
+                ${
+                  point.photos
+                    .map(
+                      photo => `
 
-                  <div class="response-photo">
+                        <div class="response-photo">
 
-                    <img
-                      src="${photo}"
-                      alt="Reviewer photo"
-                    >
+                          <img
+                            src="${photo}"
+                            alt="Reviewer photo"
+                          >
 
-                  </div>
+                        </div>
 
-                `
-              )
-              .join('')
-          }
+                      `
+                    )
+                    .join('')
+                }
 
-        </div>
+              </div>
 
-      </div>
+            </div>
 
-    `;
-
-  }
-
-
-  html += `
+          `
+          : ''
+      }
 
     </div>
 
   `;
-
-
-  return html;
 
 }
 
@@ -764,7 +748,7 @@ export async function prepareShipReview(){
 
 
 /* =========================================================
-   SEND CURRENT REPORT TO SHIP
+   SEND TO SHIP
 ========================================================= */
 
 export async function sendCurrentReportToShip(){
@@ -797,6 +781,39 @@ export async function sendCurrentReportToShip(){
 
     alert(
       'Please check at least one checklist point before sending the report.'
+    );
+
+
+    return false;
+
+  }
+
+
+  /*
+    Save latest checklist state first.
+  */
+
+  const saved =
+    await saveOpenReport({
+
+      reportId,
+
+      meta:
+        getMeta(),
+
+      state:
+        getState()
+
+    });
+
+
+  if(
+    !saved ||
+    !saved.success
+  ){
+
+    alert(
+      'Could not save the report before sending it to the ship.'
     );
 
 
