@@ -19,9 +19,15 @@
   --status-green-bg:#EDF9F0;
 }
 
+
+/* =========================================================
+   BASE
+========================================================= */
+
 *{
   box-sizing:border-box;
 }
+
 
 html,
 body{
@@ -29,11 +35,13 @@ body{
   padding:0;
 }
 
+
 body{
   background:var(--vv-bg);
   color:var(--vv-body);
   font-family:Arial,Calibri,sans-serif;
 }
+
 
 button,
 input,
@@ -41,33 +49,40 @@ textarea{
   font-family:Arial,Calibri,sans-serif;
 }
 
+
 button{
   cursor:pointer;
 }
+
 
 button:disabled{
   opacity:.55;
   cursor:not-allowed;
 }
 
+
 .hidden{
   display:none !important;
 }
 
+
 .app{
   width:100%;
-  max-width:760px;
+  max-width:950px;
   min-height:100vh;
   margin:0 auto;
   background:#fff;
   box-shadow:0 0 40px rgba(0,0,0,.04);
 }
 
+
 /* =========================================================
    HEADER
 ========================================================= */
 
 .band{
+  position:relative;
+
   background-color:var(--vv-squid);
 
   background-image:
@@ -80,39 +95,121 @@ button:disabled{
     );
 
   color:#fff;
+
   padding:30px 28px 24px;
 }
 
+
 .band.compact{
-  padding:18px 22px;
+  padding:22px 28px 20px;
 }
+
 
 .eyebrow{
   font-family:Poppins,Arial,sans-serif;
   font-size:11px;
   letter-spacing:.12em;
   font-weight:700;
-  opacity:.88;
+  opacity:.9;
 }
+
 
 .band h1{
   margin:6px 0 4px;
+
   font-family:Poppins,Arial,sans-serif;
+
   font-size:25px;
   line-height:1.2;
+
   font-weight:800;
 }
 
+
 .band.compact h1{
-  font-size:19px;
+  font-size:20px;
 }
+
 
 .band .sub{
   margin:0;
-  color:rgba(255,255,255,.84);
+
+  color:rgba(255,255,255,.86);
+
   font-size:13px;
   line-height:1.45;
 }
+
+
+/* =========================================================
+   HEADER BACK BUTTON
+   LEFT + VIRGIN RED
+========================================================= */
+
+.header-back{
+  position:absolute;
+
+  top:15px;
+  left:17px;
+
+  padding:7px 11px;
+
+  background:var(--vv-red);
+  color:#FFFFFF;
+
+  border:1px solid var(--vv-red);
+
+  border-radius:7px;
+
+  font-family:Arial,Calibri,sans-serif;
+
+  font-size:10px;
+  font-weight:800;
+  line-height:1;
+
+  cursor:pointer;
+
+  z-index:20;
+
+  transition:
+    background .15s ease,
+    border-color .15s ease,
+    transform .15s ease;
+}
+
+
+.header-back:hover{
+  background:var(--vv-red-dark);
+
+  border-color:var(--vv-red-dark);
+}
+
+
+.header-back:active{
+  transform:translateY(1px);
+}
+
+
+/*
+  Leave clear space on the left for
+  the header Back button.
+*/
+
+.band.compact .eyebrow{
+  padding-left:74px;
+}
+
+
+.band.compact h1{
+  padding-left:74px;
+  padding-right:0;
+}
+
+
+.band.compact .sub{
+  padding-left:74px;
+}
+
 
 /* =========================================================
    HOME
@@ -122,14 +219,20 @@ button:disabled{
   padding:28px;
 }
 
+
 .home-grid{
   display:grid;
-  grid-template-columns:1fr 1fr;
+
+  grid-template-columns:
+    1fr 1fr;
+
   gap:16px;
 }
 
+
 .home-card{
   min-height:150px;
+
   padding:22px;
 
   background:#fff;
@@ -145,11 +248,16 @@ button:disabled{
     transform .15s ease;
 }
 
+
 .home-card:hover{
   border-color:var(--vv-squid);
-  box-shadow:0 6px 20px rgba(60,16,83,.09);
+
+  box-shadow:
+    0 6px 20px rgba(60,16,83,.09);
+
   transform:translateY(-1px);
 }
+
 
 .home-card h2{
   margin:0 0 10px;
@@ -157,10 +265,13 @@ button:disabled{
   color:var(--vv-squid);
 
   font-family:Poppins,Arial,sans-serif;
+
   font-size:16px;
   line-height:1.3;
+
   font-weight:800;
 }
+
 
 .home-card p{
   margin:0;
@@ -171,25 +282,30 @@ button:disabled{
   line-height:1.5;
 }
 
+
 /* =========================================================
-   PAGE / FORMS
+   PAGE / FORM
 ========================================================= */
 
 .page-pad{
   padding:24px;
 }
 
+
 .reports{
   padding:24px;
 }
 
+
 .summary{
-  padding:22px 24px 125px;
+  padding:24px 24px 120px;
 }
+
 
 .field{
   margin-bottom:16px;
 }
+
 
 .field label{
   display:block;
@@ -203,6 +319,7 @@ button:disabled{
   letter-spacing:.05em;
 }
 
+
 .field input,
 .field textarea{
   width:100%;
@@ -212,6 +329,7 @@ button:disabled{
   background:#fff;
 
   border:1.5px solid var(--vv-line);
+
   border-radius:8px;
 
   color:var(--vv-body);
@@ -219,17 +337,23 @@ button:disabled{
   font-size:14px;
 }
 
+
 .field input:focus,
 .field textarea:focus{
   outline:none;
+
   border-color:var(--vv-red);
 }
 
+
 .field textarea{
   min-height:70px;
+
   line-height:1.45;
+
   resize:vertical;
 }
+
 
 /* =========================================================
    BUTTONS
@@ -247,13 +371,16 @@ button:disabled{
   border-radius:9px;
 
   font-family:Poppins,Arial,sans-serif;
+
   font-size:14px;
   font-weight:700;
 }
 
+
 .btn-primary:hover{
   background:var(--vv-red-dark);
 }
+
 
 .btn-secondary{
   width:100%;
@@ -264,22 +391,30 @@ button:disabled{
   color:var(--vv-squid);
 
   border:1.5px solid var(--vv-squid);
+
   border-radius:9px;
 
   font-family:Poppins,Arial,sans-serif;
+
   font-size:13px;
   font-weight:700;
 }
 
+
 .btn-secondary:hover{
-  background:#faf7fc;
+  background:#FAF7FC;
 }
+
 
 .grid2{
   display:grid;
-  grid-template-columns:1fr 1fr;
+
+  grid-template-columns:
+    1fr 1fr;
+
   gap:9px;
 }
+
 
 /* =========================================================
    META
@@ -300,9 +435,11 @@ button:disabled{
   line-height:1.55;
 }
 
+
 .meta strong{
   color:var(--vv-squid);
 }
+
 
 /* =========================================================
    REVIEWER HEADER
@@ -310,14 +447,17 @@ button:disabled{
 
 .reviewer-row{
   display:flex;
+
   align-items:center;
+
   gap:8px;
 
   margin-top:10px;
 }
 
+
 .reviewer-row label{
-  color:rgba(255,255,255,.8);
+  color:rgba(255,255,255,.82);
 
   font-size:10px;
   font-weight:800;
@@ -325,8 +465,10 @@ button:disabled{
   white-space:nowrap;
 }
 
+
 .reviewer-row input{
   flex:1;
+
   min-width:0;
 
   padding:7px 9px;
@@ -334,6 +476,7 @@ button:disabled{
   background:rgba(255,255,255,.12);
 
   border:1px solid rgba(255,255,255,.42);
+
   border-radius:6px;
 
   color:#fff;
@@ -341,14 +484,18 @@ button:disabled{
   font-size:12px;
 }
 
+
 .reviewer-row input::placeholder{
   color:rgba(255,255,255,.68);
 }
 
+
 .reviewer-row input:focus{
   outline:none;
+
   border-color:#fff;
 }
+
 
 /* =========================================================
    PROGRESS
@@ -358,8 +505,10 @@ button:disabled{
   padding:13px 20px 8px;
 }
 
+
 .progress-bar{
   width:100%;
+
   height:6px;
 
   overflow:hidden;
@@ -369,8 +518,10 @@ button:disabled{
   border-radius:4px;
 }
 
+
 .progress-fill{
   width:0;
+
   height:100%;
 
   background:var(--vv-red);
@@ -379,6 +530,7 @@ button:disabled{
 
   transition:width .2s ease;
 }
+
 
 .progress-label{
   margin-top:6px;
@@ -389,18 +541,22 @@ button:disabled{
   font-weight:600;
 }
 
+
 /* =========================================================
-   CHECKLIST SECTIONS
+   CHECKLIST
 ========================================================= */
 
 .section{
   border-bottom:1px solid var(--vv-line);
 }
 
+
 .section-head{
   display:flex;
+
   align-items:center;
   justify-content:space-between;
+
   gap:10px;
 
   padding:17px 20px;
@@ -409,21 +565,27 @@ button:disabled{
   user-select:none;
 }
 
+
 .section-head h2{
   margin:0;
 
   color:var(--vv-squid);
 
   font-family:Poppins,Arial,sans-serif;
+
   font-size:15px;
   font-weight:800;
 }
 
+
 .section-right{
   display:flex;
+
   align-items:center;
+
   gap:10px;
 }
+
 
 .section-count{
   color:var(--vv-gray);
@@ -431,6 +593,7 @@ button:disabled{
   font-size:11px;
   font-weight:700;
 }
+
 
 .chevron{
   width:9px;
@@ -444,9 +607,11 @@ button:disabled{
   transition:.2s;
 }
 
+
 .section.open .chevron{
   transform:rotate(-135deg);
 }
+
 
 .section-body{
   display:none;
@@ -454,9 +619,11 @@ button:disabled{
   padding:0 20px 16px;
 }
 
+
 .section.open .section-body{
   display:block;
 }
+
 
 .section-note{
   margin-bottom:10px;
@@ -470,8 +637,10 @@ button:disabled{
   color:var(--vv-gray);
 
   font-size:11px;
+
   line-height:1.45;
 }
+
 
 /* =========================================================
    CHECKLIST ITEMS
@@ -483,15 +652,20 @@ button:disabled{
   border-top:1px solid var(--vv-line);
 }
 
+
 .item:first-child{
   border-top:none;
 }
 
+
 .item-row{
   display:flex;
+
   align-items:flex-start;
+
   gap:9px;
 }
+
 
 .check-btn{
   flex:0 0 auto;
@@ -506,15 +680,19 @@ button:disabled{
   background:#fff;
 
   border:2px solid var(--vv-gray);
+
   border-radius:50%;
 
   position:relative;
 }
 
+
 .check-btn.checked{
   background:var(--vv-red);
+
   border-color:var(--vv-red);
 }
+
 
 .check-btn.checked::after{
   content:"";
@@ -533,22 +711,28 @@ button:disabled{
   transform:rotate(45deg);
 }
 
+
 .item-text{
   flex:1;
+
   min-width:0;
 
   padding-top:2px;
 
   font-size:14px;
+
   line-height:1.45;
 }
 
+
 .item-actions{
   display:flex;
+
   gap:5px;
 
   flex:0 0 auto;
 }
+
 
 .action{
   padding:6px 8px;
@@ -556,6 +740,7 @@ button:disabled{
   background:#fff;
 
   border:1.5px solid var(--vv-line);
+
   border-radius:7px;
 
   color:var(--vv-squid);
@@ -564,19 +749,24 @@ button:disabled{
   font-weight:800;
 }
 
+
 .action:hover{
   border-color:var(--vv-squid);
 }
 
+
 .action.active{
   background:var(--vv-squid);
   color:#fff;
+
   border-color:var(--vv-squid);
 }
+
 
 .extra{
   margin:10px 0 0 33px;
 }
+
 
 /* =========================================================
    COMMENTS
@@ -584,14 +774,18 @@ button:disabled{
 
 .comment-row{
   display:flex;
+
   align-items:flex-end;
+
   gap:7px;
 
   margin-top:8px;
 }
 
+
 .comment-row textarea{
   flex:1;
+
   min-height:45px;
 
   padding:8px;
@@ -599,16 +793,21 @@ button:disabled{
   background:#fff;
 
   border:1.5px solid var(--vv-line);
+
   border-radius:7px;
 
   font-size:13px;
+
   resize:vertical;
 }
 
+
 .comment-row textarea:focus{
   outline:none;
+
   border-color:var(--vv-red);
 }
+
 
 .add-comment{
   height:45px;
@@ -619,11 +818,13 @@ button:disabled{
   color:#fff;
 
   border:0;
+
   border-radius:7px;
 
   font-size:12px;
   font-weight:800;
 }
+
 
 .comment{
   margin-bottom:5px;
@@ -635,12 +836,16 @@ button:disabled{
   border-radius:7px;
 
   font-size:12px;
+
   line-height:1.4;
 }
 
-.comment b{
+
+.comment b,
+.comment strong{
   color:var(--vv-squid);
 }
+
 
 /* =========================================================
    PHOTOS
@@ -648,11 +853,14 @@ button:disabled{
 
 .photos{
   display:flex;
+
   flex-wrap:wrap;
+
   gap:7px;
 
   margin-top:9px;
 }
+
 
 .photo{
   width:74px;
@@ -663,10 +871,12 @@ button:disabled{
   background:#fff;
 
   border:1px solid var(--vv-line);
+
   border-radius:7px;
 
   position:relative;
 }
+
 
 .photo img{
   width:100%;
@@ -674,6 +884,7 @@ button:disabled{
 
   object-fit:cover;
 }
+
 
 .photo-remove{
   position:absolute;
@@ -690,23 +901,28 @@ button:disabled{
   color:#fff;
 
   border:0;
+
   border-radius:50%;
 
   font-size:12px;
   line-height:19px;
 }
 
+
 /* =========================================================
-   FOLLOW-UP
+   FOLLOW UP
 ========================================================= */
 
 .followup-row{
   display:flex;
+
   align-items:center;
+
   gap:7px;
 
   margin-top:10px;
 }
+
 
 .followup-row input{
   width:16px;
@@ -715,18 +931,17 @@ button:disabled{
   accent-color:var(--vv-red);
 }
 
+
 .followup-row label{
   color:var(--vv-red);
 
   font-size:11px;
+
   font-weight:800;
 
   cursor:pointer;
 }
 
-.followup-row label.followup-complete{
-  color:var(--status-green);
-}
 
 .ship-response-display{
   margin-top:6px;
@@ -742,8 +957,10 @@ button:disabled{
   color:#285536;
 
   font-size:12px;
+
   line-height:1.45;
 }
+
 
 /* =========================================================
    FOOTER
@@ -751,6 +968,7 @@ button:disabled{
 
 .footer{
   position:sticky;
+
   bottom:0;
 
   z-index:30;
@@ -761,8 +979,10 @@ button:disabled{
 
   border-top:1px solid var(--vv-line);
 
-  box-shadow:0 -5px 16px rgba(0,0,0,.04);
+  box-shadow:
+    0 -5px 16px rgba(0,0,0,.04);
 }
+
 
 /* =========================================================
    SUMMARY
@@ -770,8 +990,10 @@ button:disabled{
 
 .stats{
   display:flex;
+
   gap:9px;
 }
+
 
 .stat{
   flex:1;
@@ -785,12 +1007,15 @@ button:disabled{
   border-radius:6px;
 }
 
+
 .stat-number{
   color:var(--vv-near-black);
 
   font-size:21px;
+
   font-weight:800;
 }
+
 
 .stat-label{
   margin-top:2px;
@@ -798,10 +1023,12 @@ button:disabled{
   color:var(--vv-gray);
 
   font-size:9px;
+
   font-weight:800;
 
   text-transform:uppercase;
 }
+
 
 .summary h2{
   margin:18px 0 8px;
@@ -809,8 +1036,10 @@ button:disabled{
   color:var(--vv-squid);
 
   font-family:Poppins,Arial,sans-serif;
+
   font-size:15px;
 }
+
 
 .summary textarea{
   width:100%;
@@ -818,53 +1047,21 @@ button:disabled{
   padding:11px 12px;
 
   border:1.5px solid var(--vv-line);
+
   border-radius:8px;
 
   font-size:13px;
+
   line-height:1.5;
 
   resize:vertical;
 }
 
-.summary textarea:focus{
-  outline:none;
-  border-color:var(--vv-red);
-}
 
 .summary-section{
   margin-top:18px;
 }
 
-.summary-section textarea{
-  background:#fff;
-}
-
-.summary-photos{
-  display:flex;
-  flex-wrap:wrap;
-  gap:8px;
-
-  margin-top:8px;
-}
-
-.summary-photo{
-  width:100px;
-  height:100px;
-
-  overflow:hidden;
-
-  border:1px solid var(--vv-line);
-  border-radius:8px;
-
-  background:#fff;
-}
-
-.summary-photo img{
-  width:100%;
-  height:100%;
-
-  object-fit:cover;
-}
 
 /* =========================================================
    REPORT CARDS
@@ -878,23 +1075,31 @@ button:disabled{
   background:#fff;
 
   border:1.5px solid var(--vv-line);
+
   border-radius:10px;
 }
 
+
 .report-card.red{
-  background:#fffafa;
-  border-color:#e3aaaa;
+  background:#FFFAFA;
+
+  border-color:#E3AAAA;
 }
+
 
 .report-card.blue{
-  background:#fbfdff;
-  border-color:#b8c9e7;
+  background:#FBFDFF;
+
+  border-color:#B8C9E7;
 }
 
+
 .report-card.green{
-  background:#fbfffc;
-  border-color:#b2d5bc;
+  background:#FBFFFC;
+
+  border-color:#B2D5BC;
 }
+
 
 .report-card h3{
   margin:0 0 7px;
@@ -902,16 +1107,21 @@ button:disabled{
   color:var(--vv-squid);
 
   font-family:Poppins,Arial,sans-serif;
+
   font-size:15px;
+
   font-weight:800;
 }
+
 
 .report-meta{
   color:var(--vv-gray);
 
   font-size:12px;
+
   line-height:1.65;
 }
+
 
 .status{
   display:inline-block;
@@ -923,34 +1133,42 @@ button:disabled{
   border-radius:20px;
 
   font-size:9px;
+
   font-weight:800;
+
   letter-spacing:.04em;
 }
+
 
 .status.red{
   background:var(--status-red-bg);
   color:var(--status-red);
 }
 
+
 .status.blue{
   background:var(--status-blue-bg);
   color:var(--status-blue);
 }
+
 
 .status.green{
   background:var(--status-green-bg);
   color:var(--status-green);
 }
 
+
 .report-actions{
   display:grid;
 
-  grid-template-columns:1fr 1fr;
+  grid-template-columns:
+    1fr 1fr;
 
   gap:8px;
 
   margin-top:12px;
 }
+
 
 .report-actions button{
   min-height:38px;
@@ -960,22 +1178,27 @@ button:disabled{
   background:#fff;
 
   border:1.5px solid var(--vv-squid);
+
   border-radius:7px;
 
   color:var(--vv-squid);
 
   font-size:10px;
+
   font-weight:800;
 }
 
+
 .report-actions button:hover{
-  background:#faf7fc;
+  background:#FAF7FC;
 }
+
 
 .report-actions button.open{
   background:var(--vv-squid);
   color:#fff;
 }
+
 
 .empty{
   padding:35px 10px;
@@ -985,11 +1208,13 @@ button:disabled{
   text-align:center;
 
   font-size:13px;
+
   line-height:1.5;
 }
 
+
 /* =========================================================
-   SHIP RESPONSE
+   RESPONSE
 ========================================================= */
 
 .response-point{
@@ -998,42 +1223,45 @@ button:disabled{
   border-top:1px solid var(--vv-line);
 }
 
+
 .response-point:first-child{
   border-top:none;
 }
 
-.response-section{
+
+.response-section,
+.response-label{
   color:var(--vv-squid);
 
-  font-size:10px;
+  font-size:9px;
+
   font-weight:800;
+
   letter-spacing:.04em;
 }
+
 
 .response-text{
   margin-top:4px;
 
   font-size:14px;
+
   line-height:1.45;
+
   font-weight:600;
 }
 
-.response-comment{
-  margin-top:8px;
-
-  color:var(--vv-gray);
-
-  font-size:11.5px;
-  line-height:1.45;
-}
 
 .response-photos{
   display:flex;
+
   flex-wrap:wrap;
+
   gap:8px;
 
   margin-top:8px;
 }
+
 
 .response-photo{
   width:105px;
@@ -1042,10 +1270,12 @@ button:disabled{
   overflow:hidden;
 
   border:1px solid var(--vv-line);
+
   border-radius:8px;
 
   background:#fff;
 }
+
 
 .response-photo img{
   width:100%;
@@ -1054,63 +1284,56 @@ button:disabled{
   object-fit:cover;
 }
 
-.response-label{
-  margin-top:10px;
-
-  color:var(--vv-squid);
-
-  font-size:9px;
-  font-weight:800;
-  letter-spacing:.04em;
-}
 
 /* =========================================================
-   REVIEW
+   ADMIN
 ========================================================= */
 
-.review-followup{
-  margin-bottom:14px;
+.admin-button{
+  cursor:pointer;
 
-  padding:15px;
+  transition:
+    background .15s ease,
+    color .15s ease;
+}
+
+
+.admin-button:hover{
+  background:var(--vv-red) !important;
+  color:#fff !important;
+  border-color:var(--vv-red) !important;
+}
+
+
+.admin-delete{
+  width:100%;
+
+  min-height:38px;
+
+  padding:8px 7px;
 
   background:#fff;
 
-  border:1.5px solid var(--vv-line);
-  border-radius:10px;
+  color:var(--vv-red);
+
+  border:1.5px solid var(--vv-red);
+
+  border-radius:7px;
+
+  font-size:10px;
+
+  font-weight:800;
+
+  cursor:pointer;
 }
 
-.review-summary-box{
-  margin-bottom:20px;
-}
 
-/* =========================================================
-   TOAST
-========================================================= */
+.admin-delete:hover{
+  background:var(--vv-red);
 
-.toast{
-  position:fixed;
-
-  left:50%;
-  bottom:90px;
-
-  transform:translateX(-50%);
-
-  z-index:99999;
-
-  max-width:90%;
-
-  padding:10px 15px;
-
-  background:var(--vv-near-black);
   color:#fff;
-
-  border-radius:8px;
-
-  font-size:12px;
-
-  box-shadow:
-    0 4px 14px rgba(0,0,0,.25);
 }
+
 
 /* =========================================================
    PRINT
@@ -1122,10 +1345,13 @@ button:disabled{
     background:#fff;
   }
 
+
   .app{
     max-width:none;
+
     box-shadow:none;
   }
+
 
   .no-print,
   .footer,
@@ -1135,23 +1361,24 @@ button:disabled{
   .check-btn,
   .followup-row,
   .photo-remove,
-  .toast{
+  .header-back,
+  .admin-button{
     display:none !important;
   }
+
 
   .section-body{
     display:block !important;
   }
 
-  .section{
+
+  .section,
+  .item,
+  .report-card,
+  .response-point{
     page-break-inside:avoid;
   }
 
-  .item,
-  .response-point,
-  .report-card{
-    page-break-inside:avoid;
-  }
 
   .band{
     -webkit-print-color-adjust:exact;
@@ -1159,6 +1386,7 @@ button:disabled{
   }
 
 }
+
 
 /* =========================================================
    MOBILE
@@ -1170,41 +1398,78 @@ button:disabled{
     grid-template-columns:1fr;
   }
 
+
   .home{
     padding:20px;
   }
+
 
   .page-pad{
     padding:20px;
   }
 
+
   .reports{
     padding:20px;
   }
 
+
   .summary{
-    padding:20px 20px 125px;
+    padding:20px 20px 120px;
   }
 
-  .item-actions{
-    flex-direction:column;
-  }
-
-  .report-actions{
-    grid-template-columns:1fr;
-  }
 
   .grid2{
     grid-template-columns:1fr;
   }
 
+
   .stats{
     display:grid;
-    grid-template-columns:1fr 1fr;
+
+    grid-template-columns:
+      1fr 1fr;
   }
 
+
+  .item-actions{
+    flex-direction:column;
+  }
+
+
+  .report-actions{
+    grid-template-columns:1fr;
+  }
+
+
   .band{
-    padding:25px 20px 20px;
+    padding:
+      24px 20px 20px;
+  }
+
+
+  .band.compact .eyebrow{
+    padding-left:64px;
+  }
+
+
+  .band.compact h1{
+    padding-left:64px;
+  }
+
+
+  .band.compact .sub{
+    padding-left:64px;
+  }
+
+
+  .header-back{
+    top:12px;
+    left:12px;
+
+    padding:6px 9px;
+
+    font-size:9px;
   }
 
 }
