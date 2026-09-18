@@ -3,26 +3,6 @@
   SHIP VISIT REPORT
   review.js
   ============================================================
-
-  SHIP REVIEW
-
-  Shows ONLY checklist points that were reviewed/checked.
-
-  For each checked point:
-
-  - Checklist point
-  - Reviewer comments
-  - Attached photos
-  - Follow-Up Needed from Ship
-  - Existing Ship response
-
-  Unchecked points are NOT displayed.
-
-  After review:
-      SUBMIT REPORT
-        |
-        v
-      Submitted Reports
 */
 
 
@@ -35,31 +15,30 @@ import {
   getState,
   getMeta,
   getReviewer,
-  getReportId,
-  setReportStatus
+  getReportId
 } from './state.js';
 
 
 import {
   saveOpenReport,
-  submitReport
+  sendToShipReview
 } from './supabase.js';
 
 
 /* =========================================================
-   CALLBACK
+   CALLBACKS
 ========================================================= */
 
 let callbacks = {
 
-  submitted: null
+  sentToShip:null
 
 };
 
 
 export function setReviewCallbacks(
-  newCallbacks = {}
-) {
+  newCallbacks={}
+){
 
   callbacks = {
 
@@ -73,12 +52,12 @@ export function setReviewCallbacks(
 
 
 /* =========================================================
-   ESCAPE HTML
+   ESCAPE
 ========================================================= */
 
 function escapeHtml(
   value
-) {
+){
 
   return String(
     value ?? ''
@@ -99,10 +78,10 @@ function escapeHtml(
 
 
 /* =========================================================
-   GET CHECKED POINTS
+   CHECKED POINTS
 ========================================================= */
 
-export function getCheckedReviewPoints() {
+export function getCheckedReviewPoints(){
 
   const state =
     getState();
@@ -130,13 +109,14 @@ export function getCheckedReviewPoints() {
 
 
           /*
-            ONLY CHECKED POINTS
+            Only points marked checked
+            are sent to Ship Review.
           */
 
-          if (
+          if(
             !item ||
             !item.checked
-          ) {
+          ){
 
             return;
 
@@ -151,9 +131,6 @@ export function getCheckedReviewPoints() {
               section.title,
 
             text,
-
-            checked:
-              true,
 
             comments:
               Array.isArray(
@@ -196,83 +173,10 @@ export function getCheckedReviewPoints() {
 
 
 /* =========================================================
-   GET FOLLOW-UP POINTS
+   RENDER
 ========================================================= */
 
-export function getReviewFollowUps() {
-
-  return getCheckedReviewPoints()
-    .filter(
-      point =>
-        point.followUpNeeded
-    );
-
-}
-
-
-/* =========================================================
-   COUNTS
-========================================================= */
-
-function getReviewCounts() {
-
-  const points =
-    getCheckedReviewPoints();
-
-
-  const comments =
-    points.reduce(
-      (
-        total,
-        point
-      ) =>
-        total +
-        point.comments.length +
-        point.shipComments.length,
-      0
-    );
-
-
-  const photos =
-    points.reduce(
-      (
-        total,
-        point
-      ) =>
-        total +
-        point.photos.length,
-      0
-    );
-
-
-  const followUps =
-    points.filter(
-      point =>
-        point.followUpNeeded
-    ).length;
-
-
-  return {
-
-    checked:
-      points.length,
-
-    comments,
-
-    photos,
-
-    followUps
-
-  };
-
-}
-
-
-/* =========================================================
-   RENDER SHIP REVIEW
-========================================================= */
-
-export function renderShipReview() {
+export function renderShipReview(){
 
   const container =
     document.getElementById(
@@ -280,13 +184,9 @@ export function renderShipReview() {
     );
 
 
-  if (
+  if(
     !container
-  ) {
-
-    console.error(
-      '#ship-review-content not found.'
-    );
+  ){
 
     return;
 
@@ -301,21 +201,18 @@ export function renderShipReview() {
     getCheckedReviewPoints();
 
 
-  const counts =
-    getReviewCounts();
+  const followUps =
+    points.filter(
+      point =>
+        point.followUpNeeded
+    );
 
-
-  /*
-    ---------------------------------------------------------
-    HEADER
-    ---------------------------------------------------------
-  */
 
   let html = `
 
     <div
       style="
-        margin-bottom:18px;
+        margin-bottom:16px;
       "
     >
 
@@ -324,17 +221,17 @@ export function renderShipReview() {
           color:var(--vv-squid);
           font-size:17px;
           font-weight:800;
-          margin-bottom:5px;
         "
       >
 
-        SHIP REVIEW
+        READY TO SEND TO SHIP
 
       </div>
 
 
       <div
         style="
+          margin-top:5px;
           color:var(--vv-gray);
           font-size:12px;
           line-height:1.6;
@@ -342,104 +239,45 @@ export function renderShipReview() {
       >
 
         <b>Ship:</b>
-
-        ${escapeHtml(
-          meta.ship ||
-          ''
-        )}
+        ${escapeHtml(meta.ship)}
 
         <br>
 
         <b>Visit:</b>
-
-        ${escapeHtml(
-          meta.dateOn ||
-          ''
-        )}
+        ${escapeHtml(meta.dateOn)}
 
         ${
           meta.dateOff
-            ? ` → ${escapeHtml(
-                meta.dateOff
-              )}`
+            ? ` → ${escapeHtml(meta.dateOff)}`
             : ''
         }
 
         <br>
 
         <b>Reviewer:</b>
-
         ${escapeHtml(
           getReviewer() ||
-          meta.reviewer ||
-          ''
+          meta.reviewer
         )}
 
       </div>
 
     </div>
 
-
-    <div
-      style="
-        display:grid;
-        grid-template-columns:
-          repeat(3,1fr);
-        gap:8px;
-        margin-bottom:20px;
-      "
-    >
-
-      ${renderStat(
-        counts.checked,
-        'CHECKED'
-      )}
-
-      ${renderStat(
-        counts.comments,
-        'COMMENTS'
-      )}
-
-      ${renderStat(
-        counts.followUps,
-        'FOLLOW-UPS'
-      )}
-
-    </div>
-
   `;
 
 
-  /*
-    ---------------------------------------------------------
-    NO CHECKED POINTS
-    ---------------------------------------------------------
-  */
-
-  if (
+  if(
     points.length === 0
-  ) {
+  ){
 
     html += `
 
       <div
-        style="
-          padding:18px;
-          background:var(--vv-bg);
-          border-radius:8px;
-          color:var(--vv-gray);
-          text-align:center;
-          font-size:13px;
-          line-height:1.5;
-        "
+        class="empty"
       >
 
-        No checklist points have been checked yet.
-
-        <br><br>
-
-        Return to the checklist and mark the points
-        you have reviewed.
+        No checklist points have been checked.
 
       </div>
 
@@ -450,50 +288,85 @@ export function renderShipReview() {
       html;
 
 
-    renderCompleteReview();
-
-
     return;
 
   }
 
 
-  /*
-    ---------------------------------------------------------
-    INTRODUCTION
-    ---------------------------------------------------------
-  */
-
   html += `
 
     <div
       style="
-        margin-bottom:13px;
-        color:var(--vv-gray);
+        margin-bottom:15px;
+        padding:12px;
+        background:var(--vv-bg);
+        border-radius:8px;
         font-size:12px;
-        line-height:1.5;
+        line-height:1.6;
       "
     >
 
-      The following points were reviewed.
-      Please check the findings and follow-up requirements
-      before submitting the report.
+      <b>
+        ${points.length}
+      </b>
+
+      checked point(s)
+
+      <br>
+
+      <b>
+        ${followUps.length}
+      </b>
+
+      point(s) require ship follow-up.
 
     </div>
 
   `;
 
 
-  /*
-    ---------------------------------------------------------
-    DEPARTMENT GROUPS
-    ---------------------------------------------------------
-  */
-
   const groups =
-    groupByDepartment(
-      points
-    );
+    [];
+
+
+  points.forEach(
+    point => {
+
+      let group =
+        groups.find(
+          item =>
+            item.section ===
+            point.section
+        );
+
+
+      if(
+        !group
+      ){
+
+        group = {
+
+          section:
+            point.section,
+
+          points:[]
+
+        };
+
+
+        groups.push(
+          group
+        );
+
+      }
+
+
+      group.points.push(
+        point
+      );
+
+    }
+  );
 
 
   groups.forEach(
@@ -541,123 +414,60 @@ export function renderShipReview() {
     html;
 
 
-  /*
-    Complete review area.
-  */
-
-  renderCompleteReview();
-
-}
+  const bottom =
+    document.getElementById(
+      'ship-review-all'
+    );
 
 
-/* =========================================================
-   STAT BOX
-========================================================= */
+  if(
+    bottom
+  ){
 
-function renderStat(
-  value,
-  label
-) {
-
-  return `
-
-    <div
-      style="
-        padding:10px;
-        background:var(--vv-bg);
-        border-top:3px solid var(--vv-red);
-        border-radius:6px;
-      "
-    >
+    bottom.innerHTML = `
 
       <div
         style="
-          font-size:20px;
-          font-weight:800;
+          margin-top:16px;
+          padding-top:15px;
+          border-top:1px solid var(--vv-line);
         "
       >
 
-        ${escapeHtml(
-          value
-        )}
+        <div
+          style="
+            color:var(--vv-squid);
+            font-size:14px;
+            font-weight:800;
+          "
+        >
+
+          SEND REPORT TO SHIP
+
+        </div>
+
+
+        <div
+          style="
+            margin-top:5px;
+            color:var(--vv-gray);
+            font-size:11px;
+            line-height:1.5;
+          "
+        >
+
+          After sending, this report will appear
+          in Ship Response Report. The ship will
+          enter the response for each follow-up
+          point and submit the report.
+
+        </div>
 
       </div>
 
+    `;
 
-      <div
-        style="
-          color:var(--vv-gray);
-          font-size:9px;
-          font-weight:800;
-        "
-      >
-
-        ${escapeHtml(
-          label
-        )}
-
-      </div>
-
-    </div>
-
-  `;
-
-}
-
-
-/* =========================================================
-   GROUP BY DEPARTMENT
-========================================================= */
-
-function groupByDepartment(
-  points
-) {
-
-  const groups =
-    [];
-
-
-  points.forEach(
-    point => {
-
-      let group =
-        groups.find(
-          item =>
-            item.section ===
-            point.section
-        );
-
-
-      if (
-        !group
-      ) {
-
-        group = {
-
-          section:
-            point.section,
-
-          points: []
-
-        };
-
-
-        groups.push(
-          group
-        );
-
-      }
-
-
-      group.points.push(
-        point
-      );
-
-    }
-  );
-
-
-  return groups;
+  }
 
 }
 
@@ -668,12 +478,7 @@ function groupByDepartment(
 
 function renderReviewPoint(
   point
-) {
-
-  const followUpComplete =
-    point.followUpNeeded &&
-    point.shipComments.length > 0;
-
+){
 
   let html = `
 
@@ -688,13 +493,11 @@ function renderReviewPoint(
       "
     >
 
-      <!-- POINT -->
-
       <div
         style="
           display:flex;
-          align-items:flex-start;
           gap:9px;
+          align-items:flex-start;
         "
       >
 
@@ -713,16 +516,13 @@ function renderReviewPoint(
             font-weight:800;
           "
         >
-
           ✓
-
         </div>
 
 
         <div
           style="
             flex:1;
-            color:var(--vv-body);
             font-size:13.5px;
             line-height:1.5;
             font-weight:600;
@@ -740,13 +540,9 @@ function renderReviewPoint(
   `;
 
 
-  /*
-    FOLLOW-UP
-  */
-
-  if (
+  if(
     point.followUpNeeded
-  ) {
+  ){
 
     html += `
 
@@ -756,19 +552,9 @@ function renderReviewPoint(
         "
       >
 
-        <span
-          class="status ${
-            followUpComplete
-              ? 'green'
-              : 'blue'
-          }"
-        >
+        <span class="status blue">
 
-          ${
-            followUpComplete
-              ? 'SHIP FOLLOW-UP COMPLETED'
-              : 'FOLLOW-UP NEEDED FROM SHIP'
-          }
+          FOLLOW-UP NEEDED FROM SHIP
 
         </span>
 
@@ -779,13 +565,9 @@ function renderReviewPoint(
   }
 
 
-  /*
-    REVIEWER COMMENTS
-  */
-
-  if (
+  if(
     point.comments.length
-  ) {
+  ){
 
     html += `
 
@@ -796,13 +578,7 @@ function renderReviewPoint(
       >
 
         <div
-          style="
-            color:var(--vv-squid);
-            font-size:9px;
-            font-weight:800;
-            letter-spacing:.04em;
-            margin-bottom:5px;
-          "
+          class="response-label"
         >
 
           REVIEWER COMMENTS
@@ -815,9 +591,7 @@ function renderReviewPoint(
             .map(
               comment => `
 
-                <div
-                  class="comment"
-                >
+                <div class="comment">
 
                   <strong>
 
@@ -845,34 +619,12 @@ function renderReviewPoint(
 
     `;
 
-  } else {
-
-    html += `
-
-      <div
-        style="
-          margin-top:9px;
-          color:var(--vv-gray);
-          font-size:10px;
-        "
-      >
-
-        No reviewer comment added.
-
-      </div>
-
-    `;
-
   }
 
 
-  /*
-    PHOTOS
-  */
-
-  if (
+  if(
     point.photos.length
-  ) {
+  ){
 
     html += `
 
@@ -882,56 +634,25 @@ function renderReviewPoint(
         "
       >
 
-        <div
-          style="
-            color:var(--vv-squid);
-            font-size:9px;
-            font-weight:800;
-            letter-spacing:.04em;
-            margin-bottom:6px;
-          "
-        >
+        <div class="response-label">
 
           ATTACHED PHOTOS
 
         </div>
 
 
-        <div
-          style="
-            display:flex;
-            flex-wrap:wrap;
-            gap:8px;
-          "
-        >
+        <div class="response-photos">
 
           ${
             point.photos
               .map(
-                (
-                  photo,
-                  index
-                ) => `
+                photo => `
 
-                  <div
-                    style="
-                      width:105px;
-                      height:105px;
-                      overflow:hidden;
-                      border:1px solid var(--vv-line);
-                      border-radius:7px;
-                      background:#fff;
-                    "
-                  >
+                  <div class="response-photo">
 
                     <img
                       src="${photo}"
-                      alt="Reviewer photo ${index + 1}"
-                      style="
-                        width:100%;
-                        height:100%;
-                        object-fit:cover;
-                      "
+                      alt="Reviewer photo"
                     >
 
                   </div>
@@ -942,96 +663,6 @@ function renderReviewPoint(
           }
 
         </div>
-
-      </div>
-
-    `;
-
-  }
-
-
-  /*
-    SHIP RESPONSE
-  */
-
-  if (
-    point.followUpNeeded
-  ) {
-
-    html += `
-
-      <div
-        style="
-          margin-top:11px;
-        "
-      >
-
-        <div
-          style="
-            color:var(--status-green);
-            font-size:9px;
-            font-weight:800;
-            letter-spacing:.04em;
-            margin-bottom:5px;
-          "
-        >
-
-          SHIP COMMENTS / RESPONSES
-
-        </div>
-
-
-        ${
-          point.shipComments.length
-
-            ? point.shipComments
-                .map(
-                  comment => `
-
-                    <div
-                      class="ship-response-display"
-                    >
-
-                      <strong>
-
-                        ${escapeHtml(
-                          comment.name ||
-                          'Ship'
-                        )}:
-
-                      </strong>
-
-
-                      ${escapeHtml(
-                        comment.text ||
-                        ''
-                      )}
-
-                    </div>
-
-                  `
-                )
-                .join('')
-
-            : `
-
-                <div
-                  style="
-                    padding:8px 10px;
-                    background:#fff8f8;
-                    border-left:3px solid var(--vv-red);
-                    border-radius:6px;
-                    color:var(--vv-red);
-                    font-size:11px;
-                  "
-                >
-
-                  No ship response yet.
-
-                </div>
-
-              `
-        }
 
       </div>
 
@@ -1053,212 +684,18 @@ function renderReviewPoint(
 
 
 /* =========================================================
-   COMPLETE REVIEW
-========================================================= */
-
-export function renderCompleteReview() {
-
-  const container =
-    document.getElementById(
-      'ship-review-all'
-    );
-
-
-  if (
-    !container
-  ) {
-
-    return;
-
-  }
-
-
-  const points =
-    getCheckedReviewPoints();
-
-
-  /*
-    The previous version showed ALL points here.
-    That was the problem.
-
-    Now only checked points are shown.
-  */
-
-  if (
-    points.length === 0
-  ) {
-
-    container.innerHTML =
-      '';
-
-    return;
-
-  }
-
-
-  container.innerHTML = `
-
-    <div
-      style="
-        margin-top:20px;
-        padding-top:16px;
-        border-top:1px solid var(--vv-line);
-      "
-    >
-
-      <div
-        style="
-          color:var(--vv-squid);
-          font-size:14px;
-          font-weight:800;
-          margin-bottom:10px;
-        "
-      >
-
-        REVIEWED POINTS
-
-      </div>
-
-
-      <div
-        style="
-          color:var(--vv-gray);
-          font-size:11px;
-          line-height:1.45;
-          margin-bottom:10px;
-        "
-      >
-
-        Only checklist points marked as reviewed
-        are included in this report.
-
-      </div>
-
-
-      ${
-        points
-          .map(
-            point =>
-              renderCompactPoint(
-                point
-              )
-          )
-          .join('')
-      }
-
-    </div>
-
-  `;
-
-}
-
-
-/* =========================================================
-   COMPACT REVIEW POINT
-========================================================= */
-
-function renderCompactPoint(
-  point
-) {
-
-  const completed =
-    point.followUpNeeded &&
-    point.shipComments.length > 0;
-
-
-  return `
-
-    <div
-      style="
-        margin-bottom:10px;
-        padding:10px;
-        background:var(--vv-bg);
-        border-radius:7px;
-      "
-    >
-
-      <div
-        style="
-          color:var(--vv-squid);
-          font-size:9px;
-          font-weight:800;
-        "
-      >
-
-        ${escapeHtml(
-          point.section
-        )}
-
-      </div>
-
-
-      <div
-        style="
-          margin-top:3px;
-          font-size:12px;
-          line-height:1.4;
-        "
-      >
-
-        ${escapeHtml(
-          point.text
-        )}
-
-      </div>
-
-
-      ${
-        point.followUpNeeded
-          ? `
-
-            <div
-              style="
-                margin-top:5px;
-              "
-            >
-
-              <span
-                class="status ${
-                  completed
-                    ? 'green'
-                    : 'blue'
-                }"
-              >
-
-                ${
-                  completed
-                    ? 'FOLLOW-UP COMPLETED'
-                    : 'FOLLOW-UP NEEDED'
-                }
-
-              </span>
-
-            </div>
-
-          `
-          : ''
-      }
-
-    </div>
-
-  `;
-
-}
-
-
-/* =========================================================
    SAVE BEFORE REVIEW
 ========================================================= */
 
-export async function saveBeforeReview(){
+async function saveBeforeReview(){
 
   const reportId =
     getReportId();
 
 
-  if (
+  if(
     !reportId
-  ) {
+  ){
 
     return {
 
@@ -1290,7 +727,7 @@ export async function saveBeforeReview(){
 
 
 /* =========================================================
-   PREPARE SHIP REVIEW
+   PREPARE
 ========================================================= */
 
 export async function prepareShipReview(){
@@ -1299,14 +736,15 @@ export async function prepareShipReview(){
     await saveBeforeReview();
 
 
-  if (
+  if(
+    !saved ||
     !saved.success
-  ) {
+  ){
 
     alert(
-      'The report could not be saved before Ship Review.\n\n' +
+      'Could not save the report before Ship Review.\n\n' +
       (
-        saved.error?.message ||
+        saved?.error?.message ||
         'Unknown error'
       )
     );
@@ -1326,18 +764,18 @@ export async function prepareShipReview(){
 
 
 /* =========================================================
-   SUBMIT REPORT
+   SEND CURRENT REPORT TO SHIP
 ========================================================= */
 
-export async function submitCurrentReport(){
+export async function sendCurrentReportToShip(){
 
   const reportId =
     getReportId();
 
 
-  if (
+  if(
     !reportId
-  ) {
+  ){
 
     alert(
       'No active report was found.'
@@ -1349,33 +787,61 @@ export async function submitCurrentReport(){
   }
 
 
-  const meta =
-    getMeta();
+  const points =
+    getCheckedReviewPoints();
 
 
-  const state =
-    getState();
+  if(
+    points.length === 0
+  ){
+
+    alert(
+      'Please check at least one checklist point before sending the report.'
+    );
+
+
+    return false;
+
+  }
+
+
+  const confirmed =
+    window.confirm(
+      'Send this report to the ship?\n\n' +
+      'The report will move to Ship Response Report.'
+    );
+
+
+  if(
+    !confirmed
+  ){
+
+    return false;
+
+  }
 
 
   const result =
-    await submitReport({
+    await sendToShipReview({
 
       reportId,
 
-      meta,
+      meta:
+        getMeta(),
 
-      state
+      state:
+        getState()
 
     });
 
 
-  if (
+  if(
     !result ||
     !result.success
-  ) {
+  ){
 
     alert(
-      'The report could not be submitted.\n\n' +
+      'The report could not be sent to the ship.\n\n' +
       (
         result?.error?.message ||
         'Unknown error'
@@ -1388,24 +854,11 @@ export async function submitCurrentReport(){
   }
 
 
-  /*
-    Mark local state as submitted.
-  */
+  if(
+    callbacks.sentToShip
+  ){
 
-  setReportStatus(
-    'submitted'
-  );
-
-
-  /*
-    Notify main.js.
-  */
-
-  if (
-    callbacks.submitted
-  ) {
-
-    await callbacks.submitted(
+    await callbacks.sentToShip(
       result.data
     );
 
@@ -1418,89 +871,31 @@ export async function submitCurrentReport(){
 
 
 /* =========================================================
-   SUBMIT CONFIRMATION
+   COMPATIBILITY
 ========================================================= */
 
-export function askSubmitConfirmation(){
+export async function submitCurrentReport(){
 
-  return window.confirm(
-    'Submit this Ship Visit Report?\n\n' +
-    'The report will move from Open Reports to Submitted Reports.'
-  );
+  return sendCurrentReportToShip();
 
 }
 
 
 /* =========================================================
-   REVIEW SUMMARY
-========================================================= */
-
-export function getReviewSummary(){
-
-  const meta =
-    getMeta();
-
-
-  const counts =
-    getReviewCounts();
-
-
-  return {
-
-    ship:
-      meta.ship || '',
-
-    dateOn:
-      meta.dateOn || '',
-
-    dateOff:
-      meta.dateOff || '',
-
-    reviewer:
-      getReviewer() ||
-      meta.reviewer ||
-      '',
-
-    checked:
-      counts.checked,
-
-    comments:
-      counts.comments,
-
-    photos:
-      counts.photos,
-
-    followUps:
-      counts.followUps
-
-  };
-
-}
-
-
-/* =========================================================
-   DEFAULT EXPORT
+   DEFAULT
 ========================================================= */
 
 export default {
 
   renderShipReview,
 
-  renderCompleteReview,
-
   getCheckedReviewPoints,
-
-  getReviewFollowUps,
 
   prepareShipReview,
 
-  saveBeforeReview,
+  sendCurrentReportToShip,
 
   submitCurrentReport,
-
-  askSubmitConfirmation,
-
-  getReviewSummary,
 
   setReviewCallbacks
 
