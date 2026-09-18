@@ -4,17 +4,18 @@
   supabase.js
   ============================================================
 
-  Supabase database module.
+  Handles all communication with Supabase.
 
-  IMPORTANT:
-  Supabase is loaded globally by index.html.
-
-  We intentionally do NOT use:
-
-  import { createClient }
-  from 'https://cdn.jsdelivr.net/...'
-
-  This keeps the application module loading reliable.
+  Features:
+  - Create Open Report
+  - Update Open Report
+  - Submit Report
+  - Load Open Reports
+  - Load Submitted Reports
+  - Load One Report
+  - Delete Report
+  - Save Ship Responses
+  - Report status helpers
 */
 
 
@@ -31,7 +32,7 @@ export const SUPABASE_KEY =
 
 
 /* =========================================================
-   CHECK LIBRARY
+   SUPABASE LIBRARY CHECK
 ========================================================= */
 
 if (
@@ -40,14 +41,14 @@ if (
 ) {
 
   throw new Error(
-    'Supabase library did not load. Check index.html.'
+    'Supabase library did not load. Make sure index.html loads @supabase/supabase-js before main.js.'
   );
 
 }
 
 
 /* =========================================================
-   CLIENT
+   CREATE CLIENT
 ========================================================= */
 
 export const supabase =
@@ -58,10 +59,10 @@ export const supabase =
 
 
 /* =========================================================
-   CONNECTION TEST
+   TEST CONNECTION
 ========================================================= */
 
-export async function testConnection(){
+export async function testConnection() {
 
   try {
 
@@ -73,8 +74,8 @@ export async function testConnection(){
         .select(
           'id',
           {
-            count:'exact',
-            head:true
+            count: 'exact',
+            head: true
           }
         );
 
@@ -84,33 +85,23 @@ export async function testConnection(){
     ) {
 
       return {
-
-        success:false,
-
-        error:
-          result.error
-
+        success: false,
+        error: result.error
       };
 
     }
 
 
     return {
-
-      success:true,
-
-      error:null
-
+      success: true,
+      error: null
     };
 
-  } catch(error) {
+  } catch (error) {
 
     return {
-
-      success:false,
-
+      success: false,
       error
-
     };
 
   }
@@ -119,7 +110,7 @@ export async function testConnection(){
 
 
 /* =========================================================
-   BUILD PAYLOAD
+   BUILD DATABASE PAYLOAD
 ========================================================= */
 
 function buildPayload({
@@ -127,7 +118,7 @@ function buildPayload({
   state,
   status = 'open',
   submittedAt = null
-}){
+}) {
 
   const now =
     new Date().toISOString();
@@ -149,9 +140,9 @@ function buildPayload({
 
     status,
 
-    report_data:{
+    report_data: {
 
-      meta:{
+      meta: {
 
         ship:
           meta?.ship || '',
@@ -167,7 +158,6 @@ function buildPayload({
 
       },
 
-
       state:
         JSON.parse(
           JSON.stringify(
@@ -177,7 +167,6 @@ function buildPayload({
 
     },
 
-
     updated_at:
       now
 
@@ -186,7 +175,7 @@ function buildPayload({
 
   if (
     submittedAt
-  ){
+  ) {
 
     payload.submitted_at =
       submittedAt;
@@ -206,7 +195,7 @@ function buildPayload({
 export async function createOpenReport({
   meta,
   state
-}){
+}) {
 
   try {
 
@@ -237,7 +226,7 @@ export async function createOpenReport({
 
     if (
       result.error
-    ){
+    ) {
 
       throw result.error;
 
@@ -246,16 +235,16 @@ export async function createOpenReport({
 
     return {
 
-      success:true,
+      success: true,
 
       data:
         result.data,
 
-      error:null
+      error: null
 
     };
 
-  } catch(error) {
+  } catch (error) {
 
     console.error(
       'createOpenReport:',
@@ -265,9 +254,9 @@ export async function createOpenReport({
 
     return {
 
-      success:false,
+      success: false,
 
-      data:null,
+      data: null,
 
       error
 
@@ -286,13 +275,13 @@ export async function updateOpenReport({
   reportId,
   meta,
   state
-}){
+}) {
 
   try {
 
     if (
       !reportId
-    ){
+    ) {
 
       throw new Error(
         'Report ID is required.'
@@ -326,13 +315,17 @@ export async function updateOpenReport({
           'id',
           reportId
         )
+        .eq(
+          'status',
+          'open'
+        )
         .select()
         .single();
 
 
     if (
       result.error
-    ){
+    ) {
 
       throw result.error;
 
@@ -341,16 +334,16 @@ export async function updateOpenReport({
 
     return {
 
-      success:true,
+      success: true,
 
       data:
         result.data,
 
-      error:null
+      error: null
 
     };
 
-  } catch(error) {
+  } catch (error) {
 
     console.error(
       'updateOpenReport:',
@@ -360,9 +353,9 @@ export async function updateOpenReport({
 
     return {
 
-      success:false,
+      success: false,
 
-      data:null,
+      data: null,
 
       error
 
@@ -381,11 +374,11 @@ export async function saveOpenReport({
   reportId,
   meta,
   state
-}){
+}) {
 
   if (
     reportId
-  ){
+  ) {
 
     return updateOpenReport({
 
@@ -419,13 +412,13 @@ export async function submitReport({
   reportId,
   meta,
   state
-}){
+}) {
 
   try {
 
     if (
       !reportId
-    ){
+    ) {
 
       throw new Error(
         'Report ID is required.'
@@ -465,13 +458,17 @@ export async function submitReport({
           'id',
           reportId
         )
+        .eq(
+          'status',
+          'open'
+        )
         .select()
         .single();
 
 
     if (
       result.error
-    ){
+    ) {
 
       throw result.error;
 
@@ -480,16 +477,16 @@ export async function submitReport({
 
     return {
 
-      success:true,
+      success: true,
 
       data:
         result.data,
 
-      error:null
+      error: null
 
     };
 
-  } catch(error) {
+  } catch (error) {
 
     console.error(
       'submitReport:',
@@ -499,9 +496,9 @@ export async function submitReport({
 
     return {
 
-      success:false,
+      success: false,
 
-      data:null,
+      data: null,
 
       error
 
@@ -516,7 +513,7 @@ export async function submitReport({
    GET OPEN REPORTS
 ========================================================= */
 
-export async function getOpenReports(){
+export async function getOpenReports() {
 
   try {
 
@@ -533,14 +530,14 @@ export async function getOpenReports(){
         .order(
           'updated_at',
           {
-            ascending:false
+            ascending: false
           }
         );
 
 
     if (
       result.error
-    ){
+    ) {
 
       throw result.error;
 
@@ -549,16 +546,16 @@ export async function getOpenReports(){
 
     return {
 
-      success:true,
+      success: true,
 
       data:
         result.data || [],
 
-      error:null
+      error: null
 
     };
 
-  } catch(error) {
+  } catch (error) {
 
     console.error(
       'getOpenReports:',
@@ -568,9 +565,9 @@ export async function getOpenReports(){
 
     return {
 
-      success:false,
+      success: false,
 
-      data:[],
+      data: [],
 
       error
 
@@ -585,7 +582,7 @@ export async function getOpenReports(){
    GET SUBMITTED REPORTS
 ========================================================= */
 
-export async function getSubmittedReports(){
+export async function getSubmittedReports() {
 
   try {
 
@@ -602,15 +599,15 @@ export async function getSubmittedReports(){
         .order(
           'submitted_at',
           {
-            ascending:false,
-            nullsFirst:false
+            ascending: false,
+            nullsFirst: false
           }
         );
 
 
     if (
       result.error
-    ){
+    ) {
 
       throw result.error;
 
@@ -619,16 +616,16 @@ export async function getSubmittedReports(){
 
     return {
 
-      success:true,
+      success: true,
 
       data:
         result.data || [],
 
-      error:null
+      error: null
 
     };
 
-  } catch(error) {
+  } catch (error) {
 
     console.error(
       'getSubmittedReports:',
@@ -638,9 +635,9 @@ export async function getSubmittedReports(){
 
     return {
 
-      success:false,
+      success: false,
 
-      data:[],
+      data: [],
 
       error
 
@@ -652,18 +649,18 @@ export async function getSubmittedReports(){
 
 
 /* =========================================================
-   GET SINGLE REPORT
+   GET ONE REPORT
 ========================================================= */
 
 export async function getReport(
   reportId
-){
+) {
 
   try {
 
     if (
       !reportId
-    ){
+    ) {
 
       throw new Error(
         'Report ID is required.'
@@ -687,7 +684,7 @@ export async function getReport(
 
     if (
       result.error
-    ){
+    ) {
 
       throw result.error;
 
@@ -696,16 +693,16 @@ export async function getReport(
 
     return {
 
-      success:true,
+      success: true,
 
       data:
         result.data,
 
-      error:null
+      error: null
 
     };
 
-  } catch(error) {
+  } catch (error) {
 
     console.error(
       'getReport:',
@@ -715,9 +712,9 @@ export async function getReport(
 
     return {
 
-      success:false,
+      success: false,
 
-      data:null,
+      data: null,
 
       error
 
@@ -729,18 +726,18 @@ export async function getReport(
 
 
 /* =========================================================
-   DELETE OPEN REPORT
+   ADMIN DELETE REPORT
 ========================================================= */
 
-export async function deleteOpenReport(
+export async function deleteReport(
   reportId
-){
+) {
 
   try {
 
     if (
       !reportId
-    ){
+    ) {
 
       throw new Error(
         'Report ID is required.'
@@ -758,16 +755,12 @@ export async function deleteOpenReport(
         .eq(
           'id',
           reportId
-        )
-        .eq(
-          'status',
-          'open'
         );
 
 
     if (
       result.error
-    ){
+    ) {
 
       throw result.error;
 
@@ -776,23 +769,23 @@ export async function deleteOpenReport(
 
     return {
 
-      success:true,
+      success: true,
 
-      error:null
+      error: null
 
     };
 
-  } catch(error) {
+  } catch (error) {
 
     console.error(
-      'deleteOpenReport:',
+      'deleteReport:',
       error
     );
 
 
     return {
 
-      success:false,
+      success: false,
 
       error
 
@@ -804,19 +797,34 @@ export async function deleteOpenReport(
 
 
 /* =========================================================
+   LEGACY DELETE OPEN REPORT
+========================================================= */
+
+export async function deleteOpenReport(
+  reportId
+) {
+
+  return deleteReport(
+    reportId
+  );
+
+}
+
+
+/* =========================================================
    SAVE SHIP RESPONSE
 ========================================================= */
 
 export async function saveShipResponse({
   reportId,
   state
-}){
+}) {
 
   try {
 
     if (
       !reportId
-    ){
+    ) {
 
       throw new Error(
         'Report ID is required.'
@@ -826,7 +834,7 @@ export async function saveShipResponse({
 
 
     /*
-      Get latest database record.
+      Always get latest report first.
     */
 
     const current =
@@ -838,7 +846,7 @@ export async function saveShipResponse({
     if (
       !current.success ||
       !current.data
-    ){
+    ) {
 
       throw (
         current.error ||
@@ -850,8 +858,12 @@ export async function saveShipResponse({
     }
 
 
+    const report =
+      current.data;
+
+
     const existingData =
-      current.data.report_data ||
+      report.report_data ||
       {};
 
 
@@ -912,7 +924,7 @@ export async function saveShipResponse({
 
     if (
       result.error
-    ){
+    ) {
 
       throw result.error;
 
@@ -921,18 +933,18 @@ export async function saveShipResponse({
 
     return {
 
-      success:true,
+      success: true,
 
       data:
         result.data,
 
       complete,
 
-      error:null
+      error: null
 
     };
 
-  } catch(error) {
+  } catch (error) {
 
     console.error(
       'saveShipResponse:',
@@ -942,11 +954,11 @@ export async function saveShipResponse({
 
     return {
 
-      success:false,
+      success: false,
 
-      data:null,
+      data: null,
 
-      complete:false,
+      complete: false,
 
       error
 
@@ -958,12 +970,12 @@ export async function saveShipResponse({
 
 
 /* =========================================================
-   FOLLOW-UP COMPLETE
+   FOLLOW-UP CHECK
 ========================================================= */
 
 export function areFollowUpsComplete(
   state
-){
+) {
 
   const items =
     Object.values(
@@ -979,24 +991,14 @@ export function areFollowUpsComplete(
     );
 
 
-  /*
-    No follow-ups:
-    nothing waiting for ship.
-  */
-
   if (
     followUps.length === 0
-  ){
+  ) {
 
     return true;
 
   }
 
-
-  /*
-    At least one ship comment
-    completes a follow-up.
-  */
 
   return followUps.every(
     item =>
@@ -1015,7 +1017,7 @@ export function areFollowUpsComplete(
 
 export function countFollowUps(
   state
-){
+) {
 
   return Object.values(
     state || {}
@@ -1036,7 +1038,7 @@ export function countFollowUps(
 
 export function countCompletedFollowUps(
   state
-){
+) {
 
   return Object.values(
     state || {}
@@ -1061,11 +1063,11 @@ export function countCompletedFollowUps(
 
 export function getReportColor(
   report
-){
+) {
 
   if (
     !report
-  ){
+  ) {
 
     return 'blue';
 
@@ -1073,14 +1075,13 @@ export function getReportColor(
 
 
   /*
-    OPEN
-    RED
+    OPEN = RED
   */
 
   if (
     report.status ===
     'open'
-  ){
+  ) {
 
     return 'red';
 
@@ -1093,15 +1094,14 @@ export function getReportColor(
 
 
   /*
-    COMPLETED
-    GREEN
+    ALL FOLLOW-UPS COMPLETE = GREEN
   */
 
   if (
     areFollowUpsComplete(
       state
     )
-  ){
+  ) {
 
     return 'green';
 
@@ -1109,8 +1109,7 @@ export function getReportColor(
 
 
   /*
-    SUBMITTED / WAITING
-    BLUE
+    SUBMITTED / FOLLOW-UP OPEN = BLUE
   */
 
   return 'blue';
@@ -1124,7 +1123,7 @@ export function getReportColor(
 
 export function getReportStatusText(
   report
-){
+) {
 
   const color =
     getReportColor(
@@ -1133,9 +1132,8 @@ export function getReportStatusText(
 
 
   if (
-    color ===
-    'red'
-  ){
+    color === 'red'
+  ) {
 
     return 'OPEN / ONGOING';
 
@@ -1143,9 +1141,8 @@ export function getReportStatusText(
 
 
   if (
-    color ===
-    'green'
-  ){
+    color === 'green'
+  ) {
 
     return 'SHIP RESPONSE COMPLETE';
 
@@ -1163,12 +1160,12 @@ export function getReportStatusText(
 
 export function reportNeedsFollowUp(
   report
-){
+) {
 
   if (
     !report ||
     report.status !== 'submitted'
-  ){
+  ) {
 
     return false;
 
@@ -1204,7 +1201,7 @@ export function reportNeedsFollowUp(
 
 export function getFollowUpPoints(
   report
-){
+) {
 
   const state =
     report?.report_data?.state ||
@@ -1215,12 +1212,12 @@ export function getFollowUpPoints(
     state
   )
   .filter(
-    ([,item]) =>
+    ([, item]) =>
       item &&
       item.followUpNeeded
   )
   .map(
-    ([key,item]) => ({
+    ([key, item]) => ({
 
       key,
 
@@ -1255,6 +1252,8 @@ export default {
   getSubmittedReports,
 
   getReport,
+
+  deleteReport,
 
   deleteOpenReport,
 
