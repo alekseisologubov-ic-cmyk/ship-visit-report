@@ -1045,7 +1045,6 @@ function bindReviewButtons(){
 
       renderChecklist();
 
-
       showScreen(
         'checklist'
       );
