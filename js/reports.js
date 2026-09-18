@@ -3,15 +3,6 @@
   SHIP VISIT REPORT
   reports.js
   ============================================================
-
-  Handles:
-
-  - Open Reports
-  - Submitted Reports
-  - Report Overall
-  - Points To Follow Up
-  - Admin Delete
-  - Report navigation callbacks
 */
 
 
@@ -23,8 +14,6 @@ import {
 import {
   getReportColor,
   getReportStatusText,
-  reportNeedsFollowUp,
-  getFollowUpPoints,
   countFollowUps,
   countCompletedFollowUps,
   getReport
@@ -36,26 +25,26 @@ import {
 } from './state.js';
 
 
-/* =========================================================
-   CALLBACKS
-========================================================= */
-
 let callbacks = {
 
-  openReport: null,
+  openReport:null,
 
-  viewSummary: null,
+  viewSummary:null,
 
-  viewFollowUps: null,
+  viewFollowUps:null,
 
-  showHome: null
+  showHome:null
 
 };
 
 
+/* =========================================================
+   CALLBACKS
+========================================================= */
+
 export function setReportCallbacks(
-  newCallbacks = {}
-) {
+  newCallbacks={}
+){
 
   callbacks = {
 
@@ -69,12 +58,12 @@ export function setReportCallbacks(
 
 
 /* =========================================================
-   HTML ESCAPE
+   ESCAPE
 ========================================================= */
 
 function escapeHtml(
   value
-) {
+){
 
   return String(
     value ?? ''
@@ -82,15 +71,15 @@ function escapeHtml(
     /[&<>"']/g,
     character => ({
 
-      '&': '&amp;',
+      '&':'&amp;',
 
-      '<': '&lt;',
+      '<':'&lt;',
 
-      '>': '&gt;',
+      '>':'&gt;',
 
-      '"': '&quot;',
+      '"':'&quot;',
 
-      "'": '&#39;'
+      "'":'&#39;'
 
     }[character])
   );
@@ -104,12 +93,10 @@ function escapeHtml(
 
 function formatDate(
   value,
-  withTime = false
-) {
+  withTime=false
+){
 
-  if (
-    !value
-  ) {
+  if(!value){
 
     return '';
 
@@ -122,11 +109,11 @@ function formatDate(
     );
 
 
-  if (
+  if(
     Number.isNaN(
       date.getTime()
     )
-  ) {
+  ){
 
     return value;
 
@@ -141,15 +128,15 @@ function formatDate(
 
 
 /* =========================================================
-   ADMIN CHECK
+   ADMIN
 ========================================================= */
 
-function isAdmin() {
+function isAdmin(){
 
-  if (
+  if(
     typeof window.shipVisitIsAdmin ===
     'function'
-  ) {
+  ){
 
     return Boolean(
       window.shipVisitIsAdmin()
@@ -163,17 +150,13 @@ function isAdmin() {
 }
 
 
-/* =========================================================
-   ADMIN DELETE BUTTON
-========================================================= */
-
 function adminDeleteButton(
   reportId
-) {
+){
 
-  if (
+  if(
     !isAdmin()
-  ) {
+  ){
 
     return '';
 
@@ -188,11 +171,6 @@ function adminDeleteButton(
       data-admin-delete="${escapeHtml(
         reportId
       )}"
-      style="
-        background:#fff;
-        color:#CC0000;
-        border:1.5px solid #CC0000;
-      "
     >
       Delete Report
     </button>
@@ -206,7 +184,7 @@ function adminDeleteButton(
    OPEN REPORTS
 ========================================================= */
 
-export async function renderOpenReports() {
+export async function renderOpenReports(){
 
   const container =
     document.getElementById(
@@ -214,9 +192,7 @@ export async function renderOpenReports() {
     );
 
 
-  if (
-    !container
-  ) {
+  if(!container){
 
     return;
 
@@ -226,13 +202,15 @@ export async function renderOpenReports() {
   container.innerHTML = `
 
     <div class="empty">
+
       Loading open reports...
+
     </div>
 
   `;
 
 
-  try {
+  try{
 
     const module =
       await import(
@@ -244,12 +222,13 @@ export async function renderOpenReports() {
       await module.getOpenReports();
 
 
-    if (
+    if(
+      !result ||
       !result.success
-    ) {
+    ){
 
       throw (
-        result.error ||
+        result?.error ||
         new Error(
           'Could not load open reports.'
         )
@@ -259,22 +238,19 @@ export async function renderOpenReports() {
 
 
     const reports =
-      result.data || [];
+      result.data ||
+      [];
 
 
-    if (
+    if(
       reports.length === 0
-    ) {
+    ){
 
       container.innerHTML = `
 
         <div class="empty">
 
           No open reports yet.
-
-          <br><br>
-
-          Create a new report to see it here.
 
         </div>
 
@@ -289,17 +265,14 @@ export async function renderOpenReports() {
     container.innerHTML =
       reports
         .map(
-          report =>
-            renderOpenReportCard(
-              report
-            )
+          renderOpenReportCard
         )
         .join('');
 
 
     bindOpenReportButtons();
 
-  } catch (error) {
+  }catch(error){
 
     console.error(
       'renderOpenReports:',
@@ -316,7 +289,7 @@ export async function renderOpenReports() {
         <br><br>
 
         ${escapeHtml(
-          error?.message ||
+          error.message ||
           'Unknown error'
         )}
 
@@ -330,15 +303,17 @@ export async function renderOpenReports() {
 
 
 /* =========================================================
-   OPEN REPORT CARD
+   OPEN CARD
 ========================================================= */
 
 function renderOpenReportCard(
   report
-) {
+){
 
   const state =
-    report.report_data?.state ||
+    report
+      ?.report_data
+      ?.state ||
     {};
 
 
@@ -409,21 +384,11 @@ function renderOpenReportCard(
         <br>
 
 
-        ${
-          followUps
-            ? `
+        <b>Follow-Ups:</b>
 
-              <b>
-                Follow-Ups:
-              </b>
+        ${followUps}
 
-              ${followUps}
-
-              <br>
-
-            `
-            : ''
-        }
+        <br>
 
 
         <span class="status red">
@@ -464,10 +429,10 @@ function renderOpenReportCard(
 
 
 /* =========================================================
-   OPEN REPORT BUTTONS
+   OPEN BUTTONS
 ========================================================= */
 
-function bindOpenReportButtons() {
+function bindOpenReportButtons(){
 
   document
     .querySelectorAll(
@@ -498,157 +463,13 @@ function bindOpenReportButtons() {
 
 
 /* =========================================================
-   ADMIN DELETE BUTTONS
-========================================================= */
-
-function bindAdminDeleteButtons() {
-
-  document
-    .querySelectorAll(
-      '.admin-delete'
-    )
-    .forEach(
-      button => {
-
-        button.addEventListener(
-          'click',
-          async () => {
-
-            await handleAdminDelete(
-              button.dataset.adminDelete
-            );
-
-          }
-        );
-
-      }
-    );
-
-}
-
-
-/* =========================================================
-   HANDLE ADMIN DELETE
-========================================================= */
-
-async function handleAdminDelete(
-  reportId
-) {
-
-  if (
-    !isAdmin()
-  ) {
-
-    alert(
-      'Administrator access required.'
-    );
-
-    return;
-
-  }
-
-
-  const firstConfirm =
-    window.confirm(
-      'ADMIN ACTION\n\n' +
-      'Delete this report permanently?'
-    );
-
-
-  if (
-    !firstConfirm
-  ) {
-
-    return;
-
-  }
-
-
-  const secondConfirm =
-    window.confirm(
-      'This will permanently remove the report and its saved data.\n\n' +
-      'Continue?'
-    );
-
-
-  if (
-    !secondConfirm
-  ) {
-
-    return;
-
-  }
-
-
-  try {
-
-    const module =
-      await import(
-        './supabase.js'
-      );
-
-
-    const result =
-      await module.deleteReport(
-        reportId
-      );
-
-
-    if (
-      !result.success
-    ) {
-
-      alert(
-        'Report could not be deleted.\n\n' +
-        (
-          result.error?.message ||
-          'Supabase error'
-        )
-      );
-
-      return;
-
-    }
-
-
-    showToast(
-      'Report deleted.'
-    );
-
-
-    await renderOpenReports();
-
-    await renderSubmittedReports();
-
-  } catch (error) {
-
-    console.error(
-      'Admin delete:',
-      error
-    );
-
-
-    alert(
-      'Report could not be deleted.\n\n' +
-      (
-        error.message ||
-        'Unknown error'
-      )
-    );
-
-  }
-
-}
-
-
-/* =========================================================
-   OPEN REPORT FROM DATABASE
+   OPEN REPORT
 ========================================================= */
 
 export async function openReport(
   reportId,
-  destination = 'checklist'
-) {
+  destination='checklist'
+){
 
   const result =
     await getReport(
@@ -656,13 +477,14 @@ export async function openReport(
     );
 
 
-  if (
+  if(
+    !result ||
     !result.success ||
     !result.data
-  ) {
+  ){
 
     alert(
-      result.error?.message ||
+      result?.error?.message ||
       'Could not open report.'
     );
 
@@ -677,42 +499,45 @@ export async function openReport(
   );
 
 
-  if (
+  if(
     destination === 'checklist' &&
     callbacks.openReport
-  ) {
+  ){
 
     await callbacks.openReport(
       result.data
     );
 
+
     return true;
 
   }
 
 
-  if (
+  if(
     destination === 'summary' &&
     callbacks.viewSummary
-  ) {
+  ){
 
     await callbacks.viewSummary(
       result.data
     );
 
+
     return true;
 
   }
 
 
-  if (
+  if(
     destination === 'followups' &&
     callbacks.viewFollowUps
-  ) {
+  ){
 
     await callbacks.viewFollowUps(
       result.data
     );
+
 
     return true;
 
@@ -725,10 +550,147 @@ export async function openReport(
 
 
 /* =========================================================
+   DELETE
+========================================================= */
+
+function bindAdminDeleteButtons(){
+
+  document
+    .querySelectorAll(
+      '.admin-delete'
+    )
+    .forEach(
+      button => {
+
+        button.addEventListener(
+          'click',
+          async () => {
+
+            await handleDelete(
+              button.dataset.adminDelete
+            );
+
+          }
+        );
+
+      }
+    );
+
+}
+
+
+async function handleDelete(
+  reportId
+){
+
+  if(
+    !isAdmin()
+  ){
+
+    alert(
+      'Administrator access required.'
+    );
+
+
+    return;
+
+  }
+
+
+  const confirmed =
+    window.confirm(
+      'Delete this report permanently?'
+    );
+
+
+  if(
+    !confirmed
+  ){
+
+    return;
+
+  }
+
+
+  const second =
+    window.confirm(
+      'This cannot be undone.\n\nContinue?'
+    );
+
+
+  if(
+    !second
+  ){
+
+    return;
+
+  }
+
+
+  try{
+
+    const module =
+      await import(
+        './supabase.js'
+      );
+
+
+    const result =
+      await module.deleteReport(
+        reportId
+      );
+
+
+    if(
+      !result ||
+      !result.success
+    ){
+
+      throw (
+        result?.error ||
+        new Error(
+          'Could not delete report.'
+        )
+      );
+
+    }
+
+
+    showToast(
+      'Report deleted.'
+    );
+
+
+    await renderOpenReports();
+
+    await renderSubmittedReports();
+
+  }catch(error){
+
+    console.error(
+      'Delete report:',
+      error
+    );
+
+
+    alert(
+      'Could not delete report.\n\n' +
+      (
+        error.message ||
+        'Unknown error'
+      )
+    );
+
+  }
+
+}
+
+
+/* =========================================================
    SUBMITTED REPORTS
 ========================================================= */
 
-export async function renderSubmittedReports() {
+export async function renderSubmittedReports(){
 
   const container =
     document.getElementById(
@@ -736,9 +698,7 @@ export async function renderSubmittedReports() {
     );
 
 
-  if (
-    !container
-  ) {
+  if(!container){
 
     return;
 
@@ -756,7 +716,7 @@ export async function renderSubmittedReports() {
   `;
 
 
-  try {
+  try{
 
     const module =
       await import(
@@ -768,12 +728,13 @@ export async function renderSubmittedReports() {
       await module.getSubmittedReports();
 
 
-    if (
+    if(
+      !result ||
       !result.success
-    ) {
+    ){
 
       throw (
-        result.error ||
+        result?.error ||
         new Error(
           'Could not load submitted reports.'
         )
@@ -783,12 +744,13 @@ export async function renderSubmittedReports() {
 
 
     const reports =
-      result.data || [];
+      result.data ||
+      [];
 
 
-    if (
+    if(
       reports.length === 0
-    ) {
+    ){
 
       container.innerHTML = `
 
@@ -809,17 +771,14 @@ export async function renderSubmittedReports() {
     container.innerHTML =
       reports
         .map(
-          report =>
-            renderSubmittedReportCard(
-              report
-            )
+          renderSubmittedReportCard
         )
         .join('');
 
 
-    bindSubmittedReportButtons();
+    bindSubmittedButtons();
 
-  } catch (error) {
+  }catch(error){
 
     console.error(
       'renderSubmittedReports:',
@@ -836,7 +795,7 @@ export async function renderSubmittedReports() {
         <br><br>
 
         ${escapeHtml(
-          error?.message ||
+          error.message ||
           'Unknown error'
         )}
 
@@ -850,27 +809,17 @@ export async function renderSubmittedReports() {
 
 
 /* =========================================================
-   SUBMITTED REPORT CARD
+   SUBMITTED CARD
 ========================================================= */
 
 function renderSubmittedReportCard(
   report
-) {
-
-  const color =
-    getReportColor(
-      report
-    );
-
-
-  const status =
-    getReportStatusText(
-      report
-    );
-
+){
 
   const state =
-    report.report_data?.state ||
+    report
+      ?.report_data
+      ?.state ||
     {};
 
 
@@ -883,6 +832,18 @@ function renderSubmittedReportCard(
   const completed =
     countCompletedFollowUps(
       state
+    );
+
+
+  const color =
+    getReportColor(
+      report
+    );
+
+
+  const status =
+    getReportStatusText(
+      report
     );
 
 
@@ -937,7 +898,7 @@ function renderSubmittedReportCard(
         ${escapeHtml(
           formatDate(
             report.submitted_at ||
-            report.created_at,
+            report.updated_at,
             true
           )
         )}
@@ -945,33 +906,11 @@ function renderSubmittedReportCard(
         <br>
 
 
-        ${
-          followUps
+        <b>Follow-Ups:</b>
 
-            ? `
+        ${completed}/${followUps}
 
-              <b>
-                Follow-Ups:
-              </b>
-
-              ${completed}/${followUps}
-
-              <br>
-
-            `
-
-            : `
-
-              <b>
-                Follow-Ups:
-              </b>
-
-              None
-
-              <br>
-
-            `
-        }
+        <br>
 
 
         <span
@@ -1061,23 +1000,6 @@ function renderSubmittedReportCard(
         adminDeleteButton(
           report.id
         )
-          ? `
-
-            <div
-              class="report-actions"
-              style="
-                margin-top:8px;
-              "
-            >
-
-              ${adminDeleteButton(
-                report.id
-              )}
-
-            </div>
-
-          `
-          : ''
       }
 
     </div>
@@ -1091,7 +1013,7 @@ function renderSubmittedReportCard(
    SUBMITTED BUTTONS
 ========================================================= */
 
-function bindSubmittedReportButtons() {
+function bindSubmittedButtons(){
 
   document
     .querySelectorAll(
@@ -1156,15 +1078,16 @@ function bindSubmittedReportButtons() {
               );
 
 
-            if (
+            if(
+              !result ||
               !result.success ||
               !result.data
-            ) {
+            ){
 
               alert(
-                result.error?.message ||
                 'Could not load report.'
               );
+
 
               return;
 
@@ -1176,9 +1099,13 @@ function bindSubmittedReportButtons() {
             );
 
 
-            if (
+            currentReportForSummary =
+              result.data;
+
+
+            if(
               callbacks.viewSummary
-            ) {
+            ){
 
               await callbacks.viewSummary(
                 result.data
@@ -1224,15 +1151,16 @@ function bindSubmittedReportButtons() {
               );
 
 
-            if (
+            if(
+              !result ||
               !result.success ||
               !result.data
-            ) {
+            ){
 
               alert(
-                result.error?.message ||
                 'Could not load report.'
               );
+
 
               return;
 
@@ -1244,9 +1172,9 @@ function bindSubmittedReportButtons() {
             );
 
 
-            if (
+            if(
               callbacks.viewSummary
-            ) {
+            ){
 
               await callbacks.viewSummary(
                 result.data
@@ -1277,12 +1205,19 @@ function bindSubmittedReportButtons() {
 
 
 /* =========================================================
+   CURRENT REPORT FOR PDF
+========================================================= */
+
+let currentReportForSummary = null;
+
+
+/* =========================================================
    REPORT OVERALL
 ========================================================= */
 
 export function renderReportOverall(
   report
-) {
+){
 
   const container =
     document.getElementById(
@@ -1290,48 +1225,44 @@ export function renderReportOverall(
     );
 
 
-  if (
-    !container
-  ) {
+  if(!container){
 
     return;
 
   }
 
 
+  currentReportForSummary =
+    report;
+
+
   const state =
-    report?.report_data?.state ||
+    report
+      ?.report_data
+      ?.state ||
     {};
 
 
   const points =
     getAllPoints(
       state
-    );
-
-
-  const checkedPoints =
-    points.filter(
+    )
+    .filter(
       point =>
         point.checked
     );
 
 
-  if (
-    checkedPoints.length === 0
-  ) {
+  if(
+    points.length === 0
+  ){
 
     container.innerHTML = `
-
-      ${renderReportHeader(
-        report
-      )}
-
 
       <div class="empty">
 
         No checklist points were marked
-        as checked in this report.
+        as checked.
 
       </div>
 
@@ -1343,140 +1274,23 @@ export function renderReportOverall(
   }
 
 
-  container.innerHTML = `
-
-    ${renderReportHeader(
-      report
-    )}
-
-
-    <div
-      style="
-        margin-top:18px;
-      "
-    >
-
-      ${
-        renderOverallCheckedPoints(
-          checkedPoints
-        )
-      }
-
-    </div>
-
-  `;
+  container.innerHTML =
+    renderOverallGroups(
+      points
+    );
 
 }
 
 
 /* =========================================================
-   REPORT HEADER
-========================================================= */
-
-function renderReportHeader(
-  report
-) {
-
-  return `
-
-    <div
-      style="
-        margin-bottom:15px;
-      "
-    >
-
-      <div
-        style="
-          color:var(--vv-squid);
-          font-size:17px;
-          font-weight:800;
-          margin-bottom:6px;
-        "
-      >
-
-        ${escapeHtml(
-          report.ship ||
-          'Ship Visit Report'
-        )}
-
-      </div>
-
-
-      <div
-        style="
-          color:var(--vv-gray);
-          font-size:12px;
-          line-height:1.6;
-        "
-      >
-
-        <b>
-          Visit:
-        </b>
-
-        ${escapeHtml(
-          report.date_on ||
-          ''
-        )}
-
-        ${
-          report.date_off
-            ? ` → ${escapeHtml(
-                report.date_off
-              )}`
-            : ''
-        }
-
-        <br>
-
-        <b>
-          Reviewer:
-        </b>
-
-        ${escapeHtml(
-          report.reviewer ||
-          ''
-        )}
-
-        ${
-          report.submitted_at
-            ? `
-
-              <br>
-
-              <b>
-                Submitted:
-              </b>
-
-              ${escapeHtml(
-                formatDate(
-                  report.submitted_at,
-                  true
-                )
-              )}
-
-            `
-            : ''
-        }
-
-      </div>
-
-    </div>
-
-  `;
-
-}
-
-
-/* =========================================================
-   ALL CHECKED POINTS
+   GET ALL POINTS
 ========================================================= */
 
 function getAllPoints(
   state
-) {
+){
 
-  const result =
+  const points =
     [];
 
 
@@ -1498,7 +1312,7 @@ function getAllPoints(
             {};
 
 
-          result.push({
+          points.push({
 
             key,
 
@@ -1547,18 +1361,18 @@ function getAllPoints(
   );
 
 
-  return result;
+  return points;
 
 }
 
 
 /* =========================================================
-   CHECKED POINTS BY DEPARTMENT
+   OVERALL GROUPS
 ========================================================= */
 
-function renderOverallCheckedPoints(
+function renderOverallGroups(
   points
-) {
+){
 
   const groups =
     [];
@@ -1575,16 +1389,14 @@ function renderOverallCheckedPoints(
         );
 
 
-      if (
-        !group
-      ) {
+      if(!group){
 
         group = {
 
           section:
             point.section,
 
-          points: []
+          points:[]
 
         };
 
@@ -1616,6 +1428,7 @@ function renderOverallCheckedPoints(
 
           <div
             style="
+              margin-top:18px;
               margin-bottom:10px;
               padding-bottom:7px;
               border-bottom:2px solid var(--vv-red);
@@ -1658,12 +1471,7 @@ function renderOverallCheckedPoints(
 
 function renderOverallPoint(
   point
-) {
-
-  const followupComplete =
-    point.followUpNeeded &&
-    point.shipComments.length > 0;
-
+){
 
   return `
 
@@ -1701,14 +1509,13 @@ function renderOverallPoint(
             font-weight:800;
           "
         >
-
           ✓
-
         </div>
 
 
         <div
           style="
+            flex:1;
             font-size:13.5px;
             line-height:1.5;
             font-weight:600;
@@ -1734,19 +1541,9 @@ function renderOverallPoint(
               "
             >
 
-              <span
-                class="status ${
-                  followupComplete
-                    ? 'green'
-                    : 'blue'
-                }"
-              >
+              <span class="status blue">
 
-                ${
-                  followupComplete
-                    ? 'SHIP FOLLOW-UP COMPLETED'
-                    : 'FOLLOW-UP NEEDED FROM SHIP'
-                }
+                FOLLOW-UP NEEDED FROM SHIP
 
               </span>
 
@@ -1758,17 +1555,102 @@ function renderOverallPoint(
 
 
       ${
-        renderComments(
-          point.comments,
-          'REVIEWER COMMENTS'
-        )
+        point.comments.length
+          ? `
+
+            <div
+              style="
+                margin-top:10px;
+              "
+            >
+
+              <div class="response-label">
+
+                REVIEWER COMMENTS
+
+              </div>
+
+
+              ${
+                point.comments
+                  .map(
+                    comment => `
+
+                      <div class="comment">
+
+                        <strong>
+
+                          ${escapeHtml(
+                            comment.name ||
+                            'Reviewer'
+                          )}:
+
+                        </strong>
+
+
+                        ${escapeHtml(
+                          comment.text ||
+                          ''
+                        )}
+
+                      </div>
+
+                    `
+                  )
+                  .join('')
+              }
+
+            </div>
+
+          `
+          : ''
       }
 
 
       ${
-        renderPhotos(
-          point.photos
-        )
+        point.photos.length
+          ? `
+
+            <div
+              style="
+                margin-top:10px;
+              "
+            >
+
+              <div class="response-label">
+
+                ATTACHED PHOTOS
+
+              </div>
+
+
+              <div class="response-photos">
+
+                ${
+                  point.photos
+                    .map(
+                      photo => `
+
+                        <div class="response-photo">
+
+                          <img
+                            src="${photo}"
+                            alt="Report photo"
+                          >
+
+                        </div>
+
+                      `
+                    )
+                    .join('')
+                }
+
+              </div>
+
+            </div>
+
+          `
+          : ''
       }
 
 
@@ -1788,187 +1670,17 @@ function renderOverallPoint(
 
 
 /* =========================================================
-   COMMENTS
-========================================================= */
-
-function renderComments(
-  comments,
-  title
-) {
-
-  if (
-    !comments ||
-    comments.length === 0
-  ) {
-
-    return '';
-
-  }
-
-
-  return `
-
-    <div
-      style="
-        margin-top:10px;
-      "
-    >
-
-      <div
-        style="
-          color:var(--vv-squid);
-          font-size:9px;
-          font-weight:800;
-          margin-bottom:5px;
-        "
-      >
-
-        ${escapeHtml(
-          title
-        )}
-
-      </div>
-
-
-      ${
-        comments
-          .map(
-            comment => `
-
-              <div
-                class="comment"
-              >
-
-                <strong>
-
-                  ${escapeHtml(
-                    comment.name ||
-                    'Reviewer'
-                  )}:
-
-                </strong>
-
-
-                ${escapeHtml(
-                  comment.text ||
-                  ''
-                )}
-
-              </div>
-
-            `
-          )
-          .join('')
-      }
-
-    </div>
-
-  `;
-
-}
-
-
-/* =========================================================
-   PHOTOS
-========================================================= */
-
-function renderPhotos(
-  photos
-) {
-
-  if (
-    !photos ||
-    photos.length === 0
-  ) {
-
-    return '';
-
-  }
-
-
-  return `
-
-    <div
-      style="
-        margin-top:10px;
-      "
-    >
-
-      <div
-        style="
-          color:var(--vv-squid);
-          font-size:9px;
-          font-weight:800;
-          margin-bottom:6px;
-        "
-      >
-
-        ATTACHED PHOTOS
-
-      </div>
-
-
-      <div
-        style="
-          display:flex;
-          flex-wrap:wrap;
-          gap:8px;
-        "
-      >
-
-        ${
-          photos
-            .map(
-              photo => `
-
-                <div
-                  style="
-                    width:105px;
-                    height:105px;
-                    overflow:hidden;
-                    border:1px solid var(--vv-line);
-                    border-radius:8px;
-                  "
-                >
-
-                  <img
-                    src="${photo}"
-                    alt="Report photo"
-                    style="
-                      width:100%;
-                      height:100%;
-                      object-fit:cover;
-                    "
-                  >
-
-                </div>
-
-              `
-            )
-            .join('')
-        }
-
-      </div>
-
-    </div>
-
-  `;
-
-}
-
-
-/* =========================================================
    SHIP COMMENTS
 ========================================================= */
 
 function renderShipComments(
   comments
-) {
+){
 
-  if (
+  if(
     !comments ||
     comments.length === 0
-  ) {
+  ){
 
     return `
 
@@ -2002,11 +1714,9 @@ function renderShipComments(
     >
 
       <div
+        class="response-label"
         style="
           color:var(--status-green);
-          font-size:9px;
-          font-weight:800;
-          margin-bottom:5px;
         "
       >
 
@@ -2021,16 +1731,7 @@ function renderShipComments(
             comment => `
 
               <div
-                style="
-                  margin-bottom:5px;
-                  padding:8px 10px;
-                  background:var(--status-green-bg);
-                  border-left:3px solid var(--status-green);
-                  border-radius:6px;
-                  color:#285536;
-                  font-size:12px;
-                  line-height:1.45;
-                "
+                class="ship-response-display"
               >
 
                 <strong>
@@ -2063,12 +1764,12 @@ function renderShipComments(
 
 
 /* =========================================================
-   POINTS TO FOLLOW UP
+   FOLLOW UPS
 ========================================================= */
 
 export function renderReportFollowUps(
   report
-) {
+){
 
   const container =
     document.getElementById(
@@ -2076,41 +1777,40 @@ export function renderReportFollowUps(
     );
 
 
-  if (
-    !container
-  ) {
+  if(!container){
 
     return;
 
   }
 
 
+  const state =
+    report
+      ?.report_data
+      ?.state ||
+    {};
+
+
   const points =
     getAllPoints(
-      report?.report_data?.state ||
-      {}
+      state
     )
     .filter(
       point =>
+        point.checked &&
         point.followUpNeeded
     );
 
 
-  if (
+  if(
     points.length === 0
-  ) {
+  ){
 
     container.innerHTML = `
 
-      ${renderReportHeader(
-        report
-      )}
-
-
       <div class="empty">
 
-        No points were marked
-        Follow-Up Needed from Ship.
+        No points were marked for ship follow-up.
 
       </div>
 
@@ -2122,61 +1822,15 @@ export function renderReportFollowUps(
   }
 
 
-  const completed =
-    points.filter(
-      point =>
-        point.shipComments.length > 0
-    ).length;
-
-
-  container.innerHTML = `
-
-    ${renderReportHeader(
-      report
-    )}
-
-
-    <div
-      style="
-        margin-bottom:18px;
-        padding:12px;
-        background:var(--vv-bg);
-        border-top:3px solid var(--vv-red);
-        border-radius:7px;
-        font-size:11px;
-        line-height:1.6;
-      "
-    >
-
-      <strong>
-        Follow-Up Points:
-      </strong>
-
-      ${points.length}
-
-      <br>
-
-      <strong>
-        Responses Completed:
-      </strong>
-
-      ${completed}/${points.length}
-
-    </div>
-
-
-    ${
-      points
-        .map(
-          point =>
-            renderFollowUpPoint(
-              point
-            )
-        )
-        .join('')
-    }
-
-  `;
+  container.innerHTML =
+    points
+      .map(
+        point =>
+          renderFollowUpPoint(
+            point
+          )
+      )
+      .join('');
 
 }
 
@@ -2187,7 +1841,7 @@ export function renderReportFollowUps(
 
 function renderFollowUpPoint(
   point
-) {
+){
 
   const complete =
     point.shipComments.length > 0;
@@ -2206,9 +1860,7 @@ function renderFollowUpPoint(
       "
     >
 
-      <div
-        class="response-section"
-      >
+      <div class="response-section">
 
         ${escapeHtml(
           point.section
@@ -2251,17 +1903,102 @@ function renderFollowUpPoint(
 
 
       ${
-        renderComments(
-          point.comments,
-          'REVIEWER COMMENTS'
-        )
+        point.comments.length
+          ? `
+
+            <div
+              style="
+                margin-top:10px;
+              "
+            >
+
+              <div class="response-label">
+
+                REVIEWER COMMENTS
+
+              </div>
+
+
+              ${
+                point.comments
+                  .map(
+                    comment => `
+
+                      <div class="comment">
+
+                        <strong>
+
+                          ${escapeHtml(
+                            comment.name ||
+                            'Reviewer'
+                          )}:
+
+                        </strong>
+
+
+                        ${escapeHtml(
+                          comment.text ||
+                          ''
+                        )}
+
+                      </div>
+
+                    `
+                  )
+                  .join('')
+              }
+
+            </div>
+
+          `
+          : ''
       }
 
 
       ${
-        renderPhotos(
-          point.photos
-        )
+        point.photos.length
+          ? `
+
+            <div
+              style="
+                margin-top:10px;
+              "
+            >
+
+              <div class="response-label">
+
+                ATTACHED PHOTOS
+
+              </div>
+
+
+              <div class="response-photos">
+
+                ${
+                  point.photos
+                    .map(
+                      photo => `
+
+                        <div class="response-photo">
+
+                          <img
+                            src="${photo}"
+                            alt="Report photo"
+                          >
+
+                        </div>
+
+                      `
+                    )
+                    .join('')
+                }
+
+              </div>
+
+            </div>
+
+          `
+          : ''
       }
 
 
@@ -2279,30 +2016,17 @@ function renderFollowUpPoint(
 
 
 /* =========================================================
-   REFRESH
-========================================================= */
-
-export async function refreshAllReports() {
-
-  await renderOpenReports();
-
-  await renderSubmittedReports();
-
-}
-
-
-/* =========================================================
    TOAST
 ========================================================= */
 
 function showToast(
   message
-) {
+){
 
-  if (
+  if(
     typeof window.showToast ===
     'function'
-  ) {
+  ){
 
     window.showToast(
       message
@@ -2335,8 +2059,6 @@ export default {
   renderReportFollowUps,
 
   openReport,
-
-  refreshAllReports,
 
   setReportCallbacks
 
