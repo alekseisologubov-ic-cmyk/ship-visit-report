@@ -1,5 +1,6 @@
 /*
   ============================================================
+  VIRGIN VOYAGES
   SHIP VISIT REPORT
   supabase.js
   ============================================================
@@ -24,8 +25,7 @@ export const SUPABASE_KEY =
 
 if(
   !window.supabase ||
-  typeof window.supabase.createClient !==
-    'function'
+  typeof window.supabase.createClient !== 'function'
 ){
 
   throw new Error(
@@ -43,7 +43,7 @@ export const supabase =
 
 
 /* =========================================================
-   BUILD PAYLOAD
+   PAYLOAD
 ========================================================= */
 
 function buildPayload({
@@ -51,10 +51,6 @@ function buildPayload({
   state,
   status
 }){
-
-  const now =
-    new Date().toISOString();
-
 
   return {
 
@@ -111,7 +107,7 @@ function buildPayload({
     },
 
     updated_at:
-      now
+      new Date().toISOString()
 
   };
 
@@ -119,7 +115,7 @@ function buildPayload({
 
 
 /* =========================================================
-   CREATE REPORT
+   CREATE OPEN REPORT
 ========================================================= */
 
 export async function createOpenReport({
@@ -327,13 +323,23 @@ export async function sendToShipReview({
 
   try{
 
+    if(
+      !reportId
+    ){
+
+      throw new Error(
+        'Report ID is required.'
+      );
+
+    }
+
+
     const result =
       await supabase
         .from(
           'ship_visit_reports'
         )
         .update(
-
           buildPayload({
 
             meta,
@@ -344,7 +350,6 @@ export async function sendToShipReview({
               'ship_review'
 
           })
-
         )
         .eq(
           'id',
@@ -450,12 +455,6 @@ export async function getOpenReports(){
 
   }catch(error){
 
-    console.error(
-      'getOpenReports:',
-      error
-    );
-
-
     return {
 
       success:false,
@@ -520,12 +519,6 @@ export async function getShipReviewReports(){
 
   }catch(error){
 
-    console.error(
-      'getShipReviewReports:',
-      error
-    );
-
-
     return {
 
       success:false,
@@ -542,7 +535,7 @@ export async function getShipReviewReports(){
 
 
 /* =========================================================
-   SUBMITTED
+   SUBMITTED REPORTS
 ========================================================= */
 
 export async function getSubmittedReports(){
@@ -590,12 +583,6 @@ export async function getSubmittedReports(){
 
   }catch(error){
 
-    console.error(
-      'getSubmittedReports:',
-      error
-    );
-
-
     return {
 
       success:false,
@@ -612,7 +599,7 @@ export async function getSubmittedReports(){
 
 
 /* =========================================================
-   GET ONE REPORT
+   SINGLE REPORT
 ========================================================= */
 
 export async function getReport(
@@ -672,7 +659,7 @@ export async function getReport(
 
 
 /* =========================================================
-   SHIP SUBMITS RESPONSE
+   SHIP SUBMITS FINAL RESPONSE
 ========================================================= */
 
 export async function submitShipResponse({
@@ -859,7 +846,7 @@ export async function deleteReport(
 
 
 /* =========================================================
-   STATUS COLOR
+   REPORT STATUS COLOR
 ========================================================= */
 
 export function getReportColor(
@@ -939,7 +926,7 @@ export function getReportStatusText(
 
 
 /* =========================================================
-   FOLLOW-UP COUNTS
+   FOLLOW-UP COUNT
 ========================================================= */
 
 export function countFollowUps(
@@ -959,6 +946,10 @@ export function countFollowUps(
 
 }
 
+
+/* =========================================================
+   COMPLETED FOLLOW-UP COUNT
+========================================================= */
 
 export function countCompletedFollowUps(
   state
@@ -981,6 +972,10 @@ export function countCompletedFollowUps(
 
 }
 
+
+/* =========================================================
+   FOLLOW-UP STATUS
+========================================================= */
 
 export function reportNeedsFollowUp(
   report
@@ -1012,7 +1007,7 @@ export function reportNeedsFollowUp(
 
 
 /* =========================================================
-   DEFAULT
+   DEFAULT EXPORT
 ========================================================= */
 
 export default {
