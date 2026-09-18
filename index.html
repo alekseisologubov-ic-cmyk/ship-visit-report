@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ship Visit Report</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -12,18 +12,24 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
+
 :root{
   --vv-squid:#3C1053;
   --vv-squid-stripe:#461D5C;
   --vv-red:#E10A0A;
+  --vv-red-light:#E63636;
   --vv-red-deep:#CC0000;
   --vv-near-black:#1B1B1B;
   --vv-body:#333333;
   --vv-gray:#8A8A8A;
   --vv-line:#E7E2EA;
   --vv-bg:#FAF9FB;
+
   --green:#198754;
+  --green-light:#EDF9F0;
+
   --blue:#2B5DA8;
+  --blue-light:#EEF4FF;
 }
 
 *{
@@ -39,15 +45,22 @@ body{
   background:var(--vv-bg);
   color:var(--vv-body);
   font-family:Arial,Calibri,sans-serif;
+  -webkit-tap-highlight-color:transparent;
 }
 
 button{
-  font-family:Poppins,Arial,sans-serif;
+  font-family:'Poppins',Arial,sans-serif;
   cursor:pointer;
 }
 
+input,
+textarea,
+button{
+  outline:none;
+}
+
 .hidden{
-  display:none!important;
+  display:none !important;
 }
 
 .app{
@@ -58,17 +71,22 @@ button{
   box-shadow:0 0 40px rgba(0,0,0,.04);
 }
 
-/* HEADER */
+/* =========================================================
+   HEADER
+========================================================= */
 
 .band{
   background-color:var(--vv-squid);
-  background-image:repeating-linear-gradient(
-    45deg,
-    var(--vv-squid) 0,
-    var(--vv-squid) 40px,
-    var(--vv-squid-stripe) 40px,
-    var(--vv-squid-stripe) 80px
-  );
+
+  background-image:
+    repeating-linear-gradient(
+      45deg,
+      var(--vv-squid) 0px,
+      var(--vv-squid) 40px,
+      var(--vv-squid-stripe) 40px,
+      var(--vv-squid-stripe) 80px
+    );
+
   color:#fff;
   padding:28px 24px 22px;
 }
@@ -78,7 +96,7 @@ button{
 }
 
 .eyebrow{
-  font-family:Poppins,Arial,sans-serif;
+  font-family:'Poppins',Arial,sans-serif;
   font-size:11px;
   letter-spacing:.12em;
   font-weight:700;
@@ -88,6 +106,7 @@ button{
 .band h1{
   margin:6px 0 2px;
   font-size:24px;
+  line-height:1.2;
   font-weight:800;
 }
 
@@ -101,7 +120,9 @@ button{
   opacity:.82;
 }
 
-/* HOME */
+/* =========================================================
+   HOME
+========================================================= */
 
 .home{
   padding:24px;
@@ -109,83 +130,105 @@ button{
 
 .home-grid{
   display:grid;
-  grid-template-columns:repeat(3,1fr);
+  grid-template-columns:repeat(2,1fr);
   gap:14px;
 }
 
 .home-card{
   min-height:145px;
-  padding:18px;
+  padding:20px;
+
   background:#fff;
+
   border:1.5px solid var(--vv-line);
   border-radius:12px;
+
   text-align:left;
-  transition:.15s;
+
+  transition:
+    border-color .15s ease,
+    box-shadow .15s ease,
+    transform .15s ease;
 }
 
 .home-card:hover{
   border-color:var(--vv-squid);
-  box-shadow:0 4px 15px rgba(60,16,83,.08);
+  box-shadow:0 5px 18px rgba(60,16,83,.08);
+  transform:translateY(-1px);
 }
 
 .home-card h2{
-  margin:0 0 9px;
+  margin:0 0 10px;
   color:var(--vv-squid);
   font-size:16px;
+  line-height:1.25;
 }
 
 .home-card p{
   margin:0;
   color:var(--vv-gray);
-  font-size:12px;
+  font-size:12.5px;
   line-height:1.5;
 }
 
-/* FORMS */
+/* =========================================================
+   FORM
+========================================================= */
 
 .pad{
   padding:24px;
 }
 
 .field{
-  margin-bottom:15px;
+  margin-bottom:16px;
 }
 
 .field label{
   display:block;
   margin-bottom:6px;
+
   color:var(--vv-squid);
+
   font-size:12px;
   font-weight:700;
+  letter-spacing:.04em;
 }
 
 .field input,
 .field textarea{
   width:100%;
+
   padding:11px 12px;
+
+  background:#fff;
+
   border:1.5px solid var(--vv-line);
   border-radius:8px;
+
+  color:var(--vv-body);
+
   font-family:Arial,sans-serif;
   font-size:14px;
-  color:var(--vv-body);
-  background:#fff;
 }
 
 .field input:focus,
 .field textarea:focus{
-  outline:none;
   border-color:var(--vv-red);
 }
 
 .btn-primary{
   width:100%;
   padding:14px 18px;
-  border:0;
-  border-radius:9px;
+
   background:var(--vv-red);
   color:#fff;
+
+  border:0;
+  border-radius:9px;
+
   font-size:15px;
   font-weight:700;
+  letter-spacing:.02em;
 }
 
 .btn-primary:hover{
@@ -195,29 +238,34 @@ button{
 .btn-secondary{
   width:100%;
   padding:13px 18px;
-  border:1.5px solid var(--vv-squid);
-  border-radius:9px;
+
   background:#fff;
   color:var(--vv-squid);
+
+  border:1.5px solid var(--vv-squid);
+  border-radius:9px;
+
   font-size:14px;
   font-weight:700;
 }
 
-.btn-green{
-  width:100%;
-  padding:12px 16px;
-  border:0;
-  border-radius:8px;
-  background:var(--green);
-  color:#fff;
-  font-weight:700;
+.btn-secondary:hover{
+  background:#faf7fc;
 }
+
+/* =========================================================
+   META
+========================================================= */
 
 .meta{
   margin:14px 20px;
-  padding:12px;
+  padding:12px 14px;
+
   background:var(--vv-bg);
   border-radius:9px;
+
+  color:var(--vv-body);
+
   font-size:12px;
   line-height:1.5;
 }
@@ -226,31 +274,83 @@ button{
   color:var(--vv-squid);
 }
 
-/* CHECKLIST */
+/* =========================================================
+   REVIEWER
+========================================================= */
 
-.progress{
+.reviewer-row{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin-top:10px;
+}
+
+.reviewer-row label{
+  color:rgba(255,255,255,.78);
+  font-size:10px;
+  font-weight:700;
+  white-space:nowrap;
+}
+
+.reviewer-row input{
+  flex:1;
+  min-width:0;
+
+  padding:6px 8px;
+
+  background:rgba(255,255,255,.13);
+
+  border:1px solid rgba(255,255,255,.45);
+  border-radius:6px;
+
+  color:#fff;
+
+  font-size:12px;
+}
+
+.reviewer-row input::placeholder{
+  color:rgba(255,255,255,.7);
+}
+
+/* =========================================================
+   PROGRESS
+========================================================= */
+
+.progress-wrap{
   padding:13px 20px 7px;
 }
 
 .progress-bar{
+  width:100%;
   height:6px;
+  overflow:hidden;
+
   background:var(--vv-line);
   border-radius:4px;
-  overflow:hidden;
 }
 
 .progress-fill{
   width:0;
   height:100%;
+
   background:var(--vv-red);
+  border-radius:4px;
+
+  transition:width .2s ease;
 }
 
 .progress-label{
   margin-top:6px;
+
   color:var(--vv-gray);
+
   font-size:11px;
   font-weight:600;
 }
+
+/* =========================================================
+   CHECKLIST SECTIONS
+========================================================= */
 
 .section{
   border-bottom:1px solid var(--vv-line);
@@ -258,16 +358,29 @@ button{
 
 .section-head{
   display:flex;
-  justify-content:space-between;
   align-items:center;
+  justify-content:space-between;
+  gap:10px;
+
   padding:17px 20px;
+
   cursor:pointer;
+  user-select:none;
 }
 
 .section-head h2{
   margin:0;
+
   color:var(--vv-squid);
+
   font-size:15px;
+  font-weight:700;
+}
+
+.section-right{
+  display:flex;
+  align-items:center;
+  gap:10px;
 }
 
 .section-count{
@@ -279,9 +392,12 @@ button{
 .chevron{
   width:9px;
   height:9px;
+
   border-right:2px solid var(--vv-squid);
   border-bottom:2px solid var(--vv-squid);
+
   transform:rotate(45deg);
+  transition:.2s;
 }
 
 .section.open .chevron{
@@ -300,16 +416,27 @@ button{
 .section-note{
   margin-bottom:10px;
   padding:9px 10px;
+
   background:var(--vv-bg);
   border-radius:7px;
+
   color:var(--vv-gray);
+
   font-size:11px;
-  line-height:1.4;
+  line-height:1.45;
 }
+
+/* =========================================================
+   CHECKLIST ITEM
+========================================================= */
 
 .item{
   padding:13px 0;
   border-top:1px solid var(--vv-line);
+}
+
+.item:first-child{
+  border-top:none;
 }
 
 .item-row{
@@ -318,36 +445,52 @@ button{
   gap:9px;
 }
 
-.check{
+.check-btn{
   flex:0 0 auto;
+
   width:24px;
   height:24px;
+
+  margin-top:1px;
+
+  padding:0;
+
   border:2px solid var(--vv-gray);
   border-radius:50%;
+
   background:#fff;
+
   position:relative;
 }
 
-.check.checked{
+.check-btn.checked{
   background:var(--vv-red);
   border-color:var(--vv-red);
 }
 
-.check.checked:after{
-  content:"";
+.check-btn.checked::after{
+  content:'';
+
   position:absolute;
+
   left:6px;
   top:2px;
+
   width:6px;
   height:11px;
-  border-right:2px solid #fff;
-  border-bottom:2px solid #fff;
+
+  border-right:2.5px solid #fff;
+  border-bottom:2.5px solid #fff;
+
   transform:rotate(45deg);
 }
 
 .item-text{
   flex:1;
   min-width:0;
+
+  padding-top:1px;
+
   font-size:14px;
   line-height:1.45;
 }
@@ -355,16 +498,25 @@ button{
 .item-actions{
   display:flex;
   gap:5px;
+  flex:0 0 auto;
 }
 
 .action{
   padding:6px 8px;
+
+  background:#fff;
+
   border:1.5px solid var(--vv-line);
   border-radius:7px;
-  background:#fff;
+
   color:var(--vv-squid);
+
   font-size:10px;
   font-weight:700;
+}
+
+.action:hover{
+  border-color:var(--vv-squid);
 }
 
 .action.active{
@@ -377,11 +529,17 @@ button{
   margin:10px 0 0 33px;
 }
 
+/* =========================================================
+   COMMENTS
+========================================================= */
+
 .comment{
   margin-bottom:6px;
-  padding:7px 9px;
+  padding:8px 10px;
+
   background:var(--vv-bg);
   border-radius:7px;
+
   font-size:12px;
   line-height:1.4;
 }
@@ -392,29 +550,46 @@ button{
 
 .comment-row{
   display:flex;
-  gap:7px;
   align-items:flex-end;
+  gap:7px;
 }
 
 .comment-row textarea{
   flex:1;
   min-height:44px;
+
   padding:8px;
+
   border:1.5px solid var(--vv-line);
   border-radius:7px;
+
   resize:vertical;
+
   font-family:Arial,sans-serif;
+  font-size:13px;
 }
 
-.add{
+.comment-row textarea:focus{
+  border-color:var(--vv-red);
+}
+
+.add-comment{
   height:44px;
-  padding:0 12px;
-  border:0;
-  border-radius:7px;
+
+  padding:0 13px;
+
   background:var(--vv-squid);
   color:#fff;
+
+  border:0;
+  border-radius:7px;
+
   font-weight:700;
 }
+
+/* =========================================================
+   PHOTOS
+========================================================= */
 
 .photos{
   display:flex;
@@ -425,11 +600,14 @@ button{
 
 .photo{
   position:relative;
-  width:70px;
-  height:70px;
+
+  width:72px;
+  height:72px;
+
   overflow:hidden;
-  border-radius:7px;
+
   border:1px solid var(--vv-line);
+  border-radius:7px;
 }
 
 .photo img{
@@ -440,60 +618,85 @@ button{
 
 .photo button{
   position:absolute;
+
   top:2px;
   right:2px;
+
   width:18px;
   height:18px;
+
+  padding:0;
+
   border:0;
   border-radius:50%;
-  background:rgba(0,0,0,.7);
+
+  background:rgba(0,0,0,.72);
   color:#fff;
+
+  font-size:12px;
+  line-height:18px;
 }
 
-/* FOLLOW-UP */
+/* =========================================================
+   FOLLOW UP
+========================================================= */
 
-.followup{
+.followup-row{
   display:flex;
   align-items:center;
   gap:7px;
+
   margin-top:10px;
 }
 
-.followup input{
+.followup-row input{
   width:16px;
   height:16px;
+
   accent-color:var(--vv-red);
 }
 
-.followup span{
+.followup-row label{
   color:var(--vv-red);
+
   font-size:11px;
   font-weight:700;
+
+  cursor:pointer;
 }
 
-.followup.done span{
-  color:var(--green);
-}
-
-.ship-response{
+.ship-response-display{
   margin-top:8px;
+
   padding:8px 10px;
-  background:#edf9f0;
+
+  background:var(--green-light);
+
   border-left:3px solid var(--green);
+
   border-radius:6px;
+
+  color:#285536;
+
   font-size:12px;
   line-height:1.45;
 }
 
-/* FOOTER */
+/* =========================================================
+   FOOTER
+========================================================= */
 
 .footer{
   position:sticky;
   bottom:0;
   z-index:20;
+
   padding:14px 20px;
+
   background:#fff;
+
   border-top:1px solid var(--vv-line);
+
   box-shadow:0 -5px 16px rgba(0,0,0,.04);
 }
 
@@ -503,7 +706,9 @@ button{
   gap:9px;
 }
 
-/* SUMMARY */
+/* =========================================================
+   SUMMARY
+========================================================= */
 
 .summary{
   padding:22px 24px 120px;
@@ -516,42 +721,67 @@ button{
 
 .stat{
   flex:1;
+
   padding:10px 12px;
+
   background:var(--vv-bg);
+
   border-top:3px solid var(--vv-red);
   border-radius:6px;
 }
 
 .stat-number{
+  color:var(--vv-near-black);
+
   font-size:22px;
   font-weight:800;
 }
 
 .stat-label{
   margin-top:2px;
+
   color:var(--vv-gray);
+
   font-size:10px;
   font-weight:700;
+
   text-transform:uppercase;
 }
 
 .summary h2{
   margin:20px 0 8px;
+
   color:var(--vv-squid);
+
   font-size:15px;
 }
 
 .summary textarea{
   width:100%;
+
   padding:12px;
+
   border:1.5px solid var(--vv-line);
   border-radius:8px;
+
   font-family:Arial,sans-serif;
   font-size:14px;
-  line-height:1.5;
+  line-height:1.55;
+
+  resize:vertical;
 }
 
-/* REPORT LIST */
+.summary textarea:focus{
+  border-color:var(--vv-red);
+}
+
+.summary-section{
+  margin-top:18px;
+}
+
+/* =========================================================
+   REPORT CARDS
+========================================================= */
 
 .reports{
   padding:24px;
@@ -559,44 +789,54 @@ button{
 
 .report-card{
   margin-bottom:12px;
+
   padding:15px;
+
   border:1.5px solid var(--vv-line);
   border-radius:10px;
+
   background:#fff;
 }
 
 .report-card.red{
-  border-color:#e5a6a6;
+  border-color:#e2a4a4;
   background:#fffafa;
 }
 
 .report-card.blue{
-  border-color:#b5c9eb;
+  border-color:#b9cbea;
   background:#fbfdff;
 }
 
 .report-card.green{
-  border-color:#b5d9bf;
+  border-color:#afd2b9;
   background:#fbfffc;
 }
 
 .report-card h3{
   margin:0 0 6px;
+
   color:var(--vv-squid);
+
   font-size:15px;
 }
 
 .report-meta{
   color:var(--vv-gray);
+
   font-size:12px;
-  line-height:1.55;
+  line-height:1.6;
 }
 
 .status{
   display:inline-block;
+
   margin-top:6px;
+
   padding:4px 8px;
+
   border-radius:20px;
+
   font-size:9px;
   font-weight:800;
   letter-spacing:.05em;
@@ -608,47 +848,103 @@ button{
 }
 
 .status.blue{
-  background:#eef4ff;
+  background:var(--blue-light);
   color:var(--blue);
 }
 
 .status.green{
-  background:#edf9f0;
+  background:var(--green-light);
   color:var(--green);
 }
 
 .report-actions{
   display:grid;
   grid-template-columns:1fr 1fr 1fr;
+
   gap:8px;
+
   margin-top:11px;
 }
 
 .report-actions button{
-  padding:9px 5px;
+  padding:9px 6px;
+
+  background:#fff;
+
   border:1.5px solid var(--vv-squid);
   border-radius:7px;
-  background:#fff;
+
   color:var(--vv-squid);
+
   font-size:10px;
   font-weight:700;
 }
 
-.report-actions .open{
+.report-actions button:hover{
+  background:#faf7fc;
+}
+
+.report-actions button.open{
   background:var(--vv-squid);
   color:#fff;
 }
 
 .empty{
   padding:30px 0;
-  text-align:center;
+
   color:var(--vv-gray);
+
+  text-align:center;
+
   font-size:13px;
 }
 
-/* PRINT */
+/* =========================================================
+   RESPONSE REPORT
+========================================================= */
+
+.response-point{
+  margin-top:10px;
+
+  padding:11px 0;
+
+  border-top:1px solid var(--vv-line);
+}
+
+.response-point:first-child{
+  border-top:0;
+}
+
+.response-section{
+  margin-bottom:4px;
+
+  color:var(--vv-squid);
+
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:.04em;
+}
+
+.response-text{
+  font-size:13px;
+  line-height:1.45;
+}
+
+.response-comment{
+  margin-top:6px;
+
+  color:var(--vv-gray);
+
+  font-size:11.5px;
+  line-height:1.45;
+}
+
+/* =========================================================
+   PRINT
+========================================================= */
 
 @media print{
+
   body{
     background:#fff;
   }
@@ -660,9 +956,11 @@ button{
 
   .no-print,
   .footer,
-  .progress,
+  .progress-wrap,
+  .meta,
   .action,
-  .check{
+  .check-btn,
+  .followup-row{
     display:none!important;
   }
 
@@ -670,17 +968,27 @@ button{
     display:block!important;
   }
 
-  .band{
-    -webkit-print-color-adjust:exact;
-    print-color-adjust:exact;
+  .section{
+    page-break-inside:avoid;
   }
 
   .item{
     page-break-inside:avoid;
   }
+
+  .band{
+    -webkit-print-color-adjust:exact;
+    print-color-adjust:exact;
+  }
+
 }
 
+/* =========================================================
+   MOBILE
+========================================================= */
+
 @media(max-width:600px){
+
   .home-grid{
     grid-template-columns:1fr;
   }
@@ -696,9 +1004,11 @@ button{
   .grid2{
     grid-template-columns:1fr;
   }
+
 }
 </style>
 </head>
+
 
 <body>
 
@@ -726,55 +1036,76 @@ button{
 
   </div>
 
+
   <div class="home">
 
     <div class="home-grid">
 
       <button
+        type="button"
         class="home-card"
         id="createReport"
       >
-        <h2>CREATE REPORT</h2>
+
+        <h2>
+          CREATE REPORT
+        </h2>
 
         <p>
           Start a new ship visit report.
         </p>
+
       </button>
 
 
       <button
+        type="button"
         class="home-card"
         id="openReport"
       >
-        <h2>OPEN REPORT</h2>
+
+        <h2>
+          OPEN REPORT
+        </h2>
 
         <p>
           Continue reports that have been started but not submitted.
         </p>
+
       </button>
 
 
       <button
+        type="button"
         class="home-card"
         id="submittedReports"
       >
-        <h2>SUBMITTED REPORTS</h2>
+
+        <h2>
+          SUBMITTED REPORTS
+        </h2>
 
         <p>
-          Review completed ship visit reports.
+          Review submitted ship visit reports.
         </p>
+
       </button>
 
 
       <button
+        type="button"
         class="home-card"
         id="shipResponseReport"
       >
-        <h2>SHIP RESPONSE REPORT</h2>
+
+        <h2>
+          SHIP RESPONSE REPORT
+        </h2>
 
         <p>
-          Review and respond to checklist points requiring ship follow-up.
+          Review checklist points requiring follow-up from the ship.
         </p>
+
       </button>
 
     </div>
@@ -785,7 +1116,7 @@ button{
 
 
 <!-- =====================================================
-     SETUP
+     CREATE REPORT
 ===================================================== -->
 
 <section
@@ -813,46 +1144,65 @@ button{
   <div class="pad">
 
     <div class="field">
-      <label>SHIP</label>
+
+      <label>
+        SHIP
+      </label>
 
       <input
         id="ship"
+        type="text"
         placeholder="e.g. Valiant Lady"
       >
+
     </div>
 
 
     <div class="field">
-      <label>DATE ON</label>
+
+      <label>
+        DATE ON
+      </label>
 
       <input
         id="dateOn"
         type="date"
       >
+
     </div>
 
 
     <div class="field">
-      <label>DATE OFF</label>
+
+      <label>
+        DATE OFF
+      </label>
 
       <input
         id="dateOff"
         type="date"
       >
+
     </div>
 
 
     <div class="field">
-      <label>REVIEWER</label>
+
+      <label>
+        REVIEWER
+      </label>
 
       <input
         id="reviewer"
+        type="text"
         placeholder="Your name"
       >
+
     </div>
 
 
     <button
+      type="button"
       class="btn-primary"
       id="startBtn"
     >
@@ -864,6 +1214,7 @@ button{
 
 
     <button
+      type="button"
       class="btn-secondary"
       id="setupHome"
     >
@@ -894,6 +1245,7 @@ button{
       Ship Visit Report
     </h1>
 
+
     <div class="reviewer-row">
 
       <label>
@@ -902,14 +1254,7 @@ button{
 
       <input
         id="hdrReviewer"
-        style="
-          flex:1;
-          background:rgba(255,255,255,.12);
-          border:1px solid rgba(255,255,255,.4);
-          border-radius:6px;
-          color:#fff;
-          padding:6px 8px;
-        "
+        placeholder="Reviewer"
       >
 
     </div>
@@ -918,25 +1263,31 @@ button{
 
 
   <div class="meta">
-    <strong>Visit:</strong>
+
+    <strong>
+      Visit:
+    </strong>
+
     <span id="visitMeta"></span>
+
   </div>
 
 
-  <div class="progress">
+  <div class="progress-wrap">
 
     <div class="progress-bar">
 
       <div
-        class="progress-fill"
         id="fill"
+        class="progress-fill"
       ></div>
 
     </div>
 
+
     <div
-      class="progress-label"
       id="progress"
+      class="progress-label"
     >
       0 of 0 points reviewed
     </div>
@@ -950,6 +1301,7 @@ button{
   <div class="footer no-print">
 
     <button
+      type="button"
       class="btn-primary"
       id="summaryBtn"
     >
@@ -1000,13 +1352,16 @@ button{
       Overall Summary
     </h2>
 
+
     <textarea
       id="overall"
       rows="6"
     ></textarea>
 
 
-    <div id="sumSections"></div>
+    <div
+      id="sumSections"
+    ></div>
 
   </div>
 
@@ -1016,6 +1371,7 @@ button{
     <div class="grid2">
 
       <button
+        type="button"
         class="btn-secondary"
         id="backBtn"
       >
@@ -1024,6 +1380,7 @@ button{
 
 
       <button
+        type="button"
         class="btn-secondary"
         id="pdfBtn"
       >
@@ -1039,6 +1396,7 @@ button{
     <div class="grid2">
 
       <button
+        type="button"
         class="btn-secondary"
         id="printBtn"
       >
@@ -1047,6 +1405,7 @@ button{
 
 
       <button
+        type="button"
         class="btn-primary"
         id="submitBtn"
       >
@@ -1092,6 +1451,7 @@ button{
 
 
     <button
+      type="button"
       class="btn-secondary"
       id="openHomeBtn"
     >
@@ -1135,6 +1495,7 @@ button{
 
 
     <button
+      type="button"
       class="btn-secondary"
       id="reportsHomeBtn"
     >
@@ -1147,7 +1508,7 @@ button{
 
 
 <!-- =====================================================
-     SHIP RESPONSE
+     SHIP RESPONSE REPORT
 ===================================================== -->
 
 <section
@@ -1178,6 +1539,7 @@ button{
 
 
     <button
+      type="button"
       class="btn-secondary"
       id="responsesHomeBtn"
     >
@@ -1201,7 +1563,9 @@ const SECTIONS = [
 
   {
     id:'culinary',
+
     title:'CULINARY',
+
     items:[
       'All recipe tablets in place in the venues',
       'All recipes followed / food quality in the venues',
@@ -1234,10 +1598,15 @@ const SECTIONS = [
     ]
   },
 
+
   {
     id:'bar',
+
     title:'BAR',
-    note:'The supplied checklist did not contain a dedicated Bar section, so shared FOH and operational controls are used here.',
+
+    note:
+      'The supplied checklist did not contain a dedicated Bar section, so shared FOH and operational controls are used here.',
+
     items:[
       'All set ups FOH followed as per the latest SOP',
       'All equipment in place and in working order',
@@ -1253,9 +1622,12 @@ const SECTIONS = [
     ]
   },
 
+
   {
     id:'restaurant',
+
     title:'RESTAURANT',
+
     items:[
       'All set ups FOH followed as per the latest SOP',
       'Checking the Sailor flow of the restaurants',
@@ -1277,9 +1649,12 @@ const SECTIONS = [
     ]
   },
 
+
   {
     id:'procurement',
+
     title:'PROCUREMENT',
+
     items:[
       'Future orders',
       'All items stored properly',
@@ -1299,9 +1674,12 @@ const SECTIONS = [
     ]
   },
 
+
   {
     id:'sanitation',
+
     title:'SANITATION',
+
     items:[
       'Shellfish logs in place',
       'Cooling logs in place',
@@ -1322,18 +1700,15 @@ const SECTIONS = [
 
 
 /* =========================================================
-   SUPABASE
+   SUPABASE CONNECTION
 ========================================================= */
 
-/*
-  REPLACE THESE TWO VALUES.
-*/
-
 const SUPABASE_URL =
-  https://jpvtqvzsyqqawfenseua.supabase.co
+  'https://jpvtqvzsyqqawfenseua.supabase.co';
+
 
 const SUPABASE_KEY =
-  sb_publishable_2U4FJYEvgBYwfkUfJ768Qw_XtyshTJz
+  'sb_publishable_2U4FJYEvgBYwfkUfJ768Qw_XtyshTJz';
 
 
 let sb = null;
@@ -1345,12 +1720,8 @@ try{
 
   if(
     window.supabase &&
-    !SUPABASE_URL.includes(
-      'YOUR_PROJECT_ID'
-    ) &&
-    !SUPABASE_KEY.includes(
-      'YOUR_SUPABASE'
-    )
+    SUPABASE_URL &&
+    SUPABASE_KEY
   ){
 
     sb =
@@ -1359,14 +1730,21 @@ try{
         SUPABASE_KEY
       );
 
-    supabaseReady = true;
+
+    supabaseReady =
+      true;
+
+
+    console.log(
+      'Supabase connected'
+    );
 
   }
 
 }catch(error){
 
   console.error(
-    'Supabase setup failed',
+    'Supabase initialization failed:',
     error
   );
 
@@ -1378,52 +1756,61 @@ try{
 ========================================================= */
 
 let meta = {
+
   ship:'',
   dateOn:'',
   dateOff:'',
   reviewer:''
+
 };
+
 
 let currentReviewer =
   'Reviewer';
 
+
 let reportId =
   '';
 
+
 let state =
-  {};
+  createEmptyState();
 
 
-function emptyState(){
+function createEmptyState(){
 
   const result = {};
 
 
-  SECTIONS.forEach(section => {
+  SECTIONS.forEach(
+    section => {
 
-    section.items.forEach((item,index) => {
+      section.items.forEach(
+        (_,index) => {
 
-      result[
-        section.id +
-        '__' +
-        index
-      ] = {
+          result[
+            section.id +
+            '__' +
+            index
+          ] = {
 
-        checked:false,
+            checked:false,
 
-        comments:[],
+            comments:[],
 
-        photos:[],
+            photos:[],
 
-        followUpNeeded:false,
+            followUpNeeded:false,
 
-        shipResponse:''
+            shipResponse:''
 
-      };
+          };
 
-    });
+        }
+      );
 
-  });
+    }
+  );
 
 
   return result;
@@ -1431,54 +1818,62 @@ function emptyState(){
 }
 
 
-state =
-  emptyState();
-
-
 /* =========================================================
    HELPERS
 ========================================================= */
 
-function esc(value){
+function escapeHtml(
+  value
+){
 
-  return String(value ?? '')
-    .replace(
-      /[&<>"']/g,
-      c => ({
-        '&':'&amp;',
-        '<':'&lt;',
-        '>':'&gt;',
-        '"':'&quot;',
-        "'":'&#39;'
-      }[c])
-    );
+  return String(
+    value ?? ''
+  ).replace(
+    /[&<>"']/g,
+    c => ({
+      '&':'&amp;',
+      '<':'&lt;',
+      '>':'&gt;',
+      '"':'&quot;',
+      "'":'&#39;'
+    }[c])
+  );
 
 }
 
 
-function totals(){
+function getTotals(){
 
   let total = 0;
   let checked = 0;
   let photos = 0;
 
 
-  Object.values(state)
-    .forEach(item => {
+  Object.values(
+    state
+  ).forEach(
+    item => {
 
       total++;
 
-      if(item.checked){
+
+      if(
+        item.checked
+      ){
 
         checked++;
 
       }
 
-      photos +=
-        (item.photos || [])
-          .length;
 
-    });
+      photos +=
+        (
+          item.photos ||
+          []
+        ).length;
+
+    }
+  );
 
 
   return {
@@ -1490,13 +1885,85 @@ function totals(){
 }
 
 
-function reportStatus(report){
+function hasFollowUps(
+  report
+){
 
-  const data =
-    report.report_data || {};
+  const reportState =
+    report.report_data?.state ||
+    {};
+
+
+  return Object.values(
+    reportState
+  ).some(
+    item =>
+      item &&
+      item.followUpNeeded
+  );
+
+}
+
+
+function allFollowUpsComplete(
+  report
+){
+
+  const reportState =
+    report.report_data?.state ||
+    {};
+
+
+  let hasFollowUp =
+    false;
+
+  let complete =
+    true;
+
+
+  Object.values(
+    reportState
+  ).forEach(
+    item => {
+
+      if(
+        item &&
+        item.followUpNeeded
+      ){
+
+        hasFollowUp =
+          true;
+
+
+        if(
+          !item.shipResponse ||
+          !item.shipResponse.trim()
+        ){
+
+          complete =
+            false;
+
+        }
+
+      }
+
+    }
+  );
+
+
+  return hasFollowUp &&
+         complete;
+
+}
+
+
+function reportColor(
+  report
+){
 
   if(
-    report.status === 'open'
+    report.status ===
+    'open'
   ){
 
     return 'red';
@@ -1505,8 +1972,9 @@ function reportStatus(report){
 
 
   if(
-    data.shipResponseStatus ===
-    'complete'
+    allFollowUpsComplete(
+      report
+    )
   ){
 
     return 'green';
@@ -1519,20 +1987,24 @@ function reportStatus(report){
 }
 
 
-function reportStatusText(report){
+function reportStatusText(
+  report
+){
 
-  const status =
-    reportStatus(report);
+  const color =
+    reportColor(
+      report
+    );
 
 
-  if(status === 'red'){
+  if(color === 'red'){
 
     return 'OPEN / ONGOING';
 
   }
 
 
-  if(status === 'green'){
+  if(color === 'green'){
 
     return 'SHIP RESPONSE COMPLETE';
 
@@ -1548,9 +2020,11 @@ function reportStatusText(report){
    SCREEN NAVIGATION
 ========================================================= */
 
-function showScreen(name){
+function showScreen(
+  name
+){
 
-  [
+  const screenIds = [
     'home',
     'setup',
     'checklist',
@@ -1558,24 +2032,29 @@ function showScreen(name){
     'open',
     'submitted',
     'responses'
-  ]
-  .forEach(id => {
+  ];
 
-    const element =
-      document.getElementById(
-        id
-      );
 
-    if(element){
+  screenIds.forEach(
+    id => {
 
-      element.classList.toggle(
-        'hidden',
-        id !== name
-      );
+      const element =
+        document.getElementById(
+          id
+        );
+
+
+      if(element){
+
+        element.classList.toggle(
+          'hidden',
+          id !== name
+        );
+
+      }
 
     }
-
-  });
+  );
 
 
   window.scrollTo(
@@ -1594,10 +2073,12 @@ async function saveReport(
   status = 'open'
 ){
 
-  if(!supabaseReady){
+  if(
+    !supabaseReady
+  ){
 
     alert(
-      'Supabase is not connected yet.'
+      'Supabase is not connected. Check the Supabase URL and publishable key.'
     );
 
     return false;
@@ -1607,16 +2088,22 @@ async function saveReport(
 
   try{
 
+    const now =
+      new Date().toISOString();
+
+
     const payload = {
 
       ship:
         meta.ship,
 
       date_on:
-        meta.dateOn || null,
+        meta.dateOn ||
+        null,
 
       date_off:
-        meta.dateOff || null,
+        meta.dateOff ||
+        null,
 
       reviewer:
         meta.reviewer ||
@@ -1626,12 +2113,23 @@ async function saveReport(
       status,
 
       report_data:{
-        meta,
-        state
+
+        meta:{
+          ...meta
+        },
+
+        state:
+
+          JSON.parse(
+            JSON.stringify(
+              state
+            )
+          )
+
       },
 
       updated_at:
-        new Date().toISOString()
+        now
 
     };
 
@@ -1642,7 +2140,7 @@ async function saveReport(
     ){
 
       payload.submitted_at =
-        new Date().toISOString();
+        now;
 
     }
 
@@ -1650,7 +2148,9 @@ async function saveReport(
     let result;
 
 
-    if(reportId){
+    if(
+      reportId
+    ){
 
       result =
         await sb
@@ -1683,7 +2183,9 @@ async function saveReport(
     }
 
 
-    if(result.error){
+    if(
+      result.error
+    ){
 
       throw result.error;
 
@@ -1705,7 +2207,11 @@ async function saveReport(
 
 
     alert(
-      'Could not save the report to Supabase.'
+      'The report could not be saved to Supabase.\n\n' +
+      (
+        error.message ||
+        'Unknown error'
+      )
     );
 
 
@@ -1724,7 +2230,9 @@ async function loadReports(
   status
 ){
 
-  if(!supabaseReady){
+  if(
+    !supabaseReady
+  ){
 
     return [];
 
@@ -1751,7 +2259,9 @@ async function loadReports(
         );
 
 
-    if(result.error){
+    if(
+      result.error
+    ){
 
       throw result.error;
 
@@ -1768,6 +2278,15 @@ async function loadReports(
     );
 
 
+    alert(
+      'Could not load reports from Supabase.\n\n' +
+      (
+        error.message ||
+        'Unknown error'
+      )
+    );
+
+
     return [];
 
   }
@@ -1776,85 +2295,35 @@ async function loadReports(
 
 
 /* =========================================================
-   HYDRATE REPORT
+   RENDER HEADER
 ========================================================= */
 
-function hydrateReport(
-  report
-){
+function updateHeader(){
 
-  reportId =
-    report.id;
-
-
-  meta = {
-
-    ship:
-      report.ship ||
-      report.report_data?.meta?.ship ||
-      '',
-
-    dateOn:
-      report.date_on ||
-      report.report_data?.meta?.dateOn ||
-      '',
-
-    dateOff:
-      report.date_off ||
-      report.report_data?.meta?.dateOff ||
-      '',
-
-    reviewer:
-      report.reviewer ||
-      report.report_data?.meta?.reviewer ||
-      'Reviewer'
-
-  };
+  document.getElementById(
+    'hdrShip'
+  ).textContent =
+    (
+      meta.ship ||
+      ''
+    ).toUpperCase();
 
 
-  currentReviewer =
-    meta.reviewer;
+  document.getElementById(
+    'hdrReviewer'
+  ).value =
+    currentReviewer;
 
 
-  state =
-    emptyState();
-
-
-  const saved =
-    report.report_data?.state ||
-    {};
-
-
-  Object.keys(saved)
-    .forEach(key => {
-
-      if(state[key]){
-
-        state[key] = {
-
-          ...state[key],
-
-          ...saved[key],
-
-          comments:
-            Array.isArray(
-              saved[key].comments
-            )
-              ? saved[key].comments
-              : [],
-
-          photos:
-            Array.isArray(
-              saved[key].photos
-            )
-              ? saved[key].photos
-              : []
-
-        };
-
-      }
-
-    });
+  document.getElementById(
+    'visitMeta'
+  ).textContent =
+    `${meta.dateOn || ''}` +
+    (
+      meta.dateOff
+        ? ` → ${meta.dateOff}`
+        : ''
+    );
 
 }
 
@@ -1863,7 +2332,7 @@ function hydrateReport(
    RENDER CHECKLIST
 ========================================================= */
 
-function renderSections(){
+function renderChecklist(){
 
   const wrap =
     document.getElementById(
@@ -1878,13 +2347,13 @@ function renderSections(){
   SECTIONS.forEach(
     (section,sectionIndex) => {
 
-      const element =
+      const sectionElement =
         document.createElement(
           'div'
         );
 
 
-      element.className =
+      sectionElement.className =
         'section' +
         (
           sectionIndex === 0
@@ -1893,21 +2362,17 @@ function renderSections(){
         );
 
 
-      element.innerHTML = `
+      sectionElement.innerHTML = `
 
         <div class="section-head">
 
           <h2>
-            ${esc(section.title)}
+            ${escapeHtml(
+              section.title
+            )}
           </h2>
 
-          <div
-            style="
-              display:flex;
-              align-items:center;
-              gap:9px
-            "
-          >
+          <div class="section-right">
 
             <span
               class="section-count"
@@ -1922,47 +2387,57 @@ function renderSections(){
 
         </div>
 
+
         <div class="section-body"></div>
 
       `;
 
 
       wrap.appendChild(
-        element
+        sectionElement
       );
 
 
-      element
+      sectionElement
         .querySelector(
           '.section-head'
         )
-        .onclick = () => {
+        .onclick =
+        () => {
 
-          element
+          sectionElement
             .classList
-            .toggle('open');
+            .toggle(
+              'open'
+            );
 
         };
 
 
       const body =
-        element.querySelector(
-          '.section-body'
-        );
+        sectionElement
+          .querySelector(
+            '.section-body'
+          );
 
 
-      if(section.note){
+      if(
+        section.note
+      ){
 
         const note =
           document.createElement(
             'div'
           );
 
+
         note.className =
           'section-note';
 
+
         note.textContent =
           section.note;
+
 
         body.appendChild(
           note
@@ -1995,24 +2470,35 @@ function renderSections(){
             <div class="item-row">
 
               <button
-                class="check"
+                type="button"
+                class="check-btn"
                 data-key="${key}"
+                aria-label="Mark reviewed"
               ></button>
 
+
               <div class="item-text">
-                ${esc(text)}
+
+                ${escapeHtml(
+                  text
+                )}
+
               </div>
+
 
               <div class="item-actions">
 
                 <button
+                  type="button"
                   class="action note"
                   data-key="${key}"
                 >
                   Comment
                 </button>
 
+
                 <button
+                  type="button"
                   class="action photo-button"
                   data-key="${key}"
                 >
@@ -2041,8 +2527,10 @@ function renderSections(){
                   placeholder="Add a comment"
                 ></textarea>
 
+
                 <button
-                  class="add"
+                  type="button"
+                  class="add-comment"
                   data-key="${key}"
                 >
                   Add
@@ -2057,26 +2545,26 @@ function renderSections(){
               ></div>
 
 
-              <div
-                class="followup"
-                id="followup-${key}"
-              >
+              <div class="followup-row">
 
                 <input
                   type="checkbox"
                   class="followup-check"
+                  id="followup-check-${key}"
                   data-key="${key}"
                 >
 
-                <span>
+                <label
+                  for="followup-check-${key}"
+                >
                   Follow-Up Needed from Ship
-                </span>
+                </label>
 
               </div>
 
 
               <div
-                class="ship-response"
+                class="ship-response-display"
                 id="ship-response-${key}"
               ></div>
 
@@ -2099,7 +2587,6 @@ function renderSections(){
           );
 
         }
-
       );
 
     }
@@ -2121,11 +2608,12 @@ function bindChecklistEvents(){
 
   document
     .querySelectorAll(
-      '.check'
+      '.check-btn'
     )
-    .forEach(button => {
+    .forEach(
+      button => {
 
-      button.onclick =
+        button.onclick =
         async () => {
 
           const key =
@@ -2138,28 +2626,34 @@ function bindChecklistEvents(){
 
           refreshChecklist();
 
+
           await saveReport(
             'open'
           );
 
         };
 
-    });
+      }
+    );
 
 
   document
     .querySelectorAll(
       '.note'
     )
-    .forEach(button => {
+    .forEach(
+      button => {
 
-      button.onclick =
+        button.onclick =
         () => {
+
+          const key =
+            button.dataset.key;
+
 
           const extra =
             document.getElementById(
-              'extra-' +
-              button.dataset.key
+              'extra-' + key
             );
 
 
@@ -2174,16 +2668,18 @@ function bindChecklistEvents(){
 
         };
 
-    });
+      }
+    );
 
 
   document
     .querySelectorAll(
       '.photo-button'
     )
-    .forEach(button => {
+    .forEach(
+      button => {
 
-      button.onclick =
+        button.onclick =
         () => {
 
           document
@@ -2195,16 +2691,18 @@ function bindChecklistEvents(){
 
         };
 
-    });
+      }
+    );
 
 
   document
     .querySelectorAll(
       'input[type="file"]'
     )
-    .forEach(input => {
+    .forEach(
+      input => {
 
-      input.onchange =
+        input.onchange =
         event => {
 
           addPhoto(
@@ -2214,16 +2712,18 @@ function bindChecklistEvents(){
 
         };
 
-    });
+      }
+    );
 
 
   document
     .querySelectorAll(
-      '.add'
+      '.add-comment'
     )
-    .forEach(button => {
+    .forEach(
+      button => {
 
-      button.onclick =
+        button.onclick =
         async () => {
 
           const key =
@@ -2241,7 +2741,9 @@ function bindChecklistEvents(){
             input.value.trim();
 
 
-          if(!text){
+          if(
+            !text
+          ){
 
             return;
 
@@ -2279,16 +2781,18 @@ function bindChecklistEvents(){
 
         };
 
-    });
+      }
+    );
 
 
   document
     .querySelectorAll(
       '.followup-check'
     )
-    .forEach(input => {
+    .forEach(
+      input => {
 
-      input.onchange =
+        input.onchange =
         async () => {
 
           const key =
@@ -2302,10 +2806,13 @@ function bindChecklistEvents(){
 
           document
             .getElementById(
-              'extra-' + key
+              'extra-' +
+              key
             )
             .classList
-            .remove('hidden');
+            .remove(
+              'hidden'
+            );
 
 
           refreshChecklist();
@@ -2317,7 +2824,8 @@ function bindChecklistEvents(){
 
         };
 
-    });
+      }
+    );
 
 }
 
@@ -2328,8 +2836,11 @@ function bindChecklistEvents(){
 
 function refreshChecklist(){
 
-  let total = 0;
-  let checked = 0;
+  let total =
+    0;
+
+  let checked =
+    0;
 
 
   SECTIONS.forEach(
@@ -2355,27 +2866,32 @@ function refreshChecklist(){
           total++;
 
 
-          if(item.checked){
+          if(
+            item.checked
+          ){
 
             checked++;
-
             sectionChecked++;
 
           }
 
 
-          const check =
+          const checkButton =
             document.querySelector(
-              `.check[data-key="${key}"]`
+              `.check-btn[data-key="${key}"]`
             );
 
 
-          if(check){
+          if(
+            checkButton
+          ){
 
-            check.classList.toggle(
-              'checked',
-              item.checked
-            );
+            checkButton
+              .classList
+              .toggle(
+                'checked',
+                item.checked
+              );
 
           }
 
@@ -2390,38 +2906,20 @@ function refreshChecklist(){
           );
 
 
-          const follow =
+          const followup =
             document.querySelector(
               `.followup-check[data-key="${key}"]`
             );
 
 
-          if(follow){
+          if(
+            followup
+          ){
 
-            follow.checked =
+            followup.checked =
               Boolean(
                 item.followUpNeeded
               );
-
-          }
-
-
-          const followRow =
-            document.getElementById(
-              'followup-' +
-              key
-            );
-
-
-          if(followRow){
-
-            followRow.classList.toggle(
-              'done',
-              Boolean(
-                item.followUpNeeded &&
-                item.shipResponse
-              )
-            );
 
           }
 
@@ -2433,11 +2931,21 @@ function refreshChecklist(){
             );
 
 
-          if(response){
+          if(
+            response
+          ){
 
             response.innerHTML =
               item.shipResponse
-                ? `<strong>Ship response:</strong> ${esc(item.shipResponse)}`
+                ? `
+                    <strong>
+                      Ship response:
+                    </strong>
+
+                    ${escapeHtml(
+                      item.shipResponse
+                    )}
+                  `
                 : '';
 
           }
@@ -2446,15 +2954,19 @@ function refreshChecklist(){
           if(
             item.comments.length ||
             item.photos.length ||
-            item.followUpNeeded
+            item.followUpNeeded ||
+            item.shipResponse
           ){
 
             document
               .getElementById(
-                'extra-' + key
+                'extra-' +
+                key
               )
               ?.classList
-              .remove('hidden');
+              .remove(
+                'hidden'
+              );
 
           }
 
@@ -2469,7 +2981,9 @@ function refreshChecklist(){
         );
 
 
-      if(count){
+      if(
+        count
+      ){
 
         count.textContent =
           `${sectionChecked}/${section.items.length}`;
@@ -2519,7 +3033,9 @@ function renderComments(
     );
 
 
-  if(!wrap){
+  if(
+    !wrap
+  ){
 
     return;
 
@@ -2527,26 +3043,30 @@ function renderComments(
 
 
   wrap.innerHTML =
-    state[key]
-      .comments
+    (
+      state[key]
+        .comments ||
+      []
+    )
       .map(
-        comment =>
-          `
+        comment => `
+
           <div class="comment">
 
             <b>
-              ${esc(
+              ${escapeHtml(
                 comment.name ||
                 'Reviewer'
               )}:
             </b>
 
-            ${esc(
+            ${escapeHtml(
               comment.text
             )}
 
           </div>
-          `
+
+        `
       )
       .join('');
 
@@ -2554,7 +3074,7 @@ function renderComments(
 
 
 /* =========================================================
-   PHOTOS
+   PHOTO
 ========================================================= */
 
 function addPhoto(
@@ -2566,7 +3086,9 @@ function addPhoto(
     event.target.files[0];
 
 
-  if(!file){
+  if(
+    !file
+  ){
 
     return;
 
@@ -2578,92 +3100,103 @@ function addPhoto(
 
 
   reader.onload =
-    e => {
+  eventResult => {
 
-      const img =
-        new Image();
-
-
-      img.onload =
-        async () => {
-
-          const maxWidth =
-            1000;
+    const image =
+      new Image();
 
 
-          const scale =
-            Math.min(
-              1,
-              maxWidth /
-              img.width
-            );
+    image.onload =
+    async () => {
+
+      const maxWidth =
+        1000;
 
 
-          const canvas =
-            document.createElement(
-              'canvas'
-            );
+      const scale =
+        Math.min(
+          1,
+          maxWidth /
+          image.width
+        );
 
 
-          canvas.width =
-            Math.round(
-              img.width * scale
-            );
+      const canvas =
+        document.createElement(
+          'canvas'
+        );
 
 
-          canvas.height =
-            Math.round(
-              img.height * scale
-            );
+      canvas.width =
+        Math.round(
+          image.width *
+          scale
+        );
 
 
-          canvas
-            .getContext('2d')
-            .drawImage(
-              img,
-              0,
-              0,
-              canvas.width,
-              canvas.height
-            );
+      canvas.height =
+        Math.round(
+          image.height *
+          scale
+        );
 
 
-          const photo =
-            canvas.toDataURL(
-              'image/jpeg',
-              .78
-            );
+      const context =
+        canvas.getContext(
+          '2d'
+        );
 
 
-          state[key]
-            .photos
-            .push(photo);
+      context.drawImage(
+        image,
+        0,
+        0,
+        canvas.width,
+        canvas.height
+      );
 
 
-          renderPhotos(
-            key
-          );
+      const dataUrl =
+        canvas.toDataURL(
+          'image/jpeg',
+          0.78
+        );
 
 
-          document
-            .getElementById(
-              'extra-' + key
-            )
-            .classList
-            .remove('hidden');
+      state[key]
+        .photos
+        .push(
+          dataUrl
+        );
 
 
-          await saveReport(
-            'open'
-          );
-
-        };
+      renderPhotos(
+        key
+      );
 
 
-      img.src =
-        e.target.result;
+      document
+        .getElementById(
+          'extra-' +
+          key
+        )
+        .classList
+        .remove(
+          'hidden'
+        );
+
+
+      await saveReport(
+        'open'
+      );
 
     };
+
+
+    image.src =
+      eventResult.target.result;
+
+  };
 
 
   reader.readAsDataURL(
@@ -2688,7 +3221,9 @@ function renderPhotos(
     );
 
 
-  if(!wrap){
+  if(
+    !wrap
+  ){
 
     return;
 
@@ -2699,22 +3234,25 @@ function renderPhotos(
     '';
 
 
-  state[key]
-    .photos
+  (
+    state[key]
+      .photos ||
+    []
+  )
     .forEach(
       (src,index) => {
 
-        const div =
+        const element =
           document.createElement(
             'div'
           );
 
 
-        div.className =
+        element.className =
           'photo';
 
 
-        div.innerHTML = `
+        element.innerHTML = `
 
           <img
             src="${src}"
@@ -2730,7 +3268,7 @@ function renderPhotos(
         `;
 
 
-        div
+        element
           .querySelector(
             'button'
           )
@@ -2758,7 +3296,7 @@ function renderPhotos(
 
 
         wrap.appendChild(
-          div
+          element
         );
 
       }
@@ -2768,47 +3306,168 @@ function renderPhotos(
 
 
 /* =========================================================
-   HEADER
+   START REPORT
 ========================================================= */
 
-function updateHeader(){
+document
+  .getElementById(
+    'startBtn'
+  )
+  .onclick =
+  async () => {
 
-  document.getElementById(
-    'hdrShip'
-  ).textContent =
-    (
-      meta.ship ||
-      ''
-    ).toUpperCase();
+    meta.ship =
+      document
+        .getElementById(
+          'ship'
+        )
+        .value
+        .trim();
 
 
-  document.getElementById(
-    'hdrReviewer'
-  ).value =
-    currentReviewer;
+    meta.dateOn =
+      document
+        .getElementById(
+          'dateOn'
+        )
+        .value;
 
 
-  document.getElementById(
-    'visitMeta'
-  ).textContent =
-    `${meta.dateOn || ''}` +
-    (
-      meta.dateOff
-        ? ` → ${meta.dateOff}`
-        : ''
+    meta.dateOff =
+      document
+        .getElementById(
+          'dateOff'
+        )
+        .value;
+
+
+    meta.reviewer =
+      document
+        .getElementById(
+          'reviewer'
+        )
+        .value
+        .trim();
+
+
+    if(
+      !meta.ship
+    ){
+
+      alert(
+        'Please enter the ship.'
+      );
+
+      return;
+
+    }
+
+
+    if(
+      !meta.reviewer
+    ){
+
+      alert(
+        'Please enter the reviewer.'
+      );
+
+      return;
+
+    }
+
+
+    state =
+      createEmptyState();
+
+
+    reportId =
+      '';
+
+
+    currentReviewer =
+      meta.reviewer;
+
+
+    updateHeader();
+
+    renderChecklist();
+
+
+    showScreen(
+      'checklist'
     );
 
-}
+
+    const saved =
+      await saveReport(
+        'open'
+      );
+
+
+    if(
+      !saved
+    ){
+
+      showScreen(
+        'setup'
+      );
+
+    }
+
+  };
+
+
+/* =========================================================
+   REVIEWER UPDATE
+========================================================= */
+
+document
+  .getElementById(
+    'hdrReviewer'
+  )
+  .onchange =
+  async event => {
+
+    currentReviewer =
+      event.target.value.trim() ||
+      'Reviewer';
+
+
+    meta.reviewer =
+      currentReviewer;
+
+
+    await saveReport(
+      'open'
+    );
+
+  };
 
 
 /* =========================================================
    SUMMARY
 ========================================================= */
 
+document
+  .getElementById(
+    'summaryBtn'
+  )
+  .onclick =
+  () => {
+
+    buildSummary();
+
+    showScreen(
+      'summary'
+    );
+
+  };
+
+
 function buildSummary(){
 
-  const t =
-    totals();
+  const totalsData =
+    getTotals();
 
 
   document.getElementById(
@@ -2818,7 +3477,7 @@ function buildSummary(){
     <div class="stat">
 
       <div class="stat-number">
-        ${t.checked}/${t.total}
+        ${totalsData.checked}/${totalsData.total}
       </div>
 
       <div class="stat-label">
@@ -2831,7 +3490,7 @@ function buildSummary(){
     <div class="stat">
 
       <div class="stat-number">
-        ${t.photos}
+        ${totalsData.photos}
       </div>
 
       <div class="stat-label">
@@ -2873,7 +3532,7 @@ function buildSummary(){
         : ''
     ) +
     `, reviewed by ${meta.reviewer}. ` +
-    `${t.checked} of ${t.total} ` +
+    `${totalsData.checked} of ${totalsData.total} ` +
     `review points were confirmed during the visit.`;
 
 
@@ -2890,50 +3549,69 @@ function buildSummary(){
   SECTIONS.forEach(
     section => {
 
-      const checked =
-        section.items.filter(
-          (_,index) =>
-            state[
-              section.id +
-              '__' +
-              index
-            ].checked
-        ).length;
+      let checked =
+        0;
 
 
-      const followUps =
-        section.items.filter(
-          (_,index) =>
-            state[
-              section.id +
-              '__' +
-              index
-            ].followUpNeeded
-        );
+      let followups =
+        0;
 
 
-      const block =
+      section.items.forEach(
+        (_,index) => {
+
+          const key =
+            section.id +
+            '__' +
+            index;
+
+
+          if(
+            state[key].checked
+          ){
+
+            checked++;
+
+          }
+
+
+          if(
+            state[key].followUpNeeded
+          ){
+
+            followups++;
+
+          }
+
+        }
+      );
+
+
+      const div =
         document.createElement(
           'div'
         );
 
 
-      block.className =
+      div.className =
         'summary-section';
 
 
-      block.innerHTML = `
+      div.innerHTML = `
 
         <h2>
-          ${esc(section.title)}
+          ${escapeHtml(
+            section.title
+          )}
         </h2>
 
+
         <textarea rows="4">${
-          esc(
+          escapeHtml(
             `${checked} of ${section.items.length} points confirmed.` +
             (
-              followUps.length
-                ? ` ${followUps.length} follow-up point(s) assigned to ship.`
+              followups
+                ? ` ${followups} follow-up point(s) assigned to the ship.`
                 : ''
             )
           )
@@ -2943,7 +3621,7 @@ function buildSummary(){
 
 
       wrap.appendChild(
-        block
+        div
       );
 
     }
@@ -2953,7 +3631,7 @@ function buildSummary(){
 
 
 /* =========================================================
-   SUBMIT
+   SUBMIT REPORT
 ========================================================= */
 
 document
@@ -2963,24 +3641,37 @@ document
   .onclick =
   async () => {
 
-    if(!supabaseReady){
+    /*
+      Capture latest reviewer.
+    */
 
-      alert(
-        'Please connect Supabase before submitting reports.'
-      );
+    currentReviewer =
+      document
+        .getElementById(
+          'hdrReviewer'
+        )
+        .value
+        .trim() ||
+      'Reviewer';
 
-      return;
 
-    }
+    meta.reviewer =
+      currentReviewer;
 
 
-    const ok =
+    /*
+      Save as SUBMITTED.
+    */
+
+    const saved =
       await saveReport(
         'submitted'
       );
 
 
-    if(!ok){
+    if(
+      !saved
+    ){
 
       return;
 
@@ -2988,9 +3679,7 @@ document
 
 
     /*
-      VERY IMPORTANT:
-      remove local active report
-      and return to HOME.
+      Clear current/open report.
     */
 
     reportId =
@@ -3012,8 +3701,12 @@ document
 
 
     state =
-      emptyState();
+      createEmptyState();
 
+
+    /*
+      Clear setup fields.
+    */
 
     document.getElementById(
       'ship'
@@ -3035,8 +3728,18 @@ document
     ).value = '';
 
 
+    /*
+      RETURN TO MAIN PAGE.
+    */
+
     showScreen(
       'home'
+    );
+
+
+    window.scrollTo(
+      0,
+      0
     );
 
   };
@@ -3045,6 +3748,36 @@ document
 /* =========================================================
    OPEN REPORTS
 ========================================================= */
+
+document
+  .getElementById(
+    'openReport'
+  )
+  .onclick =
+  async () => {
+
+    await renderOpenReports();
+
+    showScreen(
+      'open'
+    );
+
+  };
+
+
+document
+  .getElementById(
+    'openHomeBtn'
+  )
+  .onclick =
+  () => {
+
+    showScreen(
+      'home'
+    );
+
+  };
+
 
 async function renderOpenReports(){
 
@@ -3064,7 +3797,9 @@ async function renderOpenReports(){
     );
 
 
-  if(!reports.length){
+  if(
+    !reports.length
+  ){
 
     wrap.innerHTML =
       '<div class="empty">No open reports.</div>';
@@ -3075,113 +3810,121 @@ async function renderOpenReports(){
 
 
   wrap.innerHTML =
-    reports.map(
-      report => `
+    reports
+      .map(
+        report => `
 
-        <div class="report-card red">
+          <div class="report-card red">
 
-          <h3>
-            ${esc(
-              report.ship ||
-              'Unnamed Ship'
-            )}
-          </h3>
+            <h3>
+              ${escapeHtml(
+                report.ship ||
+                'Unnamed Ship'
+              )}
+            </h3>
 
 
-          <div class="report-meta">
+            <div class="report-meta">
 
-            <b>Date:</b>
-            ${esc(
-              report.date_on ||
-              ''
-            )}
+              <b>Date:</b>
+              ${escapeHtml(
+                report.date_on ||
+                ''
+              )}
 
-            ${
-              report.date_off
-                ? ` → ${esc(report.date_off)}`
-                : ''
-            }
+              ${
+                report.date_off
+                  ? ` → ${escapeHtml(
+                      report.date_off
+                    )}`
+                  : ''
+              }
 
-            <br>
+              <br>
 
-            <b>Reviewer:</b>
-            ${esc(
-              report.reviewer ||
-              ''
-            )}
+              <b>Reviewer:</b>
+              ${escapeHtml(
+                report.reviewer ||
+                ''
+              )}
 
-            <br>
+              <br>
 
-            <span class="status red">
-              OPEN / ONGOING
-            </span>
+              <span class="status red">
+                OPEN / ONGOING
+              </span>
+
+            </div>
+
+
+            <div class="report-actions">
+
+              <button
+                type="button"
+                class="open"
+                data-open-id="${report.id}"
+              >
+                Continue
+              </button>
+
+
+              <button
+                type="button"
+                data-delete-id="${report.id}"
+              >
+                Delete
+              </button>
+
+            </div>
 
           </div>
 
-
-          <div class="report-actions">
-
-            <button
-              class="open"
-              data-open="${report.id}"
-            >
-              Continue
-            </button>
-
-
-            <button
-              data-delete="${report.id}"
-            >
-              Delete
-            </button>
-
-          </div>
-
-        </div>
-
-      `
-    ).join('');
+        `
+      )
+      .join('');
 
 
   wrap
     .querySelectorAll(
-      '[data-open]'
+      '[data-open-id]'
     )
     .forEach(
       button => {
 
         button.onclick =
-          async () => {
+        async () => {
 
-            const report =
-              reports.find(
-                r =>
-                  r.id ===
-                  button.dataset.open
-              );
-
-
-            if(!report){
-
-              return;
-
-            }
-
-
-            hydrateReport(
-              report
+          const report =
+            reports.find(
+              r =>
+                r.id ===
+                button.dataset.openId
             );
 
 
-            updateHeader();
+          if(
+            !report
+          ){
 
-            renderSections();
+            return;
 
-            showScreen(
-              'checklist'
-            );
+          }
 
-          };
+
+          hydrateReport(
+            report
+          );
+
+
+          updateHeader();
+
+          renderChecklist();
+
+          showScreen(
+            'checklist'
+          );
+
+        };
 
       }
     );
@@ -3189,51 +3932,54 @@ async function renderOpenReports(){
 
   wrap
     .querySelectorAll(
-      '[data-delete]'
+      '[data-delete-id]'
     )
     .forEach(
       button => {
 
         button.onclick =
-          async () => {
+        async () => {
 
-            if(
-              !confirm(
-                'Delete this open report?'
+          if(
+            !confirm(
+              'Delete this open report?'
+            )
+          ){
+
+            return;
+
+          }
+
+
+          const result =
+            await sb
+              .from(
+                'ship_visit_reports'
               )
-            ){
-
-              return;
-
-            }
-
-
-            const result =
-              await sb
-                .from(
-                  'ship_visit_reports'
-                )
-                .delete()
-                .eq(
-                  'id',
-                  button.dataset.delete
-                );
-
-
-            if(result.error){
-
-              alert(
-                'Could not delete report.'
+              .delete()
+              .eq(
+                'id',
+                button.dataset.deleteId
               );
 
-              return;
 
-            }
+          if(
+            result.error
+          ){
+
+            alert(
+              'Could not delete report.\n\n' +
+              result.error.message
+            );
+
+            return;
+
+          }
 
 
-            await renderOpenReports();
+          await renderOpenReports();
 
-          };
+        };
 
       }
     );
@@ -3244,6 +3990,36 @@ async function renderOpenReports(){
 /* =========================================================
    SUBMITTED REPORTS
 ========================================================= */
+
+document
+  .getElementById(
+    'submittedReports'
+  )
+  .onclick =
+  async () => {
+
+    await renderSubmittedReports();
+
+    showScreen(
+      'submitted'
+    );
+
+  };
+
+
+document
+  .getElementById(
+    'reportsHomeBtn'
+  )
+  .onclick =
+  () => {
+
+    showScreen(
+      'home'
+    );
+
+  };
+
 
 async function renderSubmittedReports(){
 
@@ -3263,7 +4039,9 @@ async function renderSubmittedReports(){
     );
 
 
-  if(!reports.length){
+  if(
+    !reports.length
+  ){
 
     wrap.innerHTML =
       '<div class="empty">No submitted reports.</div>';
@@ -3274,91 +4052,102 @@ async function renderSubmittedReports(){
 
 
   wrap.innerHTML =
-    reports.map(
-      report => {
+    reports
+      .map(
+        report => {
 
-        const status =
-          reportStatus(
-            report
-          );
-
-
-        return `
-
-          <div
-            class="report-card ${status}"
-          >
-
-            <h3>
-              ${esc(
-                report.ship ||
-                'Unnamed Ship'
-              )}
-            </h3>
+          const color =
+            reportColor(
+              report
+            );
 
 
-            <div class="report-meta">
+          return `
 
-              <b>Date:</b>
-              ${esc(
-                report.date_on ||
-                ''
-              )}
+            <div
+              class="report-card ${color}"
+            >
 
-              ${
-                report.date_off
-                  ? ` → ${esc(report.date_off)}`
-                  : ''
-              }
+              <h3>
+                ${escapeHtml(
+                  report.ship ||
+                  'Unnamed Ship'
+                )}
+              </h3>
 
-              <br>
 
-              <b>Reviewer:</b>
-              ${esc(
-                report.reviewer ||
-                ''
-              )}
+              <div class="report-meta">
 
-              <br>
+                <b>Date:</b>
+                ${escapeHtml(
+                  report.date_on ||
+                  ''
+                )}
 
-              <span
-                class="status ${status}"
-              >
-                ${reportStatusText(report)}
-              </span>
+                ${
+                  report.date_off
+                    ? ` → ${escapeHtml(
+                        report.date_off
+                      )}`
+                    : ''
+                }
+
+                <br>
+
+                <b>Reviewer:</b>
+                ${escapeHtml(
+                  report.reviewer ||
+                  ''
+                )}
+
+                <br>
+
+                <span
+                  class="status ${color}"
+                >
+                  ${reportStatusText(
+                    report
+                  )}
+                </span>
+
+              </div>
+
+
+              <div class="report-actions">
+
+                <button
+                  type="button"
+                  class="open"
+                  data-open-sub="${report.id}"
+                >
+                  Open
+                </button>
+
+
+                <button
+                  type="button"
+                  data-pdf-sub="${report.id}"
+                >
+                  Save PDF
+                </button>
+
+
+                <button
+                  type="button"
+                  data-print-sub="${report.id}"
+                >
+                  Print
+                </button>
+
+              </div>
 
             </div>
 
+          `;
 
-            <div class="report-actions">
-
-              <button
-                class="open"
-                data-open-sub="${report.id}"
-              >
-                Open
-              </button>
-
-              <button
-                data-pdf-sub="${report.id}"
-              >
-                Save PDF
-              </button>
-
-              <button
-                data-print-sub="${report.id}"
-              >
-                Print
-              </button>
-
-            </div>
-
-          </div>
-
-        `;
-
-      }
-    ).join('');
+        }
+      )
+      .join('');
 
 
   wrap
@@ -3369,13 +4158,13 @@ async function renderSubmittedReports(){
       button => {
 
         button.onclick =
-          async () => {
+        async () => {
 
-            await openSubmittedReport(
-              button.dataset.openSub
-            );
+          await openSubmittedReport(
+            button.dataset.openSub
+          );
 
-          };
+        };
 
       }
     );
@@ -3389,14 +4178,15 @@ async function renderSubmittedReports(){
       button => {
 
         button.onclick =
-          async () => {
+        async () => {
 
-            await openSubmittedReport(
-              button.dataset.pdfSub,
-              true
-            );
+          await openSubmittedReport(
+            button.dataset.pdfSub,
+            true,
+            false
+          );
 
-          };
+        };
 
       }
     );
@@ -3410,15 +4200,15 @@ async function renderSubmittedReports(){
       button => {
 
         button.onclick =
-          async () => {
+        async () => {
 
-            await openSubmittedReport(
-              button.dataset.printSub,
-              false,
-              true
-            );
+          await openSubmittedReport(
+            button.dataset.printSub,
+            false,
+            true
+          );
 
-          };
+        };
 
       }
     );
@@ -3431,6 +4221,19 @@ async function openSubmittedReport(
   makePdf = false,
   printReport = false
 ){
+
+  if(
+    !supabaseReady
+  ){
+
+    alert(
+      'Supabase is not connected.'
+    );
+
+    return;
+
+  }
+
 
   const result =
     await sb
@@ -3445,10 +4248,13 @@ async function openSubmittedReport(
       .single();
 
 
-  if(result.error){
+  if(
+    result.error
+  ){
 
     alert(
-      'Report could not be opened.'
+      'Report could not be opened.\n\n' +
+      result.error.message
     );
 
     return;
@@ -3463,7 +4269,7 @@ async function openSubmittedReport(
 
   updateHeader();
 
-  renderSections();
+  renderChecklist();
 
   buildSummary();
 
@@ -3472,17 +4278,21 @@ async function openSubmittedReport(
   );
 
 
-  if(makePdf){
+  if(
+    makePdf
+  ){
 
     setTimeout(
-      buildPdf,
+      () => buildPdf(),
       150
     );
 
   }
 
 
-  if(printReport){
+  if(
+    printReport
+  ){
 
     setTimeout(
       () => window.print(),
@@ -3495,8 +4305,127 @@ async function openSubmittedReport(
 
 
 /* =========================================================
+   LOAD REPORT INTO APP
+========================================================= */
+
+function hydrateReport(
+  report
+){
+
+  reportId =
+    report.id;
+
+
+  meta = {
+
+    ship:
+      report.ship ||
+      report.report_data?.meta?.ship ||
+      '',
+
+    dateOn:
+      report.date_on ||
+      report.report_data?.meta?.dateOn ||
+      '',
+
+    dateOff:
+      report.date_off ||
+      report.report_data?.meta?.dateOff ||
+      '',
+
+    reviewer:
+      report.reviewer ||
+      report.report_data?.meta?.reviewer ||
+      'Reviewer'
+
+  };
+
+
+  currentReviewer =
+    meta.reviewer;
+
+
+  state =
+    createEmptyState();
+
+
+  const savedState =
+    report.report_data?.state ||
+    {};
+
+
+  Object.keys(
+    savedState
+  ).forEach(
+    key => {
+
+      if(
+        state[key]
+      ){
+
+        state[key] = {
+
+          ...state[key],
+
+          ...savedState[key],
+
+          comments:
+            Array.isArray(
+              savedState[key].comments
+            )
+              ? savedState[key].comments
+              : [],
+
+          photos:
+            Array.isArray(
+              savedState[key].photos
+            )
+              ? savedState[key].photos
+              : []
+
+        };
+
+      }
+
+    }
+  );
+
+}
+
+
+/* =========================================================
    SHIP RESPONSE REPORT
 ========================================================= */
+
+document
+  .getElementById(
+    'shipResponseReport'
+  )
+  .onclick =
+  async () => {
+
+    await renderShipResponses();
+
+    showScreen(
+      'responses'
+    );
+
+  };
+
+
+document
+  .getElementById(
+    'responsesHomeBtn'
+  )
+  .onclick =
+  () => {
+
+    showScreen(
+      'home'
+    );
+
+  };
+
 
 async function renderShipResponses(){
 
@@ -3516,7 +4445,8 @@ async function renderShipResponses(){
     );
 
 
-  const groups = [];
+  const responseGroups =
+    [];
 
 
   reports.forEach(
@@ -3527,7 +4457,8 @@ async function renderShipResponses(){
         {};
 
 
-      const points = [];
+      const points =
+        [];
 
 
       SECTIONS.forEach(
@@ -3566,8 +4497,8 @@ async function renderShipResponses(){
                       []
                     )
                     .map(
-                      c =>
-                        `${c.name}: ${c.text}`
+                      comment =>
+                        `${comment.name}: ${comment.text}`
                     )
                     .join(' | '),
 
@@ -3586,11 +4517,16 @@ async function renderShipResponses(){
       );
 
 
-      if(points.length){
+      if(
+        points.length
+      ){
 
-        groups.push({
+        responseGroups.push({
+
           report,
+
           points
+
         });
 
       }
@@ -3599,10 +4535,16 @@ async function renderShipResponses(){
   );
 
 
-  if(!groups.length){
+  if(
+    !responseGroups.length
+  ){
 
     wrap.innerHTML =
-      '<div class="empty">No follow-up points are waiting for a ship response.</div>';
+      `
+        <div class="empty">
+          No checklist points are currently waiting for a ship response.
+        </div>
+      `;
 
     return;
 
@@ -3610,195 +4552,169 @@ async function renderShipResponses(){
 
 
   wrap.innerHTML =
-    groups.map(
-      group => {
+    responseGroups
+      .map(
+        group => {
 
-        const responseCount =
-          group.points.filter(
-            point =>
-              point.response &&
-              point.response.trim()
-          ).length;
-
-
-        const complete =
-          responseCount ===
-          group.points.length;
+          const responseCount =
+            group.points.filter(
+              point =>
+                point.response &&
+                point.response.trim()
+            ).length;
 
 
-        return `
-
-          <div
-            class="report-card ${
-              complete
-                ? 'green'
-                : 'blue'
-            }"
-          >
-
-            <h3>
-              ${esc(
-                group.report.ship ||
-                'Unnamed Ship'
-              )}
-            </h3>
+          const complete =
+            responseCount ===
+            group.points.length;
 
 
-            <div class="report-meta">
+          return `
 
-              <b>Date:</b>
-              ${esc(
-                group.report.date_on ||
-                ''
-              )}
+            <div
+              class="report-card ${
+                complete
+                  ? 'green'
+                  : 'blue'
+              }"
+            >
 
-              <br>
+              <h3>
+                ${escapeHtml(
+                  group.report.ship ||
+                  'Unnamed Ship'
+                )}
+              </h3>
 
-              <b>Original Reviewer:</b>
-              ${esc(
-                group.report.reviewer ||
-                ''
-              )}
 
-              <br>
+              <div class="report-meta">
 
-              <span
-                class="status ${
-                  complete
-                    ? 'green'
-                    : 'blue'
-                }"
+                <b>Date:</b>
+                ${escapeHtml(
+                  group.report.date_on ||
+                  ''
+                )}
+
+                <br>
+
+                <b>Original Reviewer:</b>
+                ${escapeHtml(
+                  group.report.reviewer ||
+                  ''
+                )}
+
+                <br>
+
+                <span
+                  class="status ${
+                    complete
+                      ? 'green'
+                      : 'blue'
+                  }"
+                >
+
+                  ${
+                    complete
+                      ? 'SHIP RESPONSE COMPLETE'
+                      : 'FOLLOW-UP OPEN'
+                  }
+
+                  — ${responseCount}/${group.points.length}
+
+                </span>
+
+              </div>
+
+
+              <div>
+
+                ${group.points.map(
+                  point => `
+
+                    <div class="response-point">
+
+                      <div class="response-section">
+                        ${escapeHtml(
+                          point.section
+                        )}
+                      </div>
+
+
+                      <div class="response-text">
+
+                        ${escapeHtml(
+                          point.text
+                        )}
+
+                      </div>
+
+
+                      ${
+                        point.comment
+                          ? `
+                            <div class="response-comment">
+
+                              <b>
+                                Visit comment:
+                              </b>
+
+                              ${escapeHtml(
+                                point.comment
+                              )}
+
+                            </div>
+                          `
+                          : ''
+                      }
+
+
+                      <div
+                        class="field"
+                        style="
+                          margin-top:9px;
+                          margin-bottom:0
+                        "
+                      >
+
+                        <label>
+                          SHIP RESPONSE
+                        </label>
+
+
+                        <textarea
+                          rows="3"
+                          data-response-report="${group.report.id}"
+                          data-response-key="${point.key}"
+                          placeholder="Enter ship response"
+                        >${escapeHtml(
+                          point.response
+                        )}</textarea>
+
+                      </div>
+
+                    </div>
+
+                  `
+                ).join('')}
+
+              </div>
+
+
+              <button
+                type="button"
+                class="btn-primary save-response"
+                data-save-response="${group.report.id}"
               >
-
-                ${
-                  complete
-                    ? 'SHIP RESPONSE COMPLETE'
-                    : 'FOLLOW-UP OPEN'
-                }
-
-                — ${responseCount}/${group.points.length}
-
-              </span>
+                Save Ship Responses
+              </button>
 
             </div>
 
+          `;
 
-            <div style="height:8px"></div>
-
-
-            ${group.points.map(
-              point => `
-
-                <div
-                  style="
-                    border-top:1px solid var(--vv-line);
-                    padding:12px 0
-                  "
-                >
-
-                  <div
-                    style="
-                      color:var(--vv-squid);
-                      font-size:11px;
-                      font-weight:800;
-                      margin-bottom:4px
-                    "
-                  >
-                    ${esc(
-                      point.section
-                    )}
-                  </div>
-
-
-                  <div
-                    style="
-                      font-size:13.5px;
-                      line-height:1.45
-                    "
-                  >
-                    ${esc(
-                      point.text
-                    )}
-                  </div>
-
-
-                  ${
-                    point.comment
-                      ? `
-                        <div
-                          style="
-                            margin-top:6px;
-                            color:var(--vv-gray);
-                            font-size:12px
-                          "
-                        >
-
-                          <b>
-                            Visit comment:
-                          </b>
-
-                          ${esc(
-                            point.comment
-                          )}
-
-                        </div>
-                      `
-                      : ''
-                  }
-
-
-                  <div
-                    class="field"
-                    style="
-                      margin-top:9px;
-                      margin-bottom:0
-                    "
-                  >
-
-                    <label>
-                      SHIP RESPONSE
-                    </label>
-
-                    <textarea
-                      rows="3"
-                      data-response-report="${group.report.id}"
-                      data-response-key="${point.key}"
-                    >${esc(
-                      point.response
-                    )}</textarea>
-
-                  </div>
-
-
-                  ${
-                    point.response
-                      ? `
-                        <div class="ship-response">
-                          Ship response added.
-                        </div>
-                      `
-                      : ''
-                  }
-
-                </div>
-
-              `
-            ).join('')}
-
-
-            <button
-              class="btn-primary save-response"
-              data-save-response="${group.report.id}"
-            >
-              Save Ship Responses
-            </button>
-
-          </div>
-
-        `;
-
-      }
-    ).join('');
+        }
+      )
+      .join('');
 
 
   wrap
@@ -3809,101 +4725,112 @@ async function renderShipResponses(){
       button => {
 
         button.onclick =
-          async () => {
+        async () => {
 
-            const id =
-              button.dataset.saveResponse;
-
-
-            const result =
-              await sb
-                .from(
-                  'ship_visit_reports'
-                )
-                .select('*')
-                .eq(
-                  'id',
-                  id
-                )
-                .single();
+          const id =
+            button.dataset.saveResponse;
 
 
-            if(result.error){
-
-              alert(
-                'Could not load report.'
-              );
-
-              return;
-
-            }
-
-
-            const report =
-              result.data;
-
-
-            const newState =
-              JSON.parse(
-                JSON.stringify(
-                  report.report_data?.state ||
-                  {}
-                )
-              );
-
-
-            wrap
-              .querySelectorAll(
-                `[data-response-report="${id}"]`
+          const result =
+            await sb
+              .from(
+                'ship_visit_reports'
               )
-              .forEach(
-                textarea => {
+              .select('*')
+              .eq(
+                'id',
+                id
+              )
+              .single();
+
+
+          if(
+            result.error
+          ){
+
+            alert(
+              'Could not load the report.'
+            );
+
+            return;
+
+          }
+
+
+          const report =
+            result.data;
+
+
+          const newState =
+            JSON.parse(
+              JSON.stringify(
+                report.report_data?.state ||
+                {}
+              )
+            );
+
+
+          wrap
+            .querySelectorAll(
+              `[data-response-report="${id}"]`
+            )
+            .forEach(
+              textarea => {
+
+                const key =
+                  textarea.dataset.responseKey;
+
+
+                if(
+                  newState[key]
+                ){
+
+                  newState[key]
+                    .shipResponse =
+                    textarea.value.trim();
+
+                }
+
+              }
+            );
+
+
+          let complete =
+            true;
+
+
+          let hasFollowUp =
+            false;
+
+
+          SECTIONS.forEach(
+            section => {
+
+              section.items.forEach(
+                (_,index) => {
 
                   const key =
-                    textarea.dataset.responseKey;
+                    section.id +
+                    '__' +
+                    index;
+
+
+                  const item =
+                    newState[key];
 
 
                   if(
-                    newState[key]
+                    item &&
+                    item.followUpNeeded
                   ){
 
-                    newState[key]
-                      .shipResponse =
-                      textarea.value.trim();
-
-                  }
-
-                }
-              );
-
-
-            let complete =
-              true;
-
-
-            SECTIONS.forEach(
-              section => {
-
-                section.items.forEach(
-                  (_,index) => {
-
-                    const key =
-                      section.id +
-                      '__' +
-                      index;
-
-
-                    const item =
-                      newState[key];
+                    hasFollowUp =
+                      true;
 
 
                     if(
-                      item &&
-                      item.followUpNeeded &&
-                      !(
-                        item.shipResponse &&
-                        item.shipResponse.trim()
-                      )
+                      !item.shipResponse ||
+                      !item.shipResponse.trim()
                     ){
 
                       complete =
@@ -3912,63 +4839,70 @@ async function renderShipResponses(){
                     }
 
                   }
-                );
 
-              }
-            );
-
-
-            const reportData = {
-
-              ...(report.report_data || {}),
-
-              state:newState,
-
-              shipResponseStatus:
-                complete
-                  ? 'complete'
-                  : 'open',
-
-              shipResponseUpdatedAt:
-                new Date().toISOString()
-
-            };
-
-
-            const updateResult =
-              await sb
-                .from(
-                  'ship_visit_reports'
-                )
-                .update({
-
-                  report_data:
-                    reportData,
-
-                  updated_at:
-                    new Date().toISOString()
-
-                })
-                .eq(
-                  'id',
-                  id
-                );
-
-
-            if(updateResult.error){
-
-              alert(
-                'Could not save ship responses.'
+                }
               );
 
-              return;
-
             }
+          );
 
 
-            await renderShipResponses();
+          const updatedReportData = {
+
+            ...(report.report_data || {}),
+
+            state:
+              newState,
+
+            shipResponseStatus:
+              hasFollowUp &&
+              complete
+                ? 'complete'
+                : 'open',
+
+            shipResponseUpdatedAt:
+              new Date().toISOString()
 
           };
+
+
+          const updateResult =
+            await sb
+              .from(
+                'ship_visit_reports'
+              )
+              .update({
+
+                report_data:
+                  updatedReportData,
+
+                updated_at:
+                  new Date().toISOString()
+
+              })
+              .eq(
+                'id',
+                id
+              );
+
+
+          if(
+            updateResult.error
+          ){
+
+            alert(
+              'Could not save ship responses.\n\n' +
+              updateResult.error.message
+            );
+
+            return;
+
+          }
+
+
+          await renderShipResponses();
+
+        };
 
       }
     );
@@ -3977,252 +4911,8 @@ async function renderShipResponses(){
 
 
 /* =========================================================
-   START NEW REPORT
+   BACK BUTTON
 ========================================================= */
-
-document
-  .getElementById(
-    'startBtn'
-  )
-  .onclick =
-  async () => {
-
-    meta.ship =
-      document.getElementById(
-        'ship'
-      ).value.trim();
-
-
-    meta.dateOn =
-      document.getElementById(
-        'dateOn'
-      ).value;
-
-
-    meta.dateOff =
-      document.getElementById(
-        'dateOff'
-      ).value;
-
-
-    meta.reviewer =
-      document.getElementById(
-        'reviewer'
-      ).value.trim();
-
-
-    if(!meta.ship){
-
-      alert(
-        'Please enter the ship.'
-      );
-
-      return;
-
-    }
-
-
-    if(!meta.reviewer){
-
-      alert(
-        'Please enter the reviewer.'
-      );
-
-      return;
-
-    }
-
-
-    state =
-      emptyState();
-
-
-    reportId =
-      '';
-
-
-    currentReviewer =
-      meta.reviewer;
-
-
-    updateHeader();
-
-    renderSections();
-
-    showScreen(
-      'checklist'
-    );
-
-
-    await saveReport(
-      'open'
-    );
-
-  };
-
-
-/* =========================================================
-   REVIEWER
-========================================================= */
-
-document
-  .getElementById(
-    'hdrReviewer'
-  )
-  .onchange =
-  async event => {
-
-    currentReviewer =
-      event.target.value.trim() ||
-      'Reviewer';
-
-
-    meta.reviewer =
-      currentReviewer;
-
-
-    await saveReport(
-      'open'
-    );
-
-  };
-
-
-/* =========================================================
-   HOME BUTTONS
-========================================================= */
-
-document
-  .getElementById(
-    'createReport'
-  )
-  .onclick =
-  () => {
-
-    document.getElementById(
-      'dateOn'
-    ).value =
-      new Date()
-        .toISOString()
-        .slice(
-          0,
-          10
-        );
-
-    showScreen(
-      'setup'
-    );
-
-  };
-
-
-document
-  .getElementById(
-    'openReport'
-  )
-  .onclick =
-  async () => {
-
-    await renderOpenReports();
-
-    showScreen(
-      'open'
-    );
-
-  };
-
-
-document
-  .getElementById(
-    'submittedReports'
-  )
-  .onclick =
-  async () => {
-
-    await renderSubmittedReports();
-
-    showScreen(
-      'submitted'
-    );
-
-  };
-
-
-document
-  .getElementById(
-    'shipResponseReport'
-  )
-  .onclick =
-  async () => {
-
-    await renderShipResponses();
-
-    showScreen(
-      'responses'
-    );
-
-  };
-
-
-document
-  .getElementById(
-    'setupHome'
-  )
-  .onclick =
-  () => showScreen(
-    'home'
-  );
-
-
-document
-  .getElementById(
-    'openHomeBtn'
-  )
-  .onclick =
-  () => showScreen(
-    'home'
-  );
-
-
-document
-  .getElementById(
-    'reportsHomeBtn'
-  )
-  .onclick =
-  () => showScreen(
-    'home'
-  );
-
-
-document
-  .getElementById(
-    'responsesHomeBtn'
-  )
-  .onclick =
-  () => showScreen(
-    'home'
-  );
-
-
-/* =========================================================
-   SUMMARY / PDF / PRINT
-========================================================= */
-
-document
-  .getElementById(
-    'summaryBtn'
-  )
-  .onclick =
-  () => {
-
-    buildSummary();
-
-    showScreen(
-      'summary'
-    );
-
-  };
-
 
 document
   .getElementById(
@@ -4238,6 +4928,10 @@ document
   };
 
 
+/* =========================================================
+   PDF
+========================================================= */
+
 document
   .getElementById(
     'pdfBtn'
@@ -4249,22 +4943,6 @@ document
 
   };
 
-
-document
-  .getElementById(
-    'printBtn'
-  )
-  .onclick =
-  () => {
-
-    window.print();
-
-  };
-
-
-/* =========================================================
-   PDF
-========================================================= */
 
 function buildPdf(){
 
@@ -4435,13 +5113,13 @@ function buildPdf(){
   }
 
 
-  function space(
+  function ensureSpace(
     amount
   ){
 
     if(
       y + amount >
-      H - 35
+      H - 38
     ){
 
       footer();
@@ -4490,7 +5168,7 @@ function buildPdf(){
     lines.forEach(
       line => {
 
-        space(
+        ensureSpace(
           size + 4
         );
 
@@ -4536,6 +5214,7 @@ function buildPdf(){
     y
   );
 
+
   y += 16;
 
 
@@ -4544,6 +5223,7 @@ function buildPdf(){
     margin,
     y
   );
+
 
   y += 16;
 
@@ -4554,6 +5234,7 @@ function buildPdf(){
     y
   );
 
+
   y += 16;
 
 
@@ -4563,11 +5244,12 @@ function buildPdf(){
     y
   );
 
+
   y += 24;
 
 
   const t =
-    totals();
+    getTotals();
 
 
   doc.setTextColor(
@@ -4586,11 +5268,13 @@ function buildPdf(){
     y
   );
 
+
   y += 22;
 
 
-  doc.setTextColor(
-    ...squid
+  doc.setFont(
+    'helvetica',
+    'bold'
   );
 
 
@@ -4599,9 +5283,8 @@ function buildPdf(){
   );
 
 
-  doc.setFont(
-    'helvetica',
-    'bold'
+  doc.setTextColor(
+    ...squid
   );
 
 
@@ -4620,17 +5303,18 @@ function buildPdf(){
       'overall'
     ).value,
     10,
-    W-margin*2
+    W -
+      margin * 2
   );
 
 
-  y += 7;
+  y += 8;
 
 
   SECTIONS.forEach(
     section => {
 
-      space(
+      ensureSpace(
         30
       );
 
@@ -4643,17 +5327,12 @@ function buildPdf(){
       doc.line(
         margin,
         y,
-        margin+38,
+        margin + 38,
         y
       );
 
 
       y += 13;
-
-
-      doc.setTextColor(
-        ...squid
-      );
 
 
       doc.setFont(
@@ -4664,6 +5343,11 @@ function buildPdf(){
 
       doc.setFontSize(
         12
+      );
+
+
+      doc.setTextColor(
+        ...squid
       );
 
 
@@ -4690,7 +5374,7 @@ function buildPdf(){
             state[key];
 
 
-          space(
+          ensureSpace(
             15
           );
 
@@ -4702,13 +5386,13 @@ function buildPdf(){
 
 
           doc.setFontSize(
-            9
+            9.2
           );
 
 
           doc.setTextColor(
             ...(item.checked
-              ? [80,80,80]
+              ? [75,75,75]
               : red)
           );
 
@@ -4725,8 +5409,10 @@ function buildPdf(){
           addText(
             text,
             9,
-            W-margin*2-24,
-            margin+21
+            W -
+              margin * 2 -
+              24,
+            margin + 21
           );
 
 
@@ -4739,8 +5425,10 @@ function buildPdf(){
               addText(
                 `— ${comment.name}: ${comment.text}`,
                 8.5,
-                W-margin*2-24,
-                margin+21
+                W -
+                  margin * 2 -
+                  24,
+                margin + 21
               );
 
             }
@@ -4756,8 +5444,10 @@ function buildPdf(){
                 ? `Ship Response: ${item.shipResponse}`
                 : 'FOLLOW-UP NEEDED FROM SHIP',
               8.5,
-              W-margin*2-24,
-              margin+21
+              W -
+                margin * 2 -
+                24,
+              margin + 21
             );
 
           }
@@ -4769,7 +5459,7 @@ function buildPdf(){
           ).forEach(
             photo => {
 
-              space(
+              ensureSpace(
                 165
               );
 
@@ -4779,7 +5469,7 @@ function buildPdf(){
                 doc.addImage(
                   photo,
                   'JPEG',
-                  margin+21,
+                  margin + 21,
                   y,
                   145,
                   145
@@ -4791,7 +5481,7 @@ function buildPdf(){
               }catch(error){
 
                 console.error(
-                  'PDF photo error',
+                  'PDF photo error:',
                   error
                 );
 
@@ -4833,6 +5523,55 @@ function buildPdf(){
   );
 
 }
+
+
+/* =========================================================
+   INITIALIZE
+========================================================= */
+
+document
+  .getElementById(
+    'createReport'
+  )
+  .onclick =
+  () => {
+
+    document.getElementById(
+      'dateOn'
+    ).value =
+      new Date()
+        .toISOString()
+        .slice(
+          0,
+          10
+        );
+
+
+    showScreen(
+      'setup'
+    );
+
+  };
+
+
+document
+  .getElementById(
+    'setupHome'
+  )
+  .onclick =
+  () => {
+
+    showScreen(
+      'home'
+    );
+
+  };
+
+
+// Always start on Home.
+showScreen(
+  'home'
+);
 
 </script>
 
