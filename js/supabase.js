@@ -1,57 +1,57 @@
 /*
+  ============================================================
+  SHIP VISIT REPORT
   supabase.js
+  ============================================================
 
-  Handles all communication between the Ship Visit Report
-  application and Supabase.
-
-  This module is responsible for:
-
-  - Creating a new Open Report
-  - Saving an Open Report
-  - Submitting a Report
-  - Loading Open Reports
-  - Loading Submitted Reports
-  - Loading one specific report
-  - Updating Ship Responses
-  - Deleting Open Reports
+  Supabase database module.
 
   IMPORTANT:
-  This browser version uses the Supabase publishable key.
-  Never put a Supabase secret/service-role key in this file.
+  Supabase is loaded globally by index.html.
+
+  We intentionally do NOT use:
+
+  import { createClient }
+  from 'https://cdn.jsdelivr.net/...'
+
+  This keeps the application module loading reliable.
 */
 
 
 /* =========================================================
-   SUPABASE CONFIGURATION
+   CONFIGURATION
 ========================================================= */
-
-import {
-  createClient
-} from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
-
-
-/*
-  Your Supabase project.
-*/
 
 export const SUPABASE_URL =
   'https://jpvtqvzsyqqawfenseua.supabase.co';
 
-
-/*
-  Your Supabase publishable browser key.
-*/
 
 export const SUPABASE_KEY =
   'sb_publishable_2U4FJYEvgBYwfkUfJ768Qw_XtyshTJz';
 
 
 /* =========================================================
-   CREATE CLIENT
+   CHECK LIBRARY
+========================================================= */
+
+if (
+  !window.supabase ||
+  typeof window.supabase.createClient !== 'function'
+) {
+
+  throw new Error(
+    'Supabase library did not load. Check index.html.'
+  );
+
+}
+
+
+/* =========================================================
+   CLIENT
 ========================================================= */
 
 export const supabase =
-  createClient(
+  window.supabase.createClient(
     SUPABASE_URL,
     SUPABASE_KEY
   );
@@ -61,7 +61,7 @@ export const supabase =
    CONNECTION TEST
 ========================================================= */
 
-export async function testConnection() {
+export async function testConnection(){
 
   try {
 
@@ -79,13 +79,9 @@ export async function testConnection() {
         );
 
 
-    if (result.error) {
-
-      console.error(
-        'Supabase connection test failed:',
-        result.error
-      );
-
+    if (
+      result.error
+    ) {
 
       return {
 
@@ -107,13 +103,7 @@ export async function testConnection() {
 
     };
 
-  } catch (error) {
-
-    console.error(
-      'Supabase connection test failed:',
-      error
-    );
-
+  } catch(error) {
 
     return {
 
@@ -129,15 +119,15 @@ export async function testConnection() {
 
 
 /* =========================================================
-   BUILD DATABASE PAYLOAD
+   BUILD PAYLOAD
 ========================================================= */
 
 function buildPayload({
   meta,
   state,
-  status,
+  status = 'open',
   submittedAt = null
-}) {
+}){
 
   const now =
     new Date().toISOString();
@@ -157,12 +147,12 @@ function buildPayload({
     reviewer:
       meta?.reviewer || '',
 
-    status:
-      status || 'open',
+    status,
 
     report_data:{
 
       meta:{
+
         ship:
           meta?.ship || '',
 
@@ -174,7 +164,9 @@ function buildPayload({
 
         reviewer:
           meta?.reviewer || ''
+
       },
+
 
       state:
         JSON.parse(
@@ -185,6 +177,7 @@ function buildPayload({
 
     },
 
+
     updated_at:
       now
 
@@ -193,7 +186,7 @@ function buildPayload({
 
   if (
     submittedAt
-  ) {
+  ){
 
     payload.submitted_at =
       submittedAt;
@@ -207,13 +200,13 @@ function buildPayload({
 
 
 /* =========================================================
-   CREATE NEW OPEN REPORT
+   CREATE OPEN REPORT
 ========================================================= */
 
 export async function createOpenReport({
   meta,
   state
-}) {
+}){
 
   try {
 
@@ -244,7 +237,7 @@ export async function createOpenReport({
 
     if (
       result.error
-    ) {
+    ){
 
       throw result.error;
 
@@ -262,10 +255,10 @@ export async function createOpenReport({
 
     };
 
-  } catch (error) {
+  } catch(error) {
 
     console.error(
-      'Create open report failed:',
+      'createOpenReport:',
       error
     );
 
@@ -286,20 +279,20 @@ export async function createOpenReport({
 
 
 /* =========================================================
-   UPDATE EXISTING OPEN REPORT
+   UPDATE OPEN REPORT
 ========================================================= */
 
 export async function updateOpenReport({
   reportId,
   meta,
   state
-}) {
+}){
 
   try {
 
     if (
       !reportId
-    ) {
+    ){
 
       throw new Error(
         'Report ID is required.'
@@ -339,7 +332,7 @@ export async function updateOpenReport({
 
     if (
       result.error
-    ) {
+    ){
 
       throw result.error;
 
@@ -357,10 +350,10 @@ export async function updateOpenReport({
 
     };
 
-  } catch (error) {
+  } catch(error) {
 
     console.error(
-      'Update open report failed:',
+      'updateOpenReport:',
       error
     );
 
@@ -388,11 +381,11 @@ export async function saveOpenReport({
   reportId,
   meta,
   state
-}) {
+}){
 
   if (
     reportId
-  ) {
+  ){
 
     return updateOpenReport({
 
@@ -426,13 +419,13 @@ export async function submitReport({
   reportId,
   meta,
   state
-}) {
+}){
 
   try {
 
     if (
       !reportId
-    ) {
+    ){
 
       throw new Error(
         'Report ID is required.'
@@ -478,7 +471,7 @@ export async function submitReport({
 
     if (
       result.error
-    ) {
+    ){
 
       throw result.error;
 
@@ -496,10 +489,10 @@ export async function submitReport({
 
     };
 
-  } catch (error) {
+  } catch(error) {
 
     console.error(
-      'Submit report failed:',
+      'submitReport:',
       error
     );
 
@@ -520,10 +513,10 @@ export async function submitReport({
 
 
 /* =========================================================
-   LOAD OPEN REPORTS
+   GET OPEN REPORTS
 ========================================================= */
 
-export async function getOpenReports() {
+export async function getOpenReports(){
 
   try {
 
@@ -547,7 +540,7 @@ export async function getOpenReports() {
 
     if (
       result.error
-    ) {
+    ){
 
       throw result.error;
 
@@ -565,10 +558,10 @@ export async function getOpenReports() {
 
     };
 
-  } catch (error) {
+  } catch(error) {
 
     console.error(
-      'Load open reports failed:',
+      'getOpenReports:',
       error
     );
 
@@ -589,10 +582,10 @@ export async function getOpenReports() {
 
 
 /* =========================================================
-   LOAD SUBMITTED REPORTS
+   GET SUBMITTED REPORTS
 ========================================================= */
 
-export async function getSubmittedReports() {
+export async function getSubmittedReports(){
 
   try {
 
@@ -617,7 +610,7 @@ export async function getSubmittedReports() {
 
     if (
       result.error
-    ) {
+    ){
 
       throw result.error;
 
@@ -635,10 +628,10 @@ export async function getSubmittedReports() {
 
     };
 
-  } catch (error) {
+  } catch(error) {
 
     console.error(
-      'Load submitted reports failed:',
+      'getSubmittedReports:',
       error
     );
 
@@ -659,18 +652,18 @@ export async function getSubmittedReports() {
 
 
 /* =========================================================
-   LOAD ONE REPORT
+   GET SINGLE REPORT
 ========================================================= */
 
 export async function getReport(
   reportId
-) {
+){
 
   try {
 
     if (
       !reportId
-    ) {
+    ){
 
       throw new Error(
         'Report ID is required.'
@@ -694,7 +687,7 @@ export async function getReport(
 
     if (
       result.error
-    ) {
+    ){
 
       throw result.error;
 
@@ -712,10 +705,10 @@ export async function getReport(
 
     };
 
-  } catch (error) {
+  } catch(error) {
 
     console.error(
-      'Load report failed:',
+      'getReport:',
       error
     );
 
@@ -741,13 +734,13 @@ export async function getReport(
 
 export async function deleteOpenReport(
   reportId
-) {
+){
 
   try {
 
     if (
       !reportId
-    ) {
+    ){
 
       throw new Error(
         'Report ID is required.'
@@ -774,7 +767,7 @@ export async function deleteOpenReport(
 
     if (
       result.error
-    ) {
+    ){
 
       throw result.error;
 
@@ -789,10 +782,10 @@ export async function deleteOpenReport(
 
     };
 
-  } catch (error) {
+  } catch(error) {
 
     console.error(
-      'Delete open report failed:',
+      'deleteOpenReport:',
       error
     );
 
@@ -811,19 +804,19 @@ export async function deleteOpenReport(
 
 
 /* =========================================================
-   UPDATE SHIP RESPONSE
+   SAVE SHIP RESPONSE
 ========================================================= */
 
 export async function saveShipResponse({
   reportId,
   state
-}) {
+}){
 
   try {
 
     if (
       !reportId
-    ) {
+    ){
 
       throw new Error(
         'Report ID is required.'
@@ -833,10 +826,7 @@ export async function saveShipResponse({
 
 
     /*
-      First load the latest database version.
-
-      This helps avoid overwriting metadata
-      with stale browser data.
+      Get latest database record.
     */
 
     const current =
@@ -848,7 +838,7 @@ export async function saveShipResponse({
     if (
       !current.success ||
       !current.data
-    ) {
+    ){
 
       throw (
         current.error ||
@@ -860,12 +850,9 @@ export async function saveShipResponse({
     }
 
 
-    const report =
-      current.data;
-
-
     const existingData =
-      report.report_data || {};
+      current.data.report_data ||
+      {};
 
 
     const updatedData = {
@@ -925,7 +912,7 @@ export async function saveShipResponse({
 
     if (
       result.error
-    ) {
+    ){
 
       throw result.error;
 
@@ -945,10 +932,10 @@ export async function saveShipResponse({
 
     };
 
-  } catch (error) {
+  } catch(error) {
 
     console.error(
-      'Save ship response failed:',
+      'saveShipResponse:',
       error
     );
 
@@ -971,12 +958,12 @@ export async function saveShipResponse({
 
 
 /* =========================================================
-   FOLLOW-UP CHECK
+   FOLLOW-UP COMPLETE
 ========================================================= */
 
 export function areFollowUpsComplete(
   state
-) {
+){
 
   const items =
     Object.values(
@@ -993,13 +980,13 @@ export function areFollowUpsComplete(
 
 
   /*
-    No follow-ups means
-    nothing is waiting for the ship.
+    No follow-ups:
+    nothing waiting for ship.
   */
 
   if (
     followUps.length === 0
-  ) {
+  ){
 
     return true;
 
@@ -1007,17 +994,15 @@ export function areFollowUpsComplete(
 
 
   /*
-    A follow-up is complete when
-    at least one ship comment exists.
+    At least one ship comment
+    completes a follow-up.
   */
 
   return followUps.every(
     item =>
-
       Array.isArray(
         item.shipComments
       ) &&
-
       item.shipComments.length > 0
   );
 
@@ -1025,12 +1010,12 @@ export function areFollowUpsComplete(
 
 
 /* =========================================================
-   COUNT FOLLOW-UPS
+   FOLLOW-UP COUNT
 ========================================================= */
 
 export function countFollowUps(
   state
-) {
+){
 
   return Object.values(
     state || {}
@@ -1046,26 +1031,23 @@ export function countFollowUps(
 
 
 /* =========================================================
-   COUNT COMPLETED FOLLOW-UPS
+   COMPLETED FOLLOW-UP COUNT
 ========================================================= */
 
 export function countCompletedFollowUps(
   state
-) {
+){
 
   return Object.values(
     state || {}
   )
   .filter(
     item =>
-
       item &&
       item.followUpNeeded &&
-
       Array.isArray(
         item.shipComments
       ) &&
-
       item.shipComments.length > 0
   )
   .length;
@@ -1074,16 +1056,16 @@ export function countCompletedFollowUps(
 
 
 /* =========================================================
-   GET REPORT STATUS COLOR
+   REPORT COLOR
 ========================================================= */
 
 export function getReportColor(
   report
-) {
+){
 
   if (
     !report
-  ) {
+  ){
 
     return 'blue';
 
@@ -1091,14 +1073,14 @@ export function getReportColor(
 
 
   /*
-    Open report:
+    OPEN
     RED
   */
 
   if (
     report.status ===
     'open'
-  ) {
+  ){
 
     return 'red';
 
@@ -1111,8 +1093,7 @@ export function getReportColor(
 
 
   /*
-    Submitted report with
-    completed follow-ups:
+    COMPLETED
     GREEN
   */
 
@@ -1120,7 +1101,7 @@ export function getReportColor(
     areFollowUpsComplete(
       state
     )
-  ) {
+  ){
 
     return 'green';
 
@@ -1128,8 +1109,7 @@ export function getReportColor(
 
 
   /*
-    Submitted report waiting
-    for ship follow-up:
+    SUBMITTED / WAITING
     BLUE
   */
 
@@ -1139,12 +1119,12 @@ export function getReportColor(
 
 
 /* =========================================================
-   GET STATUS TEXT
+   STATUS TEXT
 ========================================================= */
 
 export function getReportStatusText(
   report
-) {
+){
 
   const color =
     getReportColor(
@@ -1155,7 +1135,7 @@ export function getReportStatusText(
   if (
     color ===
     'red'
-  ) {
+  ){
 
     return 'OPEN / ONGOING';
 
@@ -1165,7 +1145,7 @@ export function getReportStatusText(
   if (
     color ===
     'green'
-  ) {
+  ){
 
     return 'SHIP RESPONSE COMPLETE';
 
@@ -1178,26 +1158,17 @@ export function getReportStatusText(
 
 
 /* =========================================================
-   REPORT WITH FOLLOW-UP ONLY
+   REPORT NEEDS FOLLOW-UP
 ========================================================= */
 
 export function reportNeedsFollowUp(
   report
-) {
+){
 
   if (
-    !report
-  ) {
-
-    return false;
-
-  }
-
-
-  if (
-    report.status !==
-    'submitted'
-  ) {
+    !report ||
+    report.status !== 'submitted'
+  ){
 
     return false;
 
@@ -1220,7 +1191,7 @@ export function reportNeedsFollowUp(
         Array.isArray(
           item.shipComments
         ) &&
-        item.shipComments.length
+        item.shipComments.length > 0
       )
   );
 
@@ -1228,12 +1199,12 @@ export function reportNeedsFollowUp(
 
 
 /* =========================================================
-   GET REPORT FOLLOW-UP POINTS
+   GET FOLLOW-UP POINTS
 ========================================================= */
 
 export function getFollowUpPoints(
   report
-) {
+){
 
   const state =
     report?.report_data?.state ||
@@ -1244,7 +1215,7 @@ export function getFollowUpPoints(
     state
   )
   .filter(
-    ([key,item]) =>
+    ([,item]) =>
       item &&
       item.followUpNeeded
   )
@@ -1262,77 +1233,14 @@ export function getFollowUpPoints(
 
 
 /* =========================================================
-   REFRESH UPDATED_AT
-========================================================= */
-
-export async function touchReport(
-  reportId
-) {
-
-  try {
-
-    const result =
-      await supabase
-        .from(
-          'ship_visit_reports'
-        )
-        .update({
-
-          updated_at:
-            new Date().toISOString()
-
-        })
-        .eq(
-          'id',
-          reportId
-        );
-
-
-    if (
-      result.error
-    ) {
-
-      throw result.error;
-
-    }
-
-
-    return {
-
-      success:true,
-
-      error:null
-
-    };
-
-  } catch (error) {
-
-    console.error(
-      'Touch report failed:',
-      error
-    );
-
-
-    return {
-
-      success:false,
-
-      error
-
-    };
-
-  }
-
-}
-
-
-/* =========================================================
    DEFAULT EXPORT
 ========================================================= */
 
 export default {
 
   supabase,
+
+  testConnection,
 
   createOpenReport,
 
@@ -1352,7 +1260,11 @@ export default {
 
   saveShipResponse,
 
-  testConnection,
+  areFollowUpsComplete,
+
+  countFollowUps,
+
+  countCompletedFollowUps,
 
   getReportColor,
 
@@ -1360,12 +1272,6 @@ export default {
 
   reportNeedsFollowUp,
 
-  getFollowUpPoints,
-
-  countFollowUps,
-
-  countCompletedFollowUps,
-
-  areFollowUpsComplete
+  getFollowUpPoints
 
 };
