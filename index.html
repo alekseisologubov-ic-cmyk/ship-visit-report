@@ -2,26 +2,28 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>Ship Visit Report</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
 :root{
   --vv-squid:#3C1053;
   --vv-squid-stripe:#461D5C;
   --vv-red:#E10A0A;
-  --vv-red-light:#E63636;
   --vv-red-deep:#CC0000;
   --vv-near-black:#1B1B1B;
   --vv-body:#333333;
   --vv-gray:#8A8A8A;
   --vv-line:#E7E2EA;
   --vv-bg:#FAF9FB;
+  --green:#198754;
+  --blue:#2B5DA8;
 }
 
 *{
@@ -37,19 +39,15 @@ body{
   background:var(--vv-bg);
   color:var(--vv-body);
   font-family:Arial,Calibri,sans-serif;
-  -webkit-tap-highlight-color:transparent;
-}
-
-h1,h2,h3,button{
-  font-family:'Poppins',Arial,sans-serif;
 }
 
 button{
+  font-family:Poppins,Arial,sans-serif;
   cursor:pointer;
 }
 
 .hidden{
-  display:none !important;
+  display:none!important;
 }
 
 .app{
@@ -60,15 +58,13 @@ button{
   box-shadow:0 0 40px rgba(0,0,0,.04);
 }
 
-/* =========================
-   HEADER
-========================= */
+/* HEADER */
 
 .band{
   background-color:var(--vv-squid);
   background-image:repeating-linear-gradient(
     45deg,
-    var(--vv-squid) 0px,
+    var(--vv-squid) 0,
     var(--vv-squid) 40px,
     var(--vv-squid-stripe) 40px,
     var(--vv-squid-stripe) 80px
@@ -82,7 +78,7 @@ button{
 }
 
 .eyebrow{
-  font-family:'Poppins',Arial,sans-serif;
+  font-family:Poppins,Arial,sans-serif;
   font-size:11px;
   letter-spacing:.12em;
   font-weight:700;
@@ -90,8 +86,8 @@ button{
 }
 
 .band h1{
-  font-size:24px;
   margin:6px 0 2px;
+  font-size:24px;
   font-weight:800;
 }
 
@@ -105,58 +101,54 @@ button{
   opacity:.82;
 }
 
-/* =========================
-   HOME
-========================= */
+/* HOME */
 
 .home{
-  padding:25px 24px 40px;
+  padding:24px;
 }
 
 .home-grid{
   display:grid;
-  grid-template-columns:1fr 1fr;
+  grid-template-columns:repeat(3,1fr);
   gap:14px;
 }
 
 .home-card{
   min-height:145px;
-  padding:20px;
+  padding:18px;
   background:#fff;
   border:1.5px solid var(--vv-line);
   border-radius:12px;
   text-align:left;
-  transition:.15s ease;
+  transition:.15s;
 }
 
 .home-card:hover{
   border-color:var(--vv-squid);
-  box-shadow:0 4px 14px rgba(60,16,83,.08);
+  box-shadow:0 4px 15px rgba(60,16,83,.08);
 }
 
 .home-card h2{
-  margin:0 0 10px;
+  margin:0 0 9px;
   color:var(--vv-squid);
-  font-size:17px;
+  font-size:16px;
 }
 
 .home-card p{
   margin:0;
   color:var(--vv-gray);
-  font-size:12.5px;
+  font-size:12px;
   line-height:1.5;
 }
 
-/* =========================
-   FORM
-========================= */
+/* FORMS */
 
-.page-pad{
+.pad{
   padding:24px;
 }
 
 .field{
-  margin-bottom:16px;
+  margin-bottom:15px;
 }
 
 .field label{
@@ -165,19 +157,18 @@ button{
   color:var(--vv-squid);
   font-size:12px;
   font-weight:700;
-  letter-spacing:.04em;
 }
 
 .field input,
 .field textarea{
   width:100%;
   padding:11px 12px;
-  background:#fff;
   border:1.5px solid var(--vv-line);
   border-radius:8px;
-  color:var(--vv-body);
   font-family:Arial,sans-serif;
-  font-size:15px;
+  font-size:14px;
+  color:var(--vv-body);
+  background:#fff;
 }
 
 .field input:focus,
@@ -189,13 +180,12 @@ button{
 .btn-primary{
   width:100%;
   padding:14px 18px;
-  background:var(--vv-red);
-  color:#fff;
   border:0;
   border-radius:9px;
+  background:var(--vv-red);
+  color:#fff;
   font-size:15px;
   font-weight:700;
-  letter-spacing:.02em;
 }
 
 .btn-primary:hover{
@@ -205,97 +195,62 @@ button{
 .btn-secondary{
   width:100%;
   padding:13px 18px;
-  background:#fff;
-  color:var(--vv-squid);
   border:1.5px solid var(--vv-squid);
   border-radius:9px;
+  background:#fff;
+  color:var(--vv-squid);
   font-size:14px;
   font-weight:700;
 }
 
-/* =========================
-   META
-========================= */
+.btn-green{
+  width:100%;
+  padding:12px 16px;
+  border:0;
+  border-radius:8px;
+  background:var(--green);
+  color:#fff;
+  font-weight:700;
+}
 
-.meta-box{
+.meta{
   margin:14px 20px;
-  padding:13px 14px;
+  padding:12px;
   background:var(--vv-bg);
   border-radius:9px;
   font-size:12px;
   line-height:1.5;
 }
 
-.meta-box strong{
+.meta strong{
   color:var(--vv-squid);
 }
 
-/* =========================
-   REVIEWER
-========================= */
+/* CHECKLIST */
 
-.reviewer-row{
-  display:flex;
-  align-items:center;
-  gap:8px;
-  margin-top:10px;
-}
-
-.reviewer-row label{
-  color:rgba(255,255,255,.78);
-  font-size:10px;
-  font-weight:700;
-  letter-spacing:.05em;
-  white-space:nowrap;
-}
-
-.reviewer-row input{
-  flex:1;
-  min-width:0;
-  padding:6px 8px;
-  background:rgba(255,255,255,.13);
-  border:1px solid rgba(255,255,255,.45);
-  border-radius:6px;
-  color:#fff;
-}
-
-.reviewer-row input::placeholder{
-  color:rgba(255,255,255,.7);
-}
-
-/* =========================
-   PROGRESS
-========================= */
-
-.progress-wrap{
-  padding:14px 20px 7px;
+.progress{
+  padding:13px 20px 7px;
 }
 
 .progress-bar{
   height:6px;
-  overflow:hidden;
   background:var(--vv-line);
   border-radius:4px;
+  overflow:hidden;
 }
 
 .progress-fill{
-  height:100%;
   width:0;
+  height:100%;
   background:var(--vv-red);
-  border-radius:4px;
-  transition:width .2s ease;
 }
 
 .progress-label{
   margin-top:6px;
   color:var(--vv-gray);
-  font-size:11.5px;
+  font-size:11px;
   font-weight:600;
 }
-
-/* =========================
-   SECTIONS
-========================= */
 
 .section{
   border-bottom:1px solid var(--vv-line);
@@ -303,25 +258,16 @@ button{
 
 .section-head{
   display:flex;
-  align-items:center;
   justify-content:space-between;
-  gap:10px;
+  align-items:center;
   padding:17px 20px;
   cursor:pointer;
-  user-select:none;
 }
 
 .section-head h2{
   margin:0;
   color:var(--vv-squid);
   font-size:15px;
-  font-weight:700;
-}
-
-.section-right{
-  display:flex;
-  align-items:center;
-  gap:10px;
 }
 
 .section-count{
@@ -336,7 +282,6 @@ button{
   border-right:2px solid var(--vv-squid);
   border-bottom:2px solid var(--vv-squid);
   transform:rotate(45deg);
-  transition:.2s;
 }
 
 .section.open .chevron{
@@ -358,199 +303,207 @@ button{
   background:var(--vv-bg);
   border-radius:7px;
   color:var(--vv-gray);
-  font-size:11.5px;
-  line-height:1.45;
+  font-size:11px;
+  line-height:1.4;
 }
-
-/* =========================
-   ITEMS
-========================= */
 
 .item{
   padding:13px 0;
   border-top:1px solid var(--vv-line);
 }
 
-.item:first-child{
-  border-top:none;
-}
-
 .item-row{
   display:flex;
   align-items:flex-start;
-  gap:10px;
+  gap:9px;
 }
 
-.check-btn{
+.check{
   flex:0 0 auto;
   width:24px;
   height:24px;
-  margin-top:1px;
-  padding:0;
-  background:#fff;
   border:2px solid var(--vv-gray);
   border-radius:50%;
+  background:#fff;
   position:relative;
 }
 
-.check-btn.checked{
+.check.checked{
   background:var(--vv-red);
   border-color:var(--vv-red);
 }
 
-.check-btn.checked::after{
-  content:'';
+.check.checked:after{
+  content:"";
   position:absolute;
   left:6px;
   top:2px;
   width:6px;
   height:11px;
-  border-right:2.5px solid #fff;
-  border-bottom:2.5px solid #fff;
+  border-right:2px solid #fff;
+  border-bottom:2px solid #fff;
   transform:rotate(45deg);
 }
 
 .item-text{
   flex:1;
   min-width:0;
-  padding-top:1px;
   font-size:14px;
   line-height:1.45;
 }
 
 .item-actions{
-  flex:0 0 auto;
   display:flex;
-  gap:6px;
+  gap:5px;
 }
 
-.action-btn{
+.action{
   padding:6px 8px;
-  background:#fff;
-  color:var(--vv-squid);
   border:1.5px solid var(--vv-line);
   border-radius:7px;
-  font-size:11px;
+  background:#fff;
+  color:var(--vv-squid);
+  font-size:10px;
   font-weight:700;
 }
 
-.action-btn.active{
+.action.active{
   background:var(--vv-squid);
   color:#fff;
   border-color:var(--vv-squid);
 }
 
-.item-extra{
-  margin:10px 0 0 34px;
-}
-
-.comments-list{
-  margin-bottom:8px;
+.extra{
+  margin:10px 0 0 33px;
 }
 
 .comment{
   margin-bottom:6px;
-  padding:8px 10px;
+  padding:7px 9px;
   background:var(--vv-bg);
   border-radius:7px;
-  font-size:12.5px;
+  font-size:12px;
   line-height:1.4;
 }
 
 .comment b{
   color:var(--vv-squid);
-  font-size:11.5px;
 }
 
 .comment-row{
   display:flex;
+  gap:7px;
   align-items:flex-end;
-  gap:8px;
 }
 
 .comment-row textarea{
   flex:1;
   min-height:44px;
-  padding:8px 10px;
+  padding:8px;
   border:1.5px solid var(--vv-line);
   border-radius:7px;
   resize:vertical;
   font-family:Arial,sans-serif;
-  font-size:13px;
 }
 
-.add-comment{
+.add{
   height:44px;
-  padding:0 14px;
-  background:var(--vv-squid);
-  color:#fff;
+  padding:0 12px;
   border:0;
   border-radius:7px;
-  font-size:12px;
+  background:var(--vv-squid);
+  color:#fff;
   font-weight:700;
 }
 
 .photos{
   display:flex;
-  gap:8px;
+  gap:7px;
   flex-wrap:wrap;
   margin-top:8px;
 }
 
-.thumb{
+.photo{
   position:relative;
-  width:72px;
-  height:72px;
+  width:70px;
+  height:70px;
   overflow:hidden;
-  border:1px solid var(--vv-line);
   border-radius:7px;
+  border:1px solid var(--vv-line);
 }
 
-.thumb img{
+.photo img{
   width:100%;
   height:100%;
-  display:block;
   object-fit:cover;
 }
 
-.thumb-remove{
+.photo button{
   position:absolute;
   top:2px;
   right:2px;
   width:18px;
   height:18px;
-  padding:0;
   border:0;
   border-radius:50%;
-  background:rgba(27,27,27,.75);
+  background:rgba(0,0,0,.7);
   color:#fff;
-  font-size:12px;
-  line-height:18px;
 }
 
-/* =========================
-   FOOTER
-========================= */
+/* FOLLOW-UP */
+
+.followup{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  margin-top:10px;
+}
+
+.followup input{
+  width:16px;
+  height:16px;
+  accent-color:var(--vv-red);
+}
+
+.followup span{
+  color:var(--vv-red);
+  font-size:11px;
+  font-weight:700;
+}
+
+.followup.done span{
+  color:var(--green);
+}
+
+.ship-response{
+  margin-top:8px;
+  padding:8px 10px;
+  background:#edf9f0;
+  border-left:3px solid var(--green);
+  border-radius:6px;
+  font-size:12px;
+  line-height:1.45;
+}
+
+/* FOOTER */
 
 .footer{
   position:sticky;
   bottom:0;
-  z-index:10;
+  z-index:20;
   padding:14px 20px;
   background:#fff;
   border-top:1px solid var(--vv-line);
-  box-shadow:0 -6px 16px rgba(0,0,0,.04);
+  box-shadow:0 -5px 16px rgba(0,0,0,.04);
 }
 
-.footer-grid{
+.grid2{
   display:grid;
   grid-template-columns:1fr 1fr;
-  gap:10px;
+  gap:9px;
 }
 
-/* =========================
-   SUMMARY
-========================= */
+/* SUMMARY */
 
 .summary{
   padding:22px 24px 120px;
@@ -559,7 +512,6 @@ button{
 .stats{
   display:flex;
   gap:10px;
-  margin:0 0 14px;
 }
 
 .stat{
@@ -571,7 +523,6 @@ button{
 }
 
 .stat-number{
-  color:var(--vv-near-black);
   font-size:22px;
   font-weight:800;
 }
@@ -597,17 +548,10 @@ button{
   border-radius:8px;
   font-family:Arial,sans-serif;
   font-size:14px;
-  line-height:1.55;
-  resize:vertical;
+  line-height:1.5;
 }
 
-.summary-section{
-  margin-top:18px;
-}
-
-/* =========================
-   SUBMITTED REPORTS
-========================= */
+/* REPORT LIST */
 
 .reports{
   padding:24px;
@@ -616,13 +560,28 @@ button{
 .report-card{
   margin-bottom:12px;
   padding:15px;
-  background:#fff;
   border:1.5px solid var(--vv-line);
   border-radius:10px;
+  background:#fff;
+}
+
+.report-card.red{
+  border-color:#e5a6a6;
+  background:#fffafa;
+}
+
+.report-card.blue{
+  border-color:#b5c9eb;
+  background:#fbfdff;
+}
+
+.report-card.green{
+  border-color:#b5d9bf;
+  background:#fbfffc;
 }
 
 .report-card h3{
-  margin:0 0 7px;
+  margin:0 0 6px;
   color:var(--vv-squid);
   font-size:15px;
 }
@@ -630,23 +589,48 @@ button{
 .report-meta{
   color:var(--vv-gray);
   font-size:12px;
-  line-height:1.6;
+  line-height:1.55;
+}
+
+.status{
+  display:inline-block;
+  margin-top:6px;
+  padding:4px 8px;
+  border-radius:20px;
+  font-size:9px;
+  font-weight:800;
+  letter-spacing:.05em;
+}
+
+.status.red{
+  background:#fff0f0;
+  color:var(--vv-red);
+}
+
+.status.blue{
+  background:#eef4ff;
+  color:var(--blue);
+}
+
+.status.green{
+  background:#edf9f0;
+  color:var(--green);
 }
 
 .report-actions{
   display:grid;
   grid-template-columns:1fr 1fr 1fr;
   gap:8px;
-  margin-top:12px;
+  margin-top:11px;
 }
 
 .report-actions button{
-  padding:9px 7px;
-  background:#fff;
-  color:var(--vv-squid);
+  padding:9px 5px;
   border:1.5px solid var(--vv-squid);
   border-radius:7px;
-  font-size:11px;
+  background:#fff;
+  color:var(--vv-squid);
+  font-size:10px;
   font-weight:700;
 }
 
@@ -662,12 +646,9 @@ button{
   font-size:13px;
 }
 
-/* =========================
-   PRINT
-========================= */
+/* PRINT */
 
 @media print{
-
   body{
     background:#fff;
   }
@@ -679,33 +660,27 @@ button{
 
   .no-print,
   .footer,
-  .progress-wrap,
-  .meta-box,
-  .action-btn,
-  .check-btn{
-    display:none !important;
+  .progress,
+  .action,
+  .check{
+    display:none!important;
   }
 
   .section-body{
-    display:block !important;
-  }
-
-  .section{
-    page-break-inside:avoid;
-  }
-
-  .item{
-    page-break-inside:avoid;
+    display:block!important;
   }
 
   .band{
     -webkit-print-color-adjust:exact;
     print-color-adjust:exact;
   }
+
+  .item{
+    page-break-inside:avoid;
+  }
 }
 
-@media(max-width:560px){
-
+@media(max-width:600px){
   .home-grid{
     grid-template-columns:1fr;
   }
@@ -714,18 +689,13 @@ button{
     flex-direction:column;
   }
 
-  .action-btn{
-    padding:6px;
-  }
-
   .report-actions{
     grid-template-columns:1fr;
   }
 
-  .footer-grid{
+  .grid2{
     grid-template-columns:1fr;
   }
-
 }
 </style>
 </head>
@@ -734,415 +704,489 @@ button{
 
 <div class="app">
 
-  <!-- =========================
-       HOME SCREEN
-  ========================== -->
+<!-- =====================================================
+     HOME
+===================================================== -->
 
-  <section id="screen-home">
+<section id="home">
 
-    <div class="band">
+  <div class="band">
 
-      <div class="eyebrow">
-        — VIRGIN VOYAGES
-      </div>
-
-      <h1>
-        Ship Visit Report
-      </h1>
-
-      <p class="sub">
-        Create and review ship visit reports.
-      </p>
-
+    <div class="eyebrow">
+      — VIRGIN VOYAGES
     </div>
 
+    <h1>
+      Ship Visit Report
+    </h1>
 
-    <div class="home">
+    <p class="sub">
+      Create, review and manage ship visit reports.
+    </p>
 
-      <div class="home-grid">
+  </div>
 
-        <button
-          type="button"
-          class="home-card"
-          id="btn-create-report"
-        >
+  <div class="home">
 
-          <h2>
-            CREATE REPORT
-          </h2>
-
-          <p>
-            Start a new ship visit report and complete the five operational checklists.
-          </p>
-
-        </button>
-
-
-        <button
-          type="button"
-          class="home-card"
-          id="btn-submitted-reports"
-        >
-
-          <h2>
-            SUBMITTED REPORTS
-          </h2>
-
-          <p>
-            Review previously submitted reports, print them, or save them as PDF.
-          </p>
-
-        </button>
-
-      </div>
-
-    </div>
-
-  </section>
-
-
-  <!-- =========================
-       CREATE REPORT SETUP
-  ========================== -->
-
-  <section
-    id="screen-setup"
-    class="hidden"
-  >
-
-    <div class="band compact">
-
-      <div class="eyebrow">
-        — CREATE REPORT
-      </div>
-
-      <h1>
-        Ship Visit Details
-      </h1>
-
-      <p class="sub">
-        Enter the visit information.
-      </p>
-
-    </div>
-
-
-    <div class="page-pad">
-
-      <div class="field">
-
-        <label>
-          SHIP
-        </label>
-
-        <input
-          type="text"
-          id="input-ship"
-          placeholder="e.g. Valiant Lady"
-        >
-
-      </div>
-
-
-      <div class="field">
-
-        <label>
-          DATE ON
-        </label>
-
-        <input
-          type="date"
-          id="input-date-on"
-        >
-
-      </div>
-
-
-      <div class="field">
-
-        <label>
-          DATE OFF
-        </label>
-
-        <input
-          type="date"
-          id="input-date-off"
-        >
-
-      </div>
-
-
-      <div class="field">
-
-        <label>
-          REVIEWER
-        </label>
-
-        <input
-          type="text"
-          id="input-reviewer"
-          placeholder="Your name"
-        >
-
-      </div>
-
+    <div class="home-grid">
 
       <button
-        type="button"
-        class="btn-primary"
-        id="btn-start"
+        class="home-card"
+        id="createReport"
       >
-        Start Report
+        <h2>CREATE REPORT</h2>
+
+        <p>
+          Start a new ship visit report.
+        </p>
       </button>
 
 
-      <div style="height:10px"></div>
+      <button
+        class="home-card"
+        id="openReport"
+      >
+        <h2>OPEN REPORT</h2>
+
+        <p>
+          Continue reports that have been started but not submitted.
+        </p>
+      </button>
 
 
       <button
-        type="button"
-        class="btn-secondary"
-        id="btn-setup-home"
+        class="home-card"
+        id="submittedReports"
       >
-        Back to Home
+        <h2>SUBMITTED REPORTS</h2>
+
+        <p>
+          Review completed ship visit reports.
+        </p>
+      </button>
+
+
+      <button
+        class="home-card"
+        id="shipResponseReport"
+      >
+        <h2>SHIP RESPONSE REPORT</h2>
+
+        <p>
+          Review and respond to checklist points requiring ship follow-up.
+        </p>
       </button>
 
     </div>
 
-  </section>
+  </div>
+
+</section>
 
 
-  <!-- =========================
-       CHECKLIST
-  ========================== -->
+<!-- =====================================================
+     SETUP
+===================================================== -->
 
-  <section
-    id="screen-checklist"
-    class="hidden"
-  >
+<section
+  id="setup"
+  class="hidden"
+>
 
-    <div class="band compact">
+  <div class="band compact">
 
-      <div class="eyebrow">
-        — <span id="header-ship"></span>
-      </div>
+    <div class="eyebrow">
+      — CREATE REPORT
+    </div>
 
-      <h1>
-        Ship Visit Report
-      </h1>
+    <h1>
+      Ship Visit Details
+    </h1>
 
-      <div class="reviewer-row">
+    <p class="sub">
+      Enter the visit information.
+    </p>
 
-        <label>
-          REVIEWER
-        </label>
+  </div>
 
-        <input
-          type="text"
-          id="header-reviewer"
-        >
 
-      </div>
+  <div class="pad">
 
+    <div class="field">
+      <label>SHIP</label>
+
+      <input
+        id="ship"
+        placeholder="e.g. Valiant Lady"
+      >
     </div>
 
 
-    <div class="meta-box">
+    <div class="field">
+      <label>DATE ON</label>
 
-      <strong>
-        Visit:
-      </strong>
-
-      <span id="header-visit"></span>
-
+      <input
+        id="dateOn"
+        type="date"
+      >
     </div>
 
 
-    <div class="progress-wrap">
+    <div class="field">
+      <label>DATE OFF</label>
 
-      <div class="progress-bar">
+      <input
+        id="dateOff"
+        type="date"
+      >
+    </div>
 
-        <div
-          id="progress-fill"
-          class="progress-fill"
-        ></div>
 
-      </div>
+    <div class="field">
+      <label>REVIEWER</label>
 
+      <input
+        id="reviewer"
+        placeholder="Your name"
+      >
+    </div>
+
+
+    <button
+      class="btn-primary"
+      id="startBtn"
+    >
+      Start Report
+    </button>
+
+
+    <div style="height:10px"></div>
+
+
+    <button
+      class="btn-secondary"
+      id="setupHome"
+    >
+      Back to Home
+    </button>
+
+  </div>
+
+</section>
+
+
+<!-- =====================================================
+     CHECKLIST
+===================================================== -->
+
+<section
+  id="checklist"
+  class="hidden"
+>
+
+  <div class="band compact">
+
+    <div class="eyebrow">
+      — <span id="hdrShip"></span>
+    </div>
+
+    <h1>
+      Ship Visit Report
+    </h1>
+
+    <div class="reviewer-row">
+
+      <label>
+        REVIEWER
+      </label>
+
+      <input
+        id="hdrReviewer"
+        style="
+          flex:1;
+          background:rgba(255,255,255,.12);
+          border:1px solid rgba(255,255,255,.4);
+          border-radius:6px;
+          color:#fff;
+          padding:6px 8px;
+        "
+      >
+
+    </div>
+
+  </div>
+
+
+  <div class="meta">
+    <strong>Visit:</strong>
+    <span id="visitMeta"></span>
+  </div>
+
+
+  <div class="progress">
+
+    <div class="progress-bar">
 
       <div
-        id="progress-label"
-        class="progress-label"
-      >
-        0 of 0 points reviewed
-      </div>
-
-    </div>
-
-
-    <div id="checklist-sections"></div>
-
-
-    <div class="footer no-print">
-
-      <button
-        type="button"
-        class="btn-primary"
-        id="btn-summary"
-      >
-        Generate Summary
-      </button>
-
-    </div>
-
-  </section>
-
-
-  <!-- =========================
-       SUMMARY
-  ========================== -->
-
-  <section
-    id="screen-summary"
-    class="hidden"
-  >
-
-    <div class="band compact">
-
-      <div class="eyebrow">
-        — REPORT SUMMARY
-      </div>
-
-      <h1 id="summary-title">
-        Visit Summary
-      </h1>
-
-      <p
-        class="sub"
-        id="summary-meta"
-      ></p>
-
-    </div>
-
-
-    <div class="summary">
-
-      <div
-        class="stats"
-        id="summary-stats"
+        class="progress-fill"
+        id="fill"
       ></div>
 
-
-      <h2>
-        Overall Summary
-      </h2>
-
-      <textarea
-        id="overall-summary"
-        rows="6"
-      ></textarea>
-
-
-      <div id="section-summaries"></div>
-
     </div>
 
-
-    <div class="footer no-print">
-
-      <div class="footer-grid">
-
-        <button
-          type="button"
-          class="btn-secondary"
-          id="btn-back-checklist"
-        >
-          Back to Checklist
-        </button>
-
-
-        <button
-          type="button"
-          class="btn-secondary"
-          id="btn-save-pdf"
-        >
-          Save PDF
-        </button>
-
-      </div>
-
-
-      <div style="height:10px"></div>
-
-
-      <div class="footer-grid">
-
-        <button
-          type="button"
-          class="btn-secondary"
-          id="btn-print"
-        >
-          Print Report
-        </button>
-
-
-        <button
-          type="button"
-          class="btn-primary"
-          id="btn-submit"
-        >
-          Submit Report
-        </button>
-
-      </div>
-
+    <div
+      class="progress-label"
+      id="progress"
+    >
+      0 of 0 points reviewed
     </div>
 
-  </section>
+  </div>
 
 
-  <!-- =========================
-       SUBMITTED REPORTS
-  ========================== -->
+  <div id="sections"></div>
 
-  <section
-    id="screen-submitted"
-    class="hidden"
-  >
 
-    <div class="band compact">
+  <div class="footer no-print">
 
-      <div class="eyebrow">
-        — SUBMITTED REPORTS
-      </div>
+    <button
+      class="btn-primary"
+      id="summaryBtn"
+    >
+      Generate Summary
+    </button>
 
-      <h1>
-        Report Archive
-      </h1>
+  </div>
 
-      <p class="sub">
-        Review submitted ship visit reports.
-      </p>
+</section>
 
+
+<!-- =====================================================
+     SUMMARY
+===================================================== -->
+
+<section
+  id="summary"
+  class="hidden"
+>
+
+  <div class="band compact">
+
+    <div class="eyebrow">
+      — REPORT SUMMARY
     </div>
 
+    <h1 id="sumTitle">
+      Visit Summary
+    </h1>
 
-    <div class="reports">
+    <p
+      class="sub"
+      id="sumMeta"
+    ></p>
 
-      <div id="submitted-list"></div>
+  </div>
+
+
+  <div class="summary">
+
+    <div
+      class="stats"
+      id="stats"
+    ></div>
+
+
+    <h2>
+      Overall Summary
+    </h2>
+
+    <textarea
+      id="overall"
+      rows="6"
+    ></textarea>
+
+
+    <div id="sumSections"></div>
+
+  </div>
+
+
+  <div class="footer no-print">
+
+    <div class="grid2">
+
+      <button
+        class="btn-secondary"
+        id="backBtn"
+      >
+        Back to Checklist
+      </button>
 
 
       <button
-        type="button"
         class="btn-secondary"
-        id="btn-reports-home"
+        id="pdfBtn"
       >
-        Back to Home
+        Save PDF
       </button>
 
     </div>
 
-  </section>
+
+    <div style="height:10px"></div>
+
+
+    <div class="grid2">
+
+      <button
+        class="btn-secondary"
+        id="printBtn"
+      >
+        Print Report
+      </button>
+
+
+      <button
+        class="btn-primary"
+        id="submitBtn"
+      >
+        Submit Report
+      </button>
+
+    </div>
+
+  </div>
+
+</section>
+
+
+<!-- =====================================================
+     OPEN REPORTS
+===================================================== -->
+
+<section
+  id="open"
+  class="hidden"
+>
+
+  <div class="band compact">
+
+    <div class="eyebrow">
+      — OPEN REPORT
+    </div>
+
+    <h1>
+      Open Reports
+    </h1>
+
+    <p class="sub">
+      Reports that have been started but not submitted.
+    </p>
+
+  </div>
+
+
+  <div class="reports">
+
+    <div id="openList"></div>
+
+
+    <button
+      class="btn-secondary"
+      id="openHomeBtn"
+    >
+      Back to Home
+    </button>
+
+  </div>
+
+</section>
+
+
+<!-- =====================================================
+     SUBMITTED REPORTS
+===================================================== -->
+
+<section
+  id="submitted"
+  class="hidden"
+>
+
+  <div class="band compact">
+
+    <div class="eyebrow">
+      — SUBMITTED REPORTS
+    </div>
+
+    <h1>
+      Report Archive
+    </h1>
+
+    <p class="sub">
+      Submitted reports available for review.
+    </p>
+
+  </div>
+
+
+  <div class="reports">
+
+    <div id="reportList"></div>
+
+
+    <button
+      class="btn-secondary"
+      id="reportsHomeBtn"
+    >
+      Back to Home
+    </button>
+
+  </div>
+
+</section>
+
+
+<!-- =====================================================
+     SHIP RESPONSE
+===================================================== -->
+
+<section
+  id="responses"
+  class="hidden"
+>
+
+  <div class="band compact">
+
+    <div class="eyebrow">
+      — SHIP RESPONSE REPORT
+    </div>
+
+    <h1>
+      Ship Responses
+    </h1>
+
+    <p class="sub">
+      Respond to points marked Follow-Up Needed from Ship.
+    </p>
+
+  </div>
+
+
+  <div class="reports">
+
+    <div id="responseList"></div>
+
+
+    <button
+      class="btn-secondary"
+      id="responsesHomeBtn"
+    >
+      Back to Home
+    </button>
+
+  </div>
+
+</section>
 
 </div>
 
@@ -1156,10 +1200,9 @@ button{
 const SECTIONS = [
 
   {
-    id: 'culinary',
-    title: 'CULINARY',
-    items: [
-
+    id:'culinary',
+    title:'CULINARY',
+    items:[
       'All recipe tablets in place in the venues',
       'All recipes followed / food quality in the venues',
       'Tasting spoons available in the kitchens',
@@ -1188,17 +1231,14 @@ const SECTIONS = [
       'Meeting conducted with the Hotel Service Engineer',
       'Attend the maintenance meeting while on board',
       'Review AIMS report, outstanding maintenance follow-up'
-
     ]
   },
 
-
   {
-    id: 'bar',
-    title: 'BAR',
-    note: 'The supplied template does not contain a dedicated Bar checklist. The points below use operational checks contained in the supplied template rather than adding new requirements.',
-    items: [
-
+    id:'bar',
+    title:'BAR',
+    note:'The supplied checklist did not contain a dedicated Bar section, so shared FOH and operational controls are used here.',
+    items:[
       'All set ups FOH followed as per the latest SOP',
       'All equipment in place and in working order',
       'Missing item lists updated and communicated with Procurement',
@@ -1210,16 +1250,13 @@ const SECTIONS = [
       'Review previous reports reviewed / repeat findings',
       'Budget meeting conducted',
       'Cost reduction feedback'
-
     ]
   },
 
-
   {
-    id: 'restaurant',
-    title: 'RESTAURANT',
-    items: [
-
+    id:'restaurant',
+    title:'RESTAURANT',
+    items:[
       'All set ups FOH followed as per the latest SOP',
       'Checking the Sailor flow of the restaurants',
       'Review all Hours of Operation',
@@ -1237,16 +1274,13 @@ const SECTIONS = [
       'Meeting with F&B Director',
       'Meeting with Senior Executive Chef',
       'Closing meeting discussing / inspection'
-
     ]
   },
 
-
   {
-    id: 'procurement',
-    title: 'PROCUREMENT',
-    items: [
-
+    id:'procurement',
+    title:'PROCUREMENT',
+    items:[
       'Future orders',
       'All items stored properly',
       'All ERP templates followed',
@@ -1262,16 +1296,13 @@ const SECTIONS = [
       'Chargeable tracker filled in correct',
       'Proper storage of fresh fish and seafood',
       'Missing item lists updated and communicated with Procurement'
-
     ]
   },
 
-
   {
-    id: 'sanitation',
-    title: 'SANITATION',
-    items: [
-
+    id:'sanitation',
+    title:'SANITATION',
+    items:[
       'Shellfish logs in place',
       'Cooling logs in place',
       'Updated and approved time control plans',
@@ -1284,7 +1315,6 @@ const SECTIONS = [
       'All SOPs followed as per VMS',
       'Proper storage and cleanliness in the Butcher shop and walk-in rooms',
       'Bandsaw in good condition and all safety parts in place'
-
     ]
   }
 
@@ -1292,53 +1322,102 @@ const SECTIONS = [
 
 
 /* =========================================================
+   SUPABASE
+========================================================= */
+
+/*
+  REPLACE THESE TWO VALUES.
+*/
+
+const SUPABASE_URL =
+  'https://YOUR_PROJECT_ID.supabase.co';
+
+const SUPABASE_KEY =
+  'YOUR_SUPABASE_PUBLISHABLE_OR_ANON_KEY';
+
+
+let sb = null;
+
+let supabaseReady = false;
+
+
+try{
+
+  if(
+    window.supabase &&
+    !SUPABASE_URL.includes(
+      'YOUR_PROJECT_ID'
+    ) &&
+    !SUPABASE_KEY.includes(
+      'YOUR_SUPABASE'
+    )
+  ){
+
+    sb =
+      window.supabase.createClient(
+        SUPABASE_URL,
+        SUPABASE_KEY
+      );
+
+    supabaseReady = true;
+
+  }
+
+}catch(error){
+
+  console.error(
+    'Supabase setup failed',
+    error
+  );
+
+}
+
+
+/* =========================================================
    STATE
 ========================================================= */
 
-const STORAGE_CURRENT =
-  'vv_ship_visit_current';
-
-const STORAGE_SUBMITTED =
-  'vv_ship_visit_submitted';
-
-
 let meta = {
-  ship: '',
-  dateOn: '',
-  dateOff: '',
-  reviewer: ''
+  ship:'',
+  dateOn:'',
+  dateOff:'',
+  reviewer:''
 };
-
 
 let currentReviewer =
   'Reviewer';
 
-
 let reportId =
   '';
-
 
 let state =
   {};
 
 
-function createEmptyState(){
+function emptyState(){
 
   const result = {};
 
+
   SECTIONS.forEach(section => {
 
-    section.items.forEach((text,index) => {
+    section.items.forEach((item,index) => {
 
       result[
-        section.id + '__' + index
+        section.id +
+        '__' +
+        index
       ] = {
 
-        checked: false,
+        checked:false,
 
-        comments: [],
+        comments:[],
 
-        photos: []
+        photos:[],
+
+        followUpNeeded:false,
+
+        shipResponse:''
 
       };
 
@@ -1346,67 +1425,61 @@ function createEmptyState(){
 
   });
 
+
   return result;
 
 }
 
 
 state =
-  createEmptyState();
+  emptyState();
 
 
 /* =========================================================
-   UTILITY
+   HELPERS
 ========================================================= */
 
-function escapeHtml(value){
+function esc(value){
 
   return String(value ?? '')
     .replace(
       /[&<>"']/g,
-      char => ({
+      c => ({
         '&':'&amp;',
         '<':'&lt;',
         '>':'&gt;',
         '"':'&quot;',
         "'":'&#39;'
-      }[char])
+      }[c])
     );
 
 }
 
 
-function getTotalItems(){
-
-  return SECTIONS.reduce(
-    (total,section) =>
-      total + section.items.length,
-    0
-  );
-
-}
-
-
-function getTotals(){
+function totals(){
 
   let total = 0;
   let checked = 0;
   let photos = 0;
 
-  Object.values(state).forEach(item => {
 
-    total++;
+  Object.values(state)
+    .forEach(item => {
 
-    if(item.checked){
-      checked++;
-    }
+      total++;
 
-    photos +=
-      Array.isArray(item.photos)
-        ? item.photos.length
-        : 0;
+      if(item.checked){
 
-  });
+        checked++;
+
+      }
+
+      photos +=
+        (item.photos || [])
+          .length;
+
+    });
+
 
   return {
     total,
@@ -1417,166 +1490,90 @@ function getTotals(){
 }
 
 
+function reportStatus(report){
+
+  const data =
+    report.report_data || {};
+
+  if(
+    report.status === 'open'
+  ){
+
+    return 'red';
+
+  }
+
+
+  if(
+    data.shipResponseStatus ===
+    'complete'
+  ){
+
+    return 'green';
+
+  }
+
+
+  return 'blue';
+
+}
+
+
+function reportStatusText(report){
+
+  const status =
+    reportStatus(report);
+
+
+  if(status === 'red'){
+
+    return 'OPEN / ONGOING';
+
+  }
+
+
+  if(status === 'green'){
+
+    return 'SHIP RESPONSE COMPLETE';
+
+  }
+
+
+  return 'JUST SUBMITTED';
+
+}
+
+
 /* =========================================================
-   STORAGE
+   SCREEN NAVIGATION
 ========================================================= */
 
-function saveCurrent(){
+function showScreen(name){
 
-  try{
+  [
+    'home',
+    'setup',
+    'checklist',
+    'summary',
+    'open',
+    'submitted',
+    'responses'
+  ]
+  .forEach(id => {
 
-    localStorage.setItem(
-      STORAGE_CURRENT,
-      JSON.stringify({
-
-        reportId,
-
-        meta,
-
-        currentReviewer,
-
-        state,
-
-        updatedAt:
-          new Date().toISOString()
-
-      })
-    );
-
-  }catch(error){
-
-    console.error(
-      'Could not save current report',
-      error
-    );
-
-  }
-
-}
-
-
-function clearCurrent(){
-
-  try{
-
-    localStorage.removeItem(
-      STORAGE_CURRENT
-    );
-
-  }catch(error){
-
-    console.error(
-      'Could not clear current report',
-      error
-    );
-
-  }
-
-}
-
-
-function getSubmittedReports(){
-
-  try{
-
-    const value =
-      localStorage.getItem(
-        STORAGE_SUBMITTED
+    const element =
+      document.getElementById(
+        id
       );
 
-    if(!value){
-      return [];
-    }
+    if(element){
 
-    const reports =
-      JSON.parse(value);
-
-    return Array.isArray(reports)
-      ? reports
-      : [];
-
-  }catch(error){
-
-    console.error(
-      'Could not load submitted reports',
-      error
-    );
-
-    return [];
-
-  }
-
-}
-
-
-function saveSubmittedReports(reports){
-
-  try{
-
-    localStorage.setItem(
-      STORAGE_SUBMITTED,
-      JSON.stringify(reports)
-    );
-
-    return true;
-
-  }catch(error){
-
-    console.error(
-      'Could not save submitted reports',
-      error
-    );
-
-    return false;
-
-  }
-
-}
-
-
-/* =========================================================
-   NAVIGATION
-========================================================= */
-
-function showScreen(screenName){
-
-  const screens = {
-
-    home:
-      document.getElementById(
-        'screen-home'
-      ),
-
-    setup:
-      document.getElementById(
-        'screen-setup'
-      ),
-
-    checklist:
-      document.getElementById(
-        'screen-checklist'
-      ),
-
-    summary:
-      document.getElementById(
-        'screen-summary'
-      ),
-
-    submitted:
-      document.getElementById(
-        'screen-submitted'
-      )
-
-  };
-
-
-  Object.keys(screens).forEach(name => {
-
-    screens[name]
-      .classList.toggle(
+      element.classList.toggle(
         'hidden',
-        name !== screenName
+        id !== name
       );
+
+    }
 
   });
 
@@ -1590,178 +1587,274 @@ function showScreen(screenName){
 
 
 /* =========================================================
-   HOME
+   SUPABASE SAVE
 ========================================================= */
 
-document
-  .getElementById('btn-create-report')
-  .addEventListener(
-    'click',
-    () => {
+async function saveReport(
+  status = 'open'
+){
 
-      document.getElementById(
-        'input-date-on'
-      ).value =
-        new Date()
-          .toISOString()
-          .slice(0,10);
+  if(!supabaseReady){
 
-      showScreen('setup');
-
-    }
-  );
-
-
-document
-  .getElementById('btn-submitted-reports')
-  .addEventListener(
-    'click',
-    () => {
-
-      renderSubmittedReports();
-
-      showScreen('submitted');
-
-    }
-  );
-
-
-document
-  .getElementById('btn-setup-home')
-  .addEventListener(
-    'click',
-    () => {
-
-      showScreen('home');
-
-    }
-  );
-
-
-document
-  .getElementById('btn-reports-home')
-  .addEventListener(
-    'click',
-    () => {
-
-      showScreen('home');
-
-    }
-  );
-
-
-/* =========================================================
-   START REPORT
-========================================================= */
-
-document
-  .getElementById('btn-start')
-  .addEventListener(
-    'click',
-    () => {
-
-      meta.ship =
-        document
-          .getElementById('input-ship')
-          .value
-          .trim();
-
-
-      meta.dateOn =
-        document
-          .getElementById('input-date-on')
-          .value;
-
-
-      meta.dateOff =
-        document
-          .getElementById('input-date-off')
-          .value;
-
-
-      meta.reviewer =
-        document
-          .getElementById('input-reviewer')
-          .value
-          .trim();
-
-
-      if(!meta.ship){
-
-        alert(
-          'Please enter the ship name.'
-        );
-
-        return;
-
-      }
-
-
-      if(!meta.reviewer){
-
-        alert(
-          'Please enter the reviewer name.'
-        );
-
-        return;
-
-      }
-
-
-      state =
-        createEmptyState();
-
-
-      reportId =
-        Date.now().toString();
-
-
-      currentReviewer =
-        meta.reviewer;
-
-
-      updateChecklistHeader();
-
-      renderChecklist();
-
-      showScreen('checklist');
-
-      saveCurrent();
-
-    }
-  );
-
-
-/* =========================================================
-   CHECKLIST HEADER
-========================================================= */
-
-function updateChecklistHeader(){
-
-  document.getElementById(
-    'header-ship'
-  ).textContent =
-    (
-      meta.ship ||
-      ''
-    ).toUpperCase();
-
-
-  document.getElementById(
-    'header-reviewer'
-  ).value =
-    currentReviewer;
-
-
-  document.getElementById(
-    'header-visit'
-  ).textContent =
-    `${meta.dateOn || ''}` +
-    (
-      meta.dateOff
-        ? ` → ${meta.dateOff}`
-        : ''
+    alert(
+      'Supabase is not connected yet.'
     );
+
+    return false;
+
+  }
+
+
+  try{
+
+    const payload = {
+
+      ship:
+        meta.ship,
+
+      date_on:
+        meta.dateOn || null,
+
+      date_off:
+        meta.dateOff || null,
+
+      reviewer:
+        meta.reviewer ||
+        currentReviewer ||
+        'Reviewer',
+
+      status,
+
+      report_data:{
+        meta,
+        state
+      },
+
+      updated_at:
+        new Date().toISOString()
+
+    };
+
+
+    if(
+      status ===
+      'submitted'
+    ){
+
+      payload.submitted_at =
+        new Date().toISOString();
+
+    }
+
+
+    let result;
+
+
+    if(reportId){
+
+      result =
+        await sb
+          .from(
+            'ship_visit_reports'
+          )
+          .update(
+            payload
+          )
+          .eq(
+            'id',
+            reportId
+          )
+          .select()
+          .single();
+
+    }else{
+
+      result =
+        await sb
+          .from(
+            'ship_visit_reports'
+          )
+          .insert(
+            payload
+          )
+          .select()
+          .single();
+
+    }
+
+
+    if(result.error){
+
+      throw result.error;
+
+    }
+
+
+    reportId =
+      result.data.id;
+
+
+    return true;
+
+  }catch(error){
+
+    console.error(
+      'Save report failed:',
+      error
+    );
+
+
+    alert(
+      'Could not save the report to Supabase.'
+    );
+
+
+    return false;
+
+  }
+
+}
+
+
+/* =========================================================
+   LOAD REPORTS
+========================================================= */
+
+async function loadReports(
+  status
+){
+
+  if(!supabaseReady){
+
+    return [];
+
+  }
+
+
+  try{
+
+    const result =
+      await sb
+        .from(
+          'ship_visit_reports'
+        )
+        .select('*')
+        .eq(
+          'status',
+          status
+        )
+        .order(
+          'updated_at',
+          {
+            ascending:false
+          }
+        );
+
+
+    if(result.error){
+
+      throw result.error;
+
+    }
+
+
+    return result.data || [];
+
+  }catch(error){
+
+    console.error(
+      'Load reports failed:',
+      error
+    );
+
+
+    return [];
+
+  }
+
+}
+
+
+/* =========================================================
+   HYDRATE REPORT
+========================================================= */
+
+function hydrateReport(
+  report
+){
+
+  reportId =
+    report.id;
+
+
+  meta = {
+
+    ship:
+      report.ship ||
+      report.report_data?.meta?.ship ||
+      '',
+
+    dateOn:
+      report.date_on ||
+      report.report_data?.meta?.dateOn ||
+      '',
+
+    dateOff:
+      report.date_off ||
+      report.report_data?.meta?.dateOff ||
+      '',
+
+    reviewer:
+      report.reviewer ||
+      report.report_data?.meta?.reviewer ||
+      'Reviewer'
+
+  };
+
+
+  currentReviewer =
+    meta.reviewer;
+
+
+  state =
+    emptyState();
+
+
+  const saved =
+    report.report_data?.state ||
+    {};
+
+
+  Object.keys(saved)
+    .forEach(key => {
+
+      if(state[key]){
+
+        state[key] = {
+
+          ...state[key],
+
+          ...saved[key],
+
+          comments:
+            Array.isArray(
+              saved[key].comments
+            )
+              ? saved[key].comments
+              : [],
+
+          photos:
+            Array.isArray(
+              saved[key].photos
+            )
+              ? saved[key].photos
+              : []
+
+        };
+
+      }
+
+    });
 
 }
 
@@ -1770,28 +1863,28 @@ function updateChecklistHeader(){
    RENDER CHECKLIST
 ========================================================= */
 
-function renderChecklist(){
+function renderSections(){
 
-  const container =
+  const wrap =
     document.getElementById(
-      'checklist-sections'
+      'sections'
     );
 
 
-  container.innerHTML =
+  wrap.innerHTML =
     '';
 
 
   SECTIONS.forEach(
     (section,sectionIndex) => {
 
-      const sectionElement =
+      const element =
         document.createElement(
           'div'
         );
 
 
-      sectionElement.className =
+      element.className =
         'section' +
         (
           sectionIndex === 0
@@ -1800,15 +1893,21 @@ function renderChecklist(){
         );
 
 
-      sectionElement.innerHTML = `
+      element.innerHTML = `
 
         <div class="section-head">
 
           <h2>
-            ${escapeHtml(section.title)}
+            ${esc(section.title)}
           </h2>
 
-          <div class="section-right">
+          <div
+            style="
+              display:flex;
+              align-items:center;
+              gap:9px
+            "
+          >
 
             <span
               class="section-count"
@@ -1828,30 +1927,28 @@ function renderChecklist(){
       `;
 
 
-      container.appendChild(
-        sectionElement
+      wrap.appendChild(
+        element
       );
 
 
-      sectionElement
-        .querySelector('.section-head')
-        .addEventListener(
-          'click',
-          () => {
+      element
+        .querySelector(
+          '.section-head'
+        )
+        .onclick = () => {
 
-            sectionElement
-              .classList
-              .toggle('open');
+          element
+            .classList
+            .toggle('open');
 
-          }
-        );
+        };
 
 
       const body =
-        sectionElement
-          .querySelector(
-            '.section-body'
-          );
+        element.querySelector(
+          '.section-body'
+        );
 
 
       if(section.note){
@@ -1893,38 +1990,30 @@ function renderChecklist(){
             'item';
 
 
-          item.id =
-            'item-' + key;
-
-
           item.innerHTML = `
 
             <div class="item-row">
 
               <button
-                type="button"
-                class="check-btn"
+                class="check"
                 data-key="${key}"
-                aria-label="Mark reviewed"
               ></button>
 
               <div class="item-text">
-                ${escapeHtml(text)}
+                ${esc(text)}
               </div>
 
               <div class="item-actions">
 
                 <button
-                  type="button"
-                  class="action-btn note-action"
+                  class="action note"
                   data-key="${key}"
                 >
                   Comment
                 </button>
 
                 <button
-                  type="button"
-                  class="action-btn photo-action"
+                  class="action photo-button"
                   data-key="${key}"
                 >
                   Photo
@@ -1936,12 +2025,11 @@ function renderChecklist(){
 
 
             <div
-              class="item-extra hidden"
+              class="extra hidden"
               id="extra-${key}"
             >
 
               <div
-                class="comments-list"
                 id="comments-${key}"
               ></div>
 
@@ -1954,8 +2042,7 @@ function renderChecklist(){
                 ></textarea>
 
                 <button
-                  type="button"
-                  class="add-comment"
+                  class="add"
                   data-key="${key}"
                 >
                   Add
@@ -1970,11 +2057,35 @@ function renderChecklist(){
               ></div>
 
 
+              <div
+                class="followup"
+                id="followup-${key}"
+              >
+
+                <input
+                  type="checkbox"
+                  class="followup-check"
+                  data-key="${key}"
+                >
+
+                <span>
+                  Follow-Up Needed from Ship
+                </span>
+
+              </div>
+
+
+              <div
+                class="ship-response"
+                id="ship-response-${key}"
+              ></div>
+
+
               <input
                 type="file"
                 accept="image/*"
                 capture="environment"
-                id="photo-input-${key}"
+                id="file-${key}"
                 class="hidden"
               >
 
@@ -2009,12 +2120,13 @@ function renderChecklist(){
 function bindChecklistEvents(){
 
   document
-    .querySelectorAll('.check-btn')
+    .querySelectorAll(
+      '.check'
+    )
     .forEach(button => {
 
-      button.addEventListener(
-        'click',
-        () => {
+      button.onclick =
+        async () => {
 
           const key =
             button.dataset.key;
@@ -2026,29 +2138,28 @@ function bindChecklistEvents(){
 
           refreshChecklist();
 
-          saveCurrent();
+          await saveReport(
+            'open'
+          );
 
-        }
-      );
+        };
 
     });
 
 
   document
-    .querySelectorAll('.note-action')
+    .querySelectorAll(
+      '.note'
+    )
     .forEach(button => {
 
-      button.addEventListener(
-        'click',
+      button.onclick =
         () => {
-
-          const key =
-            button.dataset.key;
-
 
           const extra =
             document.getElementById(
-              'extra-' + key
+              'extra-' +
+              button.dataset.key
             );
 
 
@@ -2061,29 +2172,28 @@ function bindChecklistEvents(){
             'active'
           );
 
-        }
-      );
+        };
 
     });
 
 
   document
-    .querySelectorAll('.photo-action')
+    .querySelectorAll(
+      '.photo-button'
+    )
     .forEach(button => {
 
-      button.addEventListener(
-        'click',
+      button.onclick =
         () => {
 
           document
             .getElementById(
-              'photo-input-' +
+              'file-' +
               button.dataset.key
             )
             .click();
 
-        }
-      );
+        };
 
     });
 
@@ -2094,71 +2204,118 @@ function bindChecklistEvents(){
     )
     .forEach(input => {
 
-      input.addEventListener(
-        'change',
+      input.onchange =
         event => {
 
-          handlePhoto(
+          addPhoto(
             event,
             input.dataset.key
           );
 
-        }
-      );
+        };
 
     });
 
 
   document
-    .querySelectorAll('.add-comment')
+    .querySelectorAll(
+      '.add'
+    )
     .forEach(button => {
 
-      button.addEventListener(
-        'click',
-        () => {
+      button.onclick =
+        async () => {
 
           const key =
             button.dataset.key;
 
 
-          const textarea =
+          const input =
             document.getElementById(
-              'comment-' + key
+              'comment-' +
+              key
             );
 
 
           const text =
-            textarea.value.trim();
+            input.value.trim();
 
 
           if(!text){
+
             return;
+
           }
 
 
-          state[key].comments.push({
+          state[key]
+            .comments
+            .push({
 
-            name:
-              currentReviewer,
+              name:
+                currentReviewer,
 
-            text,
+              text,
 
-            timestamp:
-              new Date().toISOString()
+              ts:
+                new Date()
+                  .toISOString()
 
-          });
+            });
 
 
-          textarea.value =
+          input.value =
             '';
 
 
-          renderComments(key);
+          renderComments(
+            key
+          );
 
-          saveCurrent();
 
-        }
-      );
+          await saveReport(
+            'open'
+          );
+
+        };
+
+    });
+
+
+  document
+    .querySelectorAll(
+      '.followup-check'
+    )
+    .forEach(input => {
+
+      input.onchange =
+        async () => {
+
+          const key =
+            input.dataset.key;
+
+
+          state[key]
+            .followUpNeeded =
+            input.checked;
+
+
+          document
+            .getElementById(
+              'extra-' + key
+            )
+            .classList
+            .remove('hidden');
+
+
+          refreshChecklist();
+
+
+          await saveReport(
+            'open'
+          );
+
+        };
 
     });
 
@@ -2166,117 +2323,183 @@ function bindChecklistEvents(){
 
 
 /* =========================================================
-   REFRESH CHECKLIST
+   REFRESH
 ========================================================= */
 
 function refreshChecklist(){
 
-  const totals =
-    getTotals();
+  let total = 0;
+  let checked = 0;
 
 
-  const percentage =
-    totals.total
+  SECTIONS.forEach(
+    section => {
+
+      let sectionChecked =
+        0;
+
+
+      section.items.forEach(
+        (_,index) => {
+
+          const key =
+            section.id +
+            '__' +
+            index;
+
+
+          const item =
+            state[key];
+
+
+          total++;
+
+
+          if(item.checked){
+
+            checked++;
+
+            sectionChecked++;
+
+          }
+
+
+          const check =
+            document.querySelector(
+              `.check[data-key="${key}"]`
+            );
+
+
+          if(check){
+
+            check.classList.toggle(
+              'checked',
+              item.checked
+            );
+
+          }
+
+
+          renderComments(
+            key
+          );
+
+
+          renderPhotos(
+            key
+          );
+
+
+          const follow =
+            document.querySelector(
+              `.followup-check[data-key="${key}"]`
+            );
+
+
+          if(follow){
+
+            follow.checked =
+              Boolean(
+                item.followUpNeeded
+              );
+
+          }
+
+
+          const followRow =
+            document.getElementById(
+              'followup-' +
+              key
+            );
+
+
+          if(followRow){
+
+            followRow.classList.toggle(
+              'done',
+              Boolean(
+                item.followUpNeeded &&
+                item.shipResponse
+              )
+            );
+
+          }
+
+
+          const response =
+            document.getElementById(
+              'ship-response-' +
+              key
+            );
+
+
+          if(response){
+
+            response.innerHTML =
+              item.shipResponse
+                ? `<strong>Ship response:</strong> ${esc(item.shipResponse)}`
+                : '';
+
+          }
+
+
+          if(
+            item.comments.length ||
+            item.photos.length ||
+            item.followUpNeeded
+          ){
+
+            document
+              .getElementById(
+                'extra-' + key
+              )
+              ?.classList
+              .remove('hidden');
+
+          }
+
+        }
+      );
+
+
+      const count =
+        document.getElementById(
+          'count-' +
+          section.id
+        );
+
+
+      if(count){
+
+        count.textContent =
+          `${sectionChecked}/${section.items.length}`;
+
+      }
+
+    }
+  );
+
+
+  const percent =
+    total
       ? Math.round(
-          (
-            totals.checked /
-            totals.total
-          ) * 100
+          checked /
+          total *
+          100
         )
       : 0;
 
 
   document.getElementById(
-    'progress-fill'
+    'fill'
   ).style.width =
-    percentage + '%';
+    percent + '%';
 
 
   document.getElementById(
-    'progress-label'
+    'progress'
   ).textContent =
-    `${totals.checked} of ${totals.total} points reviewed`;
-
-
-  SECTIONS.forEach(section => {
-
-    let checked =
-      0;
-
-
-    section.items.forEach(
-      (item,index) => {
-
-        const key =
-          section.id +
-          '__' +
-          index;
-
-
-        const itemState =
-          state[key];
-
-
-        if(itemState.checked){
-
-          checked++;
-
-        }
-
-
-        const checkButton =
-          document.querySelector(
-            `.check-btn[data-key="${key}"]`
-          );
-
-
-        if(checkButton){
-
-          checkButton.classList.toggle(
-            'checked',
-            itemState.checked
-          );
-
-        }
-
-
-        renderComments(key);
-
-        renderPhotos(key);
-
-
-        if(
-          itemState.comments.length ||
-          itemState.photos.length
-        ){
-
-          document
-            .getElementById(
-              'extra-' + key
-            )
-            ?.classList
-            .remove('hidden');
-
-        }
-
-      }
-    );
-
-
-    const count =
-      document.getElementById(
-        'count-' + section.id
-      );
-
-
-    if(count){
-
-      count.textContent =
-        `${checked}/${section.items.length}`;
-
-    }
-
-  });
+    `${checked} of ${total} points reviewed`;
 
 }
 
@@ -2285,43 +2508,46 @@ function refreshChecklist(){
    COMMENTS
 ========================================================= */
 
-function renderComments(key){
+function renderComments(
+  key
+){
 
-  const container =
+  const wrap =
     document.getElementById(
-      'comments-' + key
+      'comments-' +
+      key
     );
 
 
-  if(!container){
+  if(!wrap){
+
     return;
+
   }
 
 
-  const comments =
-    state[key].comments || [];
+  wrap.innerHTML =
+    state[key]
+      .comments
+      .map(
+        comment =>
+          `
+          <div class="comment">
 
+            <b>
+              ${esc(
+                comment.name ||
+                'Reviewer'
+              )}:
+            </b>
 
-  container.innerHTML =
-    comments
-      .map(comment => `
+            ${esc(
+              comment.text
+            )}
 
-        <div class="comment">
-
-          <b>
-            ${escapeHtml(
-              comment.name ||
-              'Reviewer'
-            )}:
-          </b>
-
-          ${escapeHtml(
-            comment.text
-          )}
-
-        </div>
-
-      `)
+          </div>
+          `
+      )
       .join('');
 
 }
@@ -2331,7 +2557,7 @@ function renderComments(key){
    PHOTOS
 ========================================================= */
 
-function handlePhoto(
+function addPhoto(
   event,
   key
 ){
@@ -2341,7 +2567,9 @@ function handlePhoto(
 
 
   if(!file){
+
     return;
+
   }
 
 
@@ -2350,14 +2578,14 @@ function handlePhoto(
 
 
   reader.onload =
-    loadEvent => {
+    e => {
 
-      const image =
+      const img =
         new Image();
 
 
-      image.onload =
-        () => {
+      img.onload =
+        async () => {
 
           const maxWidth =
             1000;
@@ -2367,7 +2595,7 @@ function handlePhoto(
             Math.min(
               1,
               maxWidth /
-              image.width
+              img.width
             );
 
 
@@ -2379,29 +2607,25 @@ function handlePhoto(
 
           canvas.width =
             Math.round(
-              image.width * scale
+              img.width * scale
             );
 
 
           canvas.height =
             Math.round(
-              image.height * scale
+              img.height * scale
             );
 
 
-          const context =
-            canvas.getContext(
-              '2d'
+          canvas
+            .getContext('2d')
+            .drawImage(
+              img,
+              0,
+              0,
+              canvas.width,
+              canvas.height
             );
-
-
-          context.drawImage(
-            image,
-            0,
-            0,
-            canvas.width,
-            canvas.height
-          );
 
 
           const photo =
@@ -2411,25 +2635,41 @@ function handlePhoto(
             );
 
 
-          state[key].photos.push(
-            photo
+          state[key]
+            .photos
+            .push(photo);
+
+
+          renderPhotos(
+            key
           );
 
 
-          renderPhotos(key);
+          document
+            .getElementById(
+              'extra-' + key
+            )
+            .classList
+            .remove('hidden');
 
-          saveCurrent();
+
+          await saveReport(
+            'open'
+          );
 
         };
 
 
-      image.src =
-        loadEvent.target.result;
+      img.src =
+        e.target.result;
 
     };
 
 
-  reader.readAsDataURL(file);
+  reader.readAsDataURL(
+    file
+  );
+
 
   event.target.value =
     '';
@@ -2437,60 +2677,65 @@ function handlePhoto(
 }
 
 
-function renderPhotos(key){
+function renderPhotos(
+  key
+){
 
-  const container =
+  const wrap =
     document.getElementById(
-      'photos-' + key
+      'photos-' +
+      key
     );
 
 
-  if(!container){
+  if(!wrap){
+
     return;
+
   }
 
 
-  container.innerHTML =
+  wrap.innerHTML =
     '';
 
 
-  state[key].photos.forEach(
-    (photo,index) => {
+  state[key]
+    .photos
+    .forEach(
+      (src,index) => {
 
-      const thumb =
-        document.createElement(
-          'div'
-        );
-
-
-      thumb.className =
-        'thumb';
+        const div =
+          document.createElement(
+            'div'
+          );
 
 
-      thumb.innerHTML = `
-
-        <img
-          src="${photo}"
-          alt="Checklist photo"
-        >
-
-        <button
-          type="button"
-          class="thumb-remove"
-        >
-          ×
-        </button>
-
-      `;
+        div.className =
+          'photo';
 
 
-      thumb
-        .querySelector(
-          '.thumb-remove'
-        )
-        .addEventListener(
-          'click',
-          () => {
+        div.innerHTML = `
+
+          <img
+            src="${src}"
+            alt="Checklist photo"
+          >
+
+          <button
+            type="button"
+          >
+            ×
+          </button>
+
+        `;
+
+
+        div
+          .querySelector(
+            'button'
+          )
+          .onclick =
+          async () => {
 
             state[key]
               .photos
@@ -2500,102 +2745,80 @@ function renderPhotos(key){
               );
 
 
-            renderPhotos(key);
+            renderPhotos(
+              key
+            );
 
-            saveCurrent();
 
-          }
+            await saveReport(
+              'open'
+            );
+
+          };
+
+
+        wrap.appendChild(
+          div
         );
 
-
-      container.appendChild(
-        thumb
-      );
-
-    }
-  );
+      }
+    );
 
 }
 
 
 /* =========================================================
-   REVIEWER
+   HEADER
 ========================================================= */
 
-document
-  .getElementById('header-reviewer')
-  .addEventListener(
-    'change',
-    event => {
-
-      currentReviewer =
-        event.target.value.trim() ||
-        'Reviewer';
-
-
-      meta.reviewer =
-        currentReviewer;
-
-
-      saveCurrent();
-
-    }
-  );
-
-
-/* =========================================================
-   SUMMARY
-========================================================= */
-
-document
-  .getElementById('btn-summary')
-  .addEventListener(
-    'click',
-    () => {
-
-      buildSummary();
-
-      showScreen(
-        'summary'
-      );
-
-    }
-  );
-
-
-function buildSummary(){
-
-  const totals =
-    getTotals();
-
+function updateHeader(){
 
   document.getElementById(
-    'summary-title'
+    'hdrShip'
   ).textContent =
-    meta.ship ||
-    'Visit Summary';
+    (
+      meta.ship ||
+      ''
+    ).toUpperCase();
 
 
   document.getElementById(
-    'summary-meta'
+    'hdrReviewer'
+  ).value =
+    currentReviewer;
+
+
+  document.getElementById(
+    'visitMeta'
   ).textContent =
     `${meta.dateOn || ''}` +
     (
       meta.dateOff
         ? ` → ${meta.dateOff}`
         : ''
-    ) +
-    ` • Reviewed by ${meta.reviewer || ''}`;
+    );
+
+}
+
+
+/* =========================================================
+   SUMMARY
+========================================================= */
+
+function buildSummary(){
+
+  const t =
+    totals();
 
 
   document.getElementById(
-    'summary-stats'
+    'stats'
   ).innerHTML = `
 
     <div class="stat">
 
       <div class="stat-number">
-        ${totals.checked}/${totals.total}
+        ${t.checked}/${t.total}
       </div>
 
       <div class="stat-label">
@@ -2608,7 +2831,7 @@ function buildSummary(){
     <div class="stat">
 
       <div class="stat-number">
-        ${totals.photos}
+        ${t.photos}
       </div>
 
       <div class="stat-label">
@@ -2621,246 +2844,129 @@ function buildSummary(){
 
 
   document.getElementById(
-    'overall-summary'
-  ).value =
-    `Ship visit report for ${meta.ship} ` +
-    `on ${meta.dateOn || ''}` +
+    'sumTitle'
+  ).textContent =
+    meta.ship ||
+    'Visit Summary';
+
+
+  document.getElementById(
+    'sumMeta'
+  ).textContent =
+    `${meta.dateOn || ''}` +
     (
       meta.dateOff
-        ? ` through ${meta.dateOff}`
+        ? ` → ${meta.dateOff}`
         : ''
     ) +
-    `, reviewed by ${meta.reviewer || ''}. ` +
-    `${totals.checked} of ${totals.total} ` +
+    ` • Reviewed by ${meta.reviewer}`;
+
+
+  document.getElementById(
+    'overall'
+  ).value =
+    `Ship visit report for ${meta.ship}, ` +
+    `${meta.dateOn || ''}` +
+    (
+      meta.dateOff
+        ? ` to ${meta.dateOff}`
+        : ''
+    ) +
+    `, reviewed by ${meta.reviewer}. ` +
+    `${t.checked} of ${t.total} ` +
     `review points were confirmed during the visit.`;
 
 
-  const container =
+  const wrap =
     document.getElementById(
-      'section-summaries'
+      'sumSections'
     );
 
 
-  container.innerHTML =
+  wrap.innerHTML =
     '';
 
 
-  SECTIONS.forEach(section => {
+  SECTIONS.forEach(
+    section => {
 
-    let checked =
-      0;
-
-    let unchecked =
-      [];
-
-
-    section.items.forEach(
-      (item,index) => {
-
-        const key =
-          section.id +
-          '__' +
-          index;
+      const checked =
+        section.items.filter(
+          (_,index) =>
+            state[
+              section.id +
+              '__' +
+              index
+            ].checked
+        ).length;
 
 
-        if(state[key].checked){
-
-          checked++;
-
-        }else{
-
-          unchecked.push(item);
-
-        }
-
-      }
-    );
+      const followUps =
+        section.items.filter(
+          (_,index) =>
+            state[
+              section.id +
+              '__' +
+              index
+            ].followUpNeeded
+        );
 
 
-    const block =
-      document.createElement(
-        'div'
+      const block =
+        document.createElement(
+          'div'
+        );
+
+
+      block.className =
+        'summary-section';
+
+
+      block.innerHTML = `
+
+        <h2>
+          ${esc(section.title)}
+        </h2>
+
+        <textarea rows="4">${
+          esc(
+            `${checked} of ${section.items.length} points confirmed.` +
+            (
+              followUps.length
+                ? ` ${followUps.length} follow-up point(s) assigned to ship.`
+                : ''
+            )
+          )
+        }</textarea>
+
+      `;
+
+
+      wrap.appendChild(
+        block
       );
 
-
-    block.className =
-      'summary-section';
-
-
-    const text =
-      `${checked} of ${section.items.length} ` +
-      `points confirmed. ` +
-      (
-        unchecked.length
-          ? `Follow-up needed on: ${unchecked.join('; ')}`
-          : 'No unchecked points.'
-      );
-
-
-    block.innerHTML = `
-
-      <h2>
-        ${escapeHtml(section.title)}
-      </h2>
-
-      <textarea
-        rows="4"
-      >${escapeHtml(text)}</textarea>
-
-    `;
-
-
-    container.appendChild(
-      block
-    );
-
-  });
+    }
+  );
 
 }
 
 
 /* =========================================================
-   BACK TO CHECKLIST
+   SUBMIT
 ========================================================= */
 
 document
-  .getElementById('btn-back-checklist')
-  .addEventListener(
-    'click',
-    () => {
+  .getElementById(
+    'submitBtn'
+  )
+  .onclick =
+  async () => {
 
-      updateChecklistHeader();
-
-      showScreen(
-        'checklist'
-      );
-
-    }
-  );
-
-
-/* =========================================================
-   SUBMIT REPORT
-   THIS IS THE IMPORTANT PART
-========================================================= */
-
-document
-  .getElementById('btn-submit')
-  .addEventListener(
-    'click',
-    submitReport
-  );
-
-
-function submitReport(){
-
-  try{
-
-    /*
-      Make sure the latest reviewer
-      name is captured.
-    */
-
-    currentReviewer =
-      document
-        .getElementById(
-          'header-reviewer'
-        )
-        .value
-        .trim() ||
-      meta.reviewer ||
-      'Reviewer';
-
-
-    meta.reviewer =
-      currentReviewer;
-
-
-    /*
-      Create a complete saved report.
-    */
-
-    const submittedReport = {
-
-      id:
-        reportId ||
-        Date.now().toString(),
-
-      meta:{
-        ship:
-          meta.ship,
-
-        dateOn:
-          meta.dateOn,
-
-        dateOff:
-          meta.dateOff,
-
-        reviewer:
-          meta.reviewer
-
-      },
-
-      state:
-        JSON.parse(
-          JSON.stringify(state)
-        ),
-
-      submittedAt:
-        new Date().toISOString()
-
-    };
-
-
-    /*
-      Load existing submitted reports.
-    */
-
-    const reports =
-      getSubmittedReports();
-
-
-    /*
-      Avoid duplicates when
-      submitting an existing report.
-    */
-
-    const existingIndex =
-      reports.findIndex(
-        report =>
-          report.id ===
-          submittedReport.id
-      );
-
-
-    if(existingIndex >= 0){
-
-      reports[existingIndex] =
-        submittedReport;
-
-    }else{
-
-      reports.unshift(
-        submittedReport
-      );
-
-    }
-
-
-    /*
-      SAVE FIRST.
-    */
-
-    const saved =
-      saveSubmittedReports(
-        reports
-      );
-
-
-    if(!saved){
+    if(!supabaseReady){
 
       alert(
-        'The report could not be saved. Please try again.'
+        'Please connect Supabase before submitting reports.'
       );
 
       return;
@@ -2868,82 +2974,519 @@ function submitReport(){
     }
 
 
+    const ok =
+      await saveReport(
+        'submitted'
+      );
+
+
+    if(!ok){
+
+      return;
+
+    }
+
+
     /*
-      Remove the active/current report.
-      This prevents the app from reopening
-      the completed report.
+      VERY IMPORTANT:
+      remove local active report
+      and return to HOME.
     */
 
-    clearCurrent();
+    reportId =
+      '';
 
-
-    /*
-      Reset everything for the next report.
-    */
-
-    reportId = '';
 
     meta = {
+
       ship:'',
       dateOn:'',
       dateOff:'',
       reviewer:''
+
     };
+
 
     currentReviewer =
       'Reviewer';
 
+
     state =
-      createEmptyState();
+      emptyState();
 
-
-    /*
-      Clear the setup fields.
-    */
 
     document.getElementById(
-      'input-ship'
-    ).value = '';
-
-    document.getElementById(
-      'input-date-on'
-    ).value = '';
-
-    document.getElementById(
-      'input-date-off'
-    ).value = '';
-
-    document.getElementById(
-      'input-reviewer'
+      'ship'
     ).value = '';
 
 
-    /*
-      MOST IMPORTANT:
-      explicitly return to HOME.
-    */
+    document.getElementById(
+      'dateOn'
+    ).value = '';
+
+
+    document.getElementById(
+      'dateOff'
+    ).value = '';
+
+
+    document.getElementById(
+      'reviewer'
+    ).value = '';
+
 
     showScreen(
       'home'
     );
 
+  };
 
-    window.scrollTo(
-      0,
-      0
+
+/* =========================================================
+   OPEN REPORTS
+========================================================= */
+
+async function renderOpenReports(){
+
+  const wrap =
+    document.getElementById(
+      'openList'
     );
 
 
-  }catch(error){
+  wrap.innerHTML =
+    '<div class="empty">Loading...</div>';
 
-    console.error(
-      'Submit report failed:',
-      error
+
+  const reports =
+    await loadReports(
+      'open'
     );
 
+
+  if(!reports.length){
+
+    wrap.innerHTML =
+      '<div class="empty">No open reports.</div>';
+
+    return;
+
+  }
+
+
+  wrap.innerHTML =
+    reports.map(
+      report => `
+
+        <div class="report-card red">
+
+          <h3>
+            ${esc(
+              report.ship ||
+              'Unnamed Ship'
+            )}
+          </h3>
+
+
+          <div class="report-meta">
+
+            <b>Date:</b>
+            ${esc(
+              report.date_on ||
+              ''
+            )}
+
+            ${
+              report.date_off
+                ? ` → ${esc(report.date_off)}`
+                : ''
+            }
+
+            <br>
+
+            <b>Reviewer:</b>
+            ${esc(
+              report.reviewer ||
+              ''
+            )}
+
+            <br>
+
+            <span class="status red">
+              OPEN / ONGOING
+            </span>
+
+          </div>
+
+
+          <div class="report-actions">
+
+            <button
+              class="open"
+              data-open="${report.id}"
+            >
+              Continue
+            </button>
+
+
+            <button
+              data-delete="${report.id}"
+            >
+              Delete
+            </button>
+
+          </div>
+
+        </div>
+
+      `
+    ).join('');
+
+
+  wrap
+    .querySelectorAll(
+      '[data-open]'
+    )
+    .forEach(
+      button => {
+
+        button.onclick =
+          async () => {
+
+            const report =
+              reports.find(
+                r =>
+                  r.id ===
+                  button.dataset.open
+              );
+
+
+            if(!report){
+
+              return;
+
+            }
+
+
+            hydrateReport(
+              report
+            );
+
+
+            updateHeader();
+
+            renderSections();
+
+            showScreen(
+              'checklist'
+            );
+
+          };
+
+      }
+    );
+
+
+  wrap
+    .querySelectorAll(
+      '[data-delete]'
+    )
+    .forEach(
+      button => {
+
+        button.onclick =
+          async () => {
+
+            if(
+              !confirm(
+                'Delete this open report?'
+              )
+            ){
+
+              return;
+
+            }
+
+
+            const result =
+              await sb
+                .from(
+                  'ship_visit_reports'
+                )
+                .delete()
+                .eq(
+                  'id',
+                  button.dataset.delete
+                );
+
+
+            if(result.error){
+
+              alert(
+                'Could not delete report.'
+              );
+
+              return;
+
+            }
+
+
+            await renderOpenReports();
+
+          };
+
+      }
+    );
+
+}
+
+
+/* =========================================================
+   SUBMITTED REPORTS
+========================================================= */
+
+async function renderSubmittedReports(){
+
+  const wrap =
+    document.getElementById(
+      'reportList'
+    );
+
+
+  wrap.innerHTML =
+    '<div class="empty">Loading...</div>';
+
+
+  const reports =
+    await loadReports(
+      'submitted'
+    );
+
+
+  if(!reports.length){
+
+    wrap.innerHTML =
+      '<div class="empty">No submitted reports.</div>';
+
+    return;
+
+  }
+
+
+  wrap.innerHTML =
+    reports.map(
+      report => {
+
+        const status =
+          reportStatus(
+            report
+          );
+
+
+        return `
+
+          <div
+            class="report-card ${status}"
+          >
+
+            <h3>
+              ${esc(
+                report.ship ||
+                'Unnamed Ship'
+              )}
+            </h3>
+
+
+            <div class="report-meta">
+
+              <b>Date:</b>
+              ${esc(
+                report.date_on ||
+                ''
+              )}
+
+              ${
+                report.date_off
+                  ? ` → ${esc(report.date_off)}`
+                  : ''
+              }
+
+              <br>
+
+              <b>Reviewer:</b>
+              ${esc(
+                report.reviewer ||
+                ''
+              )}
+
+              <br>
+
+              <span
+                class="status ${status}"
+              >
+                ${reportStatusText(report)}
+              </span>
+
+            </div>
+
+
+            <div class="report-actions">
+
+              <button
+                class="open"
+                data-open-sub="${report.id}"
+              >
+                Open
+              </button>
+
+              <button
+                data-pdf-sub="${report.id}"
+              >
+                Save PDF
+              </button>
+
+              <button
+                data-print-sub="${report.id}"
+              >
+                Print
+              </button>
+
+            </div>
+
+          </div>
+
+        `;
+
+      }
+    ).join('');
+
+
+  wrap
+    .querySelectorAll(
+      '[data-open-sub]'
+    )
+    .forEach(
+      button => {
+
+        button.onclick =
+          async () => {
+
+            await openSubmittedReport(
+              button.dataset.openSub
+            );
+
+          };
+
+      }
+    );
+
+
+  wrap
+    .querySelectorAll(
+      '[data-pdf-sub]'
+    )
+    .forEach(
+      button => {
+
+        button.onclick =
+          async () => {
+
+            await openSubmittedReport(
+              button.dataset.pdfSub,
+              true
+            );
+
+          };
+
+      }
+    );
+
+
+  wrap
+    .querySelectorAll(
+      '[data-print-sub]'
+    )
+    .forEach(
+      button => {
+
+        button.onclick =
+          async () => {
+
+            await openSubmittedReport(
+              button.dataset.printSub,
+              false,
+              true
+            );
+
+          };
+
+      }
+    );
+
+}
+
+
+async function openSubmittedReport(
+  id,
+  makePdf = false,
+  printReport = false
+){
+
+  const result =
+    await sb
+      .from(
+        'ship_visit_reports'
+      )
+      .select('*')
+      .eq(
+        'id',
+        id
+      )
+      .single();
+
+
+  if(result.error){
 
     alert(
-      'There was a problem submitting the report. Please try again.'
+      'Report could not be opened.'
+    );
+
+    return;
+
+  }
+
+
+  hydrateReport(
+    result.data
+  );
+
+
+  updateHeader();
+
+  renderSections();
+
+  buildSummary();
+
+  showScreen(
+    'summary'
+  );
+
+
+  if(makePdf){
+
+    setTimeout(
+      buildPdf,
+      150
+    );
+
+  }
+
+
+  if(printReport){
+
+    setTimeout(
+      () => window.print(),
+      200
     );
 
   }
@@ -2952,30 +3495,786 @@ function submitReport(){
 
 
 /* =========================================================
-   PDF
+   SHIP RESPONSE REPORT
 ========================================================= */
 
-document
-  .getElementById('btn-save-pdf')
-  .addEventListener(
-    'click',
-    () => {
+async function renderShipResponses(){
 
-      buildPdf();
+  const wrap =
+    document.getElementById(
+      'responseList'
+    );
+
+
+  wrap.innerHTML =
+    '<div class="empty">Loading...</div>';
+
+
+  const reports =
+    await loadReports(
+      'submitted'
+    );
+
+
+  const groups = [];
+
+
+  reports.forEach(
+    report => {
+
+      const reportState =
+        report.report_data?.state ||
+        {};
+
+
+      const points = [];
+
+
+      SECTIONS.forEach(
+        section => {
+
+          section.items.forEach(
+            (text,index) => {
+
+              const key =
+                section.id +
+                '__' +
+                index;
+
+
+              const item =
+                reportState[key];
+
+
+              if(
+                item &&
+                item.followUpNeeded
+              ){
+
+                points.push({
+
+                  key,
+
+                  section:
+                    section.title,
+
+                  text,
+
+                  comment:
+                    (
+                      item.comments ||
+                      []
+                    )
+                    .map(
+                      c =>
+                        `${c.name}: ${c.text}`
+                    )
+                    .join(' | '),
+
+                  response:
+                    item.shipResponse ||
+                    ''
+
+                });
+
+              }
+
+            }
+          );
+
+        }
+      );
+
+
+      if(points.length){
+
+        groups.push({
+          report,
+          points
+        });
+
+      }
 
     }
   );
 
 
+  if(!groups.length){
+
+    wrap.innerHTML =
+      '<div class="empty">No follow-up points are waiting for a ship response.</div>';
+
+    return;
+
+  }
+
+
+  wrap.innerHTML =
+    groups.map(
+      group => {
+
+        const responseCount =
+          group.points.filter(
+            point =>
+              point.response &&
+              point.response.trim()
+          ).length;
+
+
+        const complete =
+          responseCount ===
+          group.points.length;
+
+
+        return `
+
+          <div
+            class="report-card ${
+              complete
+                ? 'green'
+                : 'blue'
+            }"
+          >
+
+            <h3>
+              ${esc(
+                group.report.ship ||
+                'Unnamed Ship'
+              )}
+            </h3>
+
+
+            <div class="report-meta">
+
+              <b>Date:</b>
+              ${esc(
+                group.report.date_on ||
+                ''
+              )}
+
+              <br>
+
+              <b>Original Reviewer:</b>
+              ${esc(
+                group.report.reviewer ||
+                ''
+              )}
+
+              <br>
+
+              <span
+                class="status ${
+                  complete
+                    ? 'green'
+                    : 'blue'
+                }"
+              >
+
+                ${
+                  complete
+                    ? 'SHIP RESPONSE COMPLETE'
+                    : 'FOLLOW-UP OPEN'
+                }
+
+                — ${responseCount}/${group.points.length}
+
+              </span>
+
+            </div>
+
+
+            <div style="height:8px"></div>
+
+
+            ${group.points.map(
+              point => `
+
+                <div
+                  style="
+                    border-top:1px solid var(--vv-line);
+                    padding:12px 0
+                  "
+                >
+
+                  <div
+                    style="
+                      color:var(--vv-squid);
+                      font-size:11px;
+                      font-weight:800;
+                      margin-bottom:4px
+                    "
+                  >
+                    ${esc(
+                      point.section
+                    )}
+                  </div>
+
+
+                  <div
+                    style="
+                      font-size:13.5px;
+                      line-height:1.45
+                    "
+                  >
+                    ${esc(
+                      point.text
+                    )}
+                  </div>
+
+
+                  ${
+                    point.comment
+                      ? `
+                        <div
+                          style="
+                            margin-top:6px;
+                            color:var(--vv-gray);
+                            font-size:12px
+                          "
+                        >
+
+                          <b>
+                            Visit comment:
+                          </b>
+
+                          ${esc(
+                            point.comment
+                          )}
+
+                        </div>
+                      `
+                      : ''
+                  }
+
+
+                  <div
+                    class="field"
+                    style="
+                      margin-top:9px;
+                      margin-bottom:0
+                    "
+                  >
+
+                    <label>
+                      SHIP RESPONSE
+                    </label>
+
+                    <textarea
+                      rows="3"
+                      data-response-report="${group.report.id}"
+                      data-response-key="${point.key}"
+                    >${esc(
+                      point.response
+                    )}</textarea>
+
+                  </div>
+
+
+                  ${
+                    point.response
+                      ? `
+                        <div class="ship-response">
+                          Ship response added.
+                        </div>
+                      `
+                      : ''
+                  }
+
+                </div>
+
+              `
+            ).join('')}
+
+
+            <button
+              class="btn-primary save-response"
+              data-save-response="${group.report.id}"
+            >
+              Save Ship Responses
+            </button>
+
+          </div>
+
+        `;
+
+      }
+    ).join('');
+
+
+  wrap
+    .querySelectorAll(
+      '.save-response'
+    )
+    .forEach(
+      button => {
+
+        button.onclick =
+          async () => {
+
+            const id =
+              button.dataset.saveResponse;
+
+
+            const result =
+              await sb
+                .from(
+                  'ship_visit_reports'
+                )
+                .select('*')
+                .eq(
+                  'id',
+                  id
+                )
+                .single();
+
+
+            if(result.error){
+
+              alert(
+                'Could not load report.'
+              );
+
+              return;
+
+            }
+
+
+            const report =
+              result.data;
+
+
+            const newState =
+              JSON.parse(
+                JSON.stringify(
+                  report.report_data?.state ||
+                  {}
+                )
+              );
+
+
+            wrap
+              .querySelectorAll(
+                `[data-response-report="${id}"]`
+              )
+              .forEach(
+                textarea => {
+
+                  const key =
+                    textarea.dataset.responseKey;
+
+
+                  if(
+                    newState[key]
+                  ){
+
+                    newState[key]
+                      .shipResponse =
+                      textarea.value.trim();
+
+                  }
+
+                }
+              );
+
+
+            let complete =
+              true;
+
+
+            SECTIONS.forEach(
+              section => {
+
+                section.items.forEach(
+                  (_,index) => {
+
+                    const key =
+                      section.id +
+                      '__' +
+                      index;
+
+
+                    const item =
+                      newState[key];
+
+
+                    if(
+                      item &&
+                      item.followUpNeeded &&
+                      !(
+                        item.shipResponse &&
+                        item.shipResponse.trim()
+                      )
+                    ){
+
+                      complete =
+                        false;
+
+                    }
+
+                  }
+                );
+
+              }
+            );
+
+
+            const reportData = {
+
+              ...(report.report_data || {}),
+
+              state:newState,
+
+              shipResponseStatus:
+                complete
+                  ? 'complete'
+                  : 'open',
+
+              shipResponseUpdatedAt:
+                new Date().toISOString()
+
+            };
+
+
+            const updateResult =
+              await sb
+                .from(
+                  'ship_visit_reports'
+                )
+                .update({
+
+                  report_data:
+                    reportData,
+
+                  updated_at:
+                    new Date().toISOString()
+
+                })
+                .eq(
+                  'id',
+                  id
+                );
+
+
+            if(updateResult.error){
+
+              alert(
+                'Could not save ship responses.'
+              );
+
+              return;
+
+            }
+
+
+            await renderShipResponses();
+
+          };
+
+      }
+    );
+
+}
+
+
+/* =========================================================
+   START NEW REPORT
+========================================================= */
+
+document
+  .getElementById(
+    'startBtn'
+  )
+  .onclick =
+  async () => {
+
+    meta.ship =
+      document.getElementById(
+        'ship'
+      ).value.trim();
+
+
+    meta.dateOn =
+      document.getElementById(
+        'dateOn'
+      ).value;
+
+
+    meta.dateOff =
+      document.getElementById(
+        'dateOff'
+      ).value;
+
+
+    meta.reviewer =
+      document.getElementById(
+        'reviewer'
+      ).value.trim();
+
+
+    if(!meta.ship){
+
+      alert(
+        'Please enter the ship.'
+      );
+
+      return;
+
+    }
+
+
+    if(!meta.reviewer){
+
+      alert(
+        'Please enter the reviewer.'
+      );
+
+      return;
+
+    }
+
+
+    state =
+      emptyState();
+
+
+    reportId =
+      '';
+
+
+    currentReviewer =
+      meta.reviewer;
+
+
+    updateHeader();
+
+    renderSections();
+
+    showScreen(
+      'checklist'
+    );
+
+
+    await saveReport(
+      'open'
+    );
+
+  };
+
+
+/* =========================================================
+   REVIEWER
+========================================================= */
+
+document
+  .getElementById(
+    'hdrReviewer'
+  )
+  .onchange =
+  async event => {
+
+    currentReviewer =
+      event.target.value.trim() ||
+      'Reviewer';
+
+
+    meta.reviewer =
+      currentReviewer;
+
+
+    await saveReport(
+      'open'
+    );
+
+  };
+
+
+/* =========================================================
+   HOME BUTTONS
+========================================================= */
+
+document
+  .getElementById(
+    'createReport'
+  )
+  .onclick =
+  () => {
+
+    document.getElementById(
+      'dateOn'
+    ).value =
+      new Date()
+        .toISOString()
+        .slice(
+          0,
+          10
+        );
+
+    showScreen(
+      'setup'
+    );
+
+  };
+
+
+document
+  .getElementById(
+    'openReport'
+  )
+  .onclick =
+  async () => {
+
+    await renderOpenReports();
+
+    showScreen(
+      'open'
+    );
+
+  };
+
+
+document
+  .getElementById(
+    'submittedReports'
+  )
+  .onclick =
+  async () => {
+
+    await renderSubmittedReports();
+
+    showScreen(
+      'submitted'
+    );
+
+  };
+
+
+document
+  .getElementById(
+    'shipResponseReport'
+  )
+  .onclick =
+  async () => {
+
+    await renderShipResponses();
+
+    showScreen(
+      'responses'
+    );
+
+  };
+
+
+document
+  .getElementById(
+    'setupHome'
+  )
+  .onclick =
+  () => showScreen(
+    'home'
+  );
+
+
+document
+  .getElementById(
+    'openHomeBtn'
+  )
+  .onclick =
+  () => showScreen(
+    'home'
+  );
+
+
+document
+  .getElementById(
+    'reportsHomeBtn'
+  )
+  .onclick =
+  () => showScreen(
+    'home'
+  );
+
+
+document
+  .getElementById(
+    'responsesHomeBtn'
+  )
+  .onclick =
+  () => showScreen(
+    'home'
+  );
+
+
+/* =========================================================
+   SUMMARY / PDF / PRINT
+========================================================= */
+
+document
+  .getElementById(
+    'summaryBtn'
+  )
+  .onclick =
+  () => {
+
+    buildSummary();
+
+    showScreen(
+      'summary'
+    );
+
+  };
+
+
+document
+  .getElementById(
+    'backBtn'
+  )
+  .onclick =
+  () => {
+
+    showScreen(
+      'checklist'
+    );
+
+  };
+
+
+document
+  .getElementById(
+    'pdfBtn'
+  )
+  .onclick =
+  () => {
+
+    buildPdf();
+
+  };
+
+
+document
+  .getElementById(
+    'printBtn'
+  )
+  .onclick =
+  () => {
+
+    window.print();
+
+  };
+
+
+/* =========================================================
+   PDF
+========================================================= */
+
 function buildPdf(){
 
   if(
-    typeof window.jspdf ===
-    'undefined'
+    !window.jspdf ||
+    !window.jspdf.jsPDF
   ){
 
     alert(
-      'PDF library could not be loaded. Please check your internet connection.'
+      'PDF library is not available.'
     );
 
     return;
@@ -2996,10 +4295,11 @@ function buildPdf(){
     });
 
 
-  const pageWidth =
+  const W =
     doc.internal.pageSize.getWidth();
 
-  const pageHeight =
+
+  const H =
     doc.internal.pageSize.getHeight();
 
 
@@ -3023,17 +4323,18 @@ function buildPdf(){
     [27,27,27];
 
 
-  function header(title){
+  function header(){
 
     doc.setFillColor(
       ...squid
     );
 
+
     doc.rect(
       0,
       0,
-      pageWidth,
-      68,
+      W,
+      66,
       'F'
     );
 
@@ -3044,10 +4345,12 @@ function buildPdf(){
       255
     );
 
+
     doc.setFont(
       'helvetica',
       'bold'
     );
+
 
     doc.setFontSize(
       10
@@ -3057,7 +4360,7 @@ function buildPdf(){
     doc.text(
       '— VIRGIN VOYAGES',
       margin,
-      25
+      24
     );
 
 
@@ -3067,14 +4370,14 @@ function buildPdf(){
 
 
     doc.text(
-      title,
+      'Ship Visit Report',
       margin,
-      47
+      46
     );
 
 
     y =
-      86;
+      84;
 
   }
 
@@ -3085,11 +4388,12 @@ function buildPdf(){
       ...dark
     );
 
+
     doc.rect(
       0,
-      pageHeight - 25,
-      pageWidth,
-      25,
+      H-24,
+      W,
+      24,
       'F'
     );
 
@@ -3100,10 +4404,12 @@ function buildPdf(){
       255
     );
 
+
     doc.setFont(
       'helvetica',
       'normal'
     );
+
 
     doc.setFontSize(
       8
@@ -3113,14 +4419,14 @@ function buildPdf(){
     doc.text(
       'INTERNAL USE ONLY',
       margin,
-      pageHeight - 10
+      H-9
     );
 
 
     doc.text(
       `${meta.ship} • ${meta.dateOn || ''}`,
-      pageWidth - margin,
-      pageHeight - 10,
+      W-margin,
+      H-9,
       {
         align:'right'
       }
@@ -3129,27 +4435,27 @@ function buildPdf(){
   }
 
 
-  function ensureSpace(height){
+  function space(
+    amount
+  ){
 
     if(
-      y + height >
-      pageHeight - 38
+      y + amount >
+      H - 35
     ){
 
       footer();
 
       doc.addPage();
 
-      header(
-        'Ship Visit Report'
-      );
+      header();
 
     }
 
   }
 
 
-  function addWrapped(
+  function addText(
     text,
     size,
     width,
@@ -3161,9 +4467,11 @@ function buildPdf(){
       'normal'
     );
 
+
     doc.setFontSize(
       size
     );
+
 
     doc.setTextColor(
       55,
@@ -3179,31 +4487,31 @@ function buildPdf(){
       );
 
 
-    lines.forEach(line => {
+    lines.forEach(
+      line => {
 
-      ensureSpace(
-        size + 4
-      );
-
-
-      doc.text(
-        line,
-        x,
-        y
-      );
+        space(
+          size + 4
+        );
 
 
-      y +=
-        size + 4;
+        doc.text(
+          line,
+          x,
+          y
+        );
 
-    });
+
+        y +=
+          size + 4;
+
+      }
+    );
 
   }
 
 
-  header(
-    'Ship Visit Report'
-  );
+  header();
 
 
   doc.setTextColor(
@@ -3215,6 +4523,7 @@ function buildPdf(){
     'helvetica',
     'bold'
   );
+
 
   doc.setFontSize(
     11
@@ -3254,16 +4563,17 @@ function buildPdf(){
     y
   );
 
-  y += 22;
+  y += 24;
 
 
-  const totals =
-    getTotals();
+  const t =
+    totals();
 
 
   doc.setTextColor(
     ...red
   );
+
 
   doc.setFontSize(
     9
@@ -3271,7 +4581,7 @@ function buildPdf(){
 
 
   doc.text(
-    `${totals.checked}/${totals.total} POINTS CONFIRMED • ${totals.photos} PHOTOS`,
+    `${t.checked}/${t.total} POINTS CONFIRMED • ${t.photos} PHOTOS`,
     margin,
     y
   );
@@ -3283,13 +4593,15 @@ function buildPdf(){
     ...squid
   );
 
-  doc.setFont(
-    'helvetica',
-    'bold'
-  );
 
   doc.setFontSize(
     12
+  );
+
+
+  doc.setFont(
+    'helvetica',
+    'bold'
   );
 
 
@@ -3299,304 +4611,203 @@ function buildPdf(){
     y
   );
 
+
   y += 16;
 
 
-  addWrapped(
+  addText(
     document.getElementById(
-      'overall-summary'
+      'overall'
     ).value,
     10,
-    pageWidth - margin * 2
+    W-margin*2
   );
 
 
-  y += 8;
+  y += 7;
 
 
-  SECTIONS.forEach(section => {
+  SECTIONS.forEach(
+    section => {
 
-    ensureSpace(
-      28
-    );
+      space(
+        30
+      );
 
 
-    doc.setDrawColor(
-      ...red
-    );
+      doc.setDrawColor(
+        ...red
+      );
 
 
-    doc.line(
-      margin,
-      y,
-      margin + 38,
-      y
-    );
+      doc.line(
+        margin,
+        y,
+        margin+38,
+        y
+      );
 
 
-    y += 14;
+      y += 13;
 
 
-    doc.setFont(
-      'helvetica',
-      'bold'
-    );
+      doc.setTextColor(
+        ...squid
+      );
 
-    doc.setFontSize(
-      12
-    );
 
-    doc.setTextColor(
-      ...squid
-    );
+      doc.setFont(
+        'helvetica',
+        'bold'
+      );
 
 
-    doc.text(
-      section.title,
-      margin,
-      y
-    );
+      doc.setFontSize(
+        12
+      );
 
 
-    y += 16;
+      doc.text(
+        section.title,
+        margin,
+        y
+      );
 
 
-    let checked =
-      0;
+      y += 16;
 
 
-    let unchecked =
-      [];
+      section.items.forEach(
+        (text,index) => {
 
+          const key =
+            section.id +
+            '__' +
+            index;
 
-    section.items.forEach(
-      (item,index) => {
 
-        const key =
-          section.id +
-          '__' +
-          index;
+          const item =
+            state[key];
 
 
-        if(state[key].checked){
-
-          checked++;
-
-        }else{
-
-          unchecked.push(
-            item
-          );
-
-        }
-
-      }
-    );
-
-
-    addWrapped(
-      `${checked} of ${section.items.length} points confirmed.`,
-      9.8,
-      pageWidth - margin * 2
-    );
-
-
-    y += 4;
-
-
-    section.items.forEach(
-      (item,index) => {
-
-        const key =
-          section.id +
-          '__' +
-          index;
-
-
-        const itemState =
-          state[key];
-
-
-        ensureSpace(
-          14
-        );
-
-
-        doc.setFont(
-          'helvetica',
-          'bold'
-        );
-
-        doc.setFontSize(
-          9.2
-        );
-
-
-        doc.setTextColor(
-          ...(itemState.checked
-            ? [75,75,75]
-            : red)
-        );
-
-
-        doc.text(
-          itemState.checked
-            ? '[x]'
-            : '[ ]',
-          margin,
-          y
-        );
-
-
-        doc.setFont(
-          'helvetica',
-          'normal'
-        );
-
-        doc.setTextColor(
-          60,
-          60,
-          60
-        );
-
-
-        const lines =
-          doc.splitTextToSize(
-            item,
-            pageWidth -
-            margin * 2 -
-            24
-          );
-
-
-        lines.forEach(
-          (line,lineIndex) => {
-
-            ensureSpace(
-              12
-            );
-
-
-            doc.text(
-              line,
-              margin + 21,
-              y
-            );
-
-
-            y += 12;
-
-          }
-        );
-
-
-        y += 2;
-
-
-        (
-          itemState.comments ||
-          []
-        ).forEach(comment => {
-
-          ensureSpace(
-            12
+          space(
+            15
           );
 
 
           doc.setFont(
             'helvetica',
-            'italic'
+            'bold'
           );
+
 
           doc.setFontSize(
-            8.8
+            9
           );
+
 
           doc.setTextColor(
-            120,
-            120,
-            120
+            ...(item.checked
+              ? [80,80,80]
+              : red)
           );
 
 
-          const commentLines =
-            doc.splitTextToSize(
-              `— ${comment.name}: ${comment.text}`,
-              pageWidth -
-              margin * 2 -
-              30
-            );
+          doc.text(
+            item.checked
+              ? '[x]'
+              : '[ ]',
+            margin,
+            y
+          );
 
 
-          commentLines.forEach(
-            line => {
+          addText(
+            text,
+            9,
+            W-margin*2-24,
+            margin+21
+          );
 
-              ensureSpace(
-                11
+
+          (
+            item.comments ||
+            []
+          ).forEach(
+            comment => {
+
+              addText(
+                `— ${comment.name}: ${comment.text}`,
+                8.5,
+                W-margin*2-24,
+                margin+21
               );
-
-
-              doc.text(
-                line,
-                margin + 22,
-                y
-              );
-
-
-              y += 11;
 
             }
           );
 
-        });
 
+          if(
+            item.followUpNeeded
+          ){
 
-        (
-          itemState.photos ||
-          []
-        ).forEach(photo => {
-
-          ensureSpace(
-            165
-          );
-
-
-          try{
-
-            doc.addImage(
-              photo,
-              'JPEG',
-              margin + 22,
-              y,
-              145,
-              145
-            );
-
-
-            y +=
-              153;
-
-          }catch(error){
-
-            console.error(
-              'Could not add photo to PDF',
-              error
+            addText(
+              item.shipResponse
+                ? `Ship Response: ${item.shipResponse}`
+                : 'FOLLOW-UP NEEDED FROM SHIP',
+              8.5,
+              W-margin*2-24,
+              margin+21
             );
 
           }
 
-        });
+
+          (
+            item.photos ||
+            []
+          ).forEach(
+            photo => {
+
+              space(
+                165
+              );
 
 
-        y += 4;
+              try{
 
-      }
-    );
+                doc.addImage(
+                  photo,
+                  'JPEG',
+                  margin+21,
+                  y,
+                  145,
+                  145
+                );
 
 
-    y += 8;
+                y += 153;
 
-  });
+              }catch(error){
+
+                console.error(
+                  'PDF photo error',
+                  error
+                );
+
+              }
+
+            }
+          );
+
+
+          y += 3;
+
+        }
+      );
+
+    }
+  );
 
 
   footer();
@@ -3607,542 +4818,21 @@ function buildPdf(){
       meta.ship ||
       'Ship'
     )
-    .replace(
-      /\s+/g,
-      '_'
-    )
-    .replace(
-      /[^a-zA-Z0-9_-]/g,
-      ''
-    );
-
-
-  const filename =
-    `Ship_Visit_Report_${safeShip}_${meta.dateOn || 'date'}.pdf`;
+      .replace(
+        /\s+/g,
+        '_'
+      )
+      .replace(
+        /[^a-zA-Z0-9_-]/g,
+        ''
+      );
 
 
   doc.save(
-    filename
+    `Ship_Visit_Report_${safeShip}_${meta.dateOn || 'date'}.pdf`
   );
 
 }
-
-
-/* =========================================================
-   PRINT
-========================================================= */
-
-document
-  .getElementById('btn-print')
-  .addEventListener(
-    'click',
-    () => {
-
-      window.print();
-
-    }
-  );
-
-
-/* =========================================================
-   SUBMITTED REPORTS
-========================================================= */
-
-function renderSubmittedReports(){
-
-  const container =
-    document.getElementById(
-      'submitted-list'
-    );
-
-
-  const reports =
-    getSubmittedReports();
-
-
-  if(!reports.length){
-
-    container.innerHTML = `
-
-      <div class="empty">
-        No submitted reports yet.
-      </div>
-
-    `;
-
-    return;
-
-  }
-
-
-  container.innerHTML =
-    reports
-      .map(report => {
-
-        const reportDate =
-          report.submittedAt
-            ? new Date(
-                report.submittedAt
-              ).toLocaleString()
-            : '';
-
-
-        return `
-
-          <div class="report-card">
-
-            <h3>
-              ${escapeHtml(
-                report.meta?.ship ||
-                'Unnamed Ship'
-              )}
-            </h3>
-
-
-            <div class="report-meta">
-
-              <b>Date:</b>
-              ${escapeHtml(
-                report.meta?.dateOn ||
-                ''
-              )}
-
-              ${
-                report.meta?.dateOff
-                  ? ` → ${escapeHtml(
-                      report.meta.dateOff
-                    )}`
-                  : ''
-              }
-
-              <br>
-
-              <b>Reviewer:</b>
-              ${escapeHtml(
-                report.meta?.reviewer ||
-                ''
-              )}
-
-              <br>
-
-              <b>Submitted:</b>
-              ${escapeHtml(
-                reportDate
-              )}
-
-            </div>
-
-
-            <div class="report-actions">
-
-              <button
-                type="button"
-                class="open"
-                data-open-report="${escapeHtml(report.id)}"
-              >
-                Open Report
-              </button>
-
-
-              <button
-                type="button"
-                data-pdf-report="${escapeHtml(report.id)}"
-              >
-                Save PDF
-              </button>
-
-
-              <button
-                type="button"
-                data-print-report="${escapeHtml(report.id)}"
-              >
-                Print
-              </button>
-
-            </div>
-
-          </div>
-
-        `;
-
-      })
-      .join('');
-
-
-  container
-    .querySelectorAll(
-      '[data-open-report]'
-    )
-    .forEach(button => {
-
-      button.addEventListener(
-        'click',
-        () => {
-
-          const report =
-            findSubmittedReport(
-              button.dataset.openReport
-            );
-
-
-          if(!report){
-            return;
-          }
-
-
-          loadReport(
-            report
-          );
-
-
-          buildSummary();
-
-          showScreen(
-            'summary'
-          );
-
-        }
-      );
-
-    });
-
-
-  container
-    .querySelectorAll(
-      '[data-pdf-report]'
-    )
-    .forEach(button => {
-
-      button.addEventListener(
-        'click',
-        () => {
-
-          const report =
-            findSubmittedReport(
-              button.dataset.pdfReport
-            );
-
-
-          if(!report){
-            return;
-          }
-
-
-          loadReport(
-            report
-          );
-
-
-          buildSummary();
-
-          showScreen(
-            'summary'
-          );
-
-
-          setTimeout(
-            () => buildPdf(),
-            100
-          );
-
-        }
-      );
-
-    });
-
-
-  container
-    .querySelectorAll(
-      '[data-print-report]'
-    )
-    .forEach(button => {
-
-      button.addEventListener(
-        'click',
-        () => {
-
-          const report =
-            findSubmittedReport(
-              button.dataset.printReport
-            );
-
-
-          if(!report){
-            return;
-          }
-
-
-          loadReport(
-            report
-          );
-
-
-          buildSummary();
-
-          showScreen(
-            'summary'
-          );
-
-
-          setTimeout(
-            () => window.print(),
-            150
-          );
-
-        }
-      );
-
-    });
-
-}
-
-
-function findSubmittedReport(id){
-
-  return getSubmittedReports()
-    .find(
-      report =>
-        report.id === id
-    );
-
-}
-
-
-/* =========================================================
-   LOAD SAVED REPORT
-========================================================= */
-
-function loadReport(report){
-
-  reportId =
-    report.id;
-
-
-  meta =
-    {
-      ship:
-        report.meta?.ship || '',
-
-      dateOn:
-        report.meta?.dateOn || '',
-
-      dateOff:
-        report.meta?.dateOff || '',
-
-      reviewer:
-        report.meta?.reviewer || 'Reviewer'
-    };
-
-
-  currentReviewer =
-    meta.reviewer;
-
-
-  state =
-    createEmptyState();
-
-
-  Object.keys(
-    report.state || {}
-  ).forEach(key => {
-
-    if(
-      Object.prototype.hasOwnProperty
-        .call(state,key)
-    ){
-
-      state[key] =
-        normalizeItem(
-          report.state[key]
-        );
-
-    }
-
-  });
-
-
-  updateChecklistHeader();
-
-  renderChecklist();
-
-  saveCurrent();
-
-}
-
-
-function normalizeItem(item){
-
-  if(!item){
-
-    return {
-      checked:false,
-      comments:[],
-      photos:[]
-    };
-
-  }
-
-
-  return {
-
-    checked:
-      Boolean(item.checked),
-
-    comments:
-      Array.isArray(item.comments)
-        ? item.comments
-        : [],
-
-    photos:
-      Array.isArray(item.photos)
-        ? item.photos
-        : []
-
-  };
-
-}
-
-
-/* =========================================================
-   RESTORE ACTIVE REPORT
-========================================================= */
-
-function restoreCurrentReport(){
-
-  try{
-
-    const value =
-      localStorage.getItem(
-        STORAGE_CURRENT
-      );
-
-
-    if(!value){
-      return false;
-    }
-
-
-    const record =
-      JSON.parse(value);
-
-
-    if(
-      !record ||
-      !record.meta ||
-      !record.state
-    ){
-
-      clearCurrent();
-
-      return false;
-
-    }
-
-
-    reportId =
-      record.reportId ||
-      Date.now().toString();
-
-
-    meta =
-      {
-        ship:
-          record.meta.ship || '',
-
-        dateOn:
-          record.meta.dateOn || '',
-
-        dateOff:
-          record.meta.dateOff || '',
-
-        reviewer:
-          record.meta.reviewer || 'Reviewer'
-      };
-
-
-    currentReviewer =
-      record.currentReviewer ||
-      meta.reviewer ||
-      'Reviewer';
-
-
-    state =
-      createEmptyState();
-
-
-    Object.keys(
-      record.state || {}
-    ).forEach(key => {
-
-      if(
-        Object.prototype.hasOwnProperty
-          .call(state,key)
-      ){
-
-        state[key] =
-          normalizeItem(
-            record.state[key]
-          );
-
-      }
-
-    });
-
-
-    updateChecklistHeader();
-
-    renderChecklist();
-
-    showScreen(
-      'checklist'
-    );
-
-
-    return true;
-
-  }catch(error){
-
-    console.error(
-      'Could not restore current report',
-      error
-    );
-
-
-    clearCurrent();
-
-    return false;
-
-  }
-
-}
-
-
-/* =========================================================
-   INITIALIZE
-========================================================= */
-
-(function init(){
-
-  /*
-    We deliberately do NOT automatically open a
-    previously submitted report.
-
-    Only an unfinished current report is restored.
-  */
-
-  const restored =
-    restoreCurrentReport();
-
-
-  if(!restored){
-
-    showScreen(
-      'home'
-    );
-
-  }
-
-})();
 
 </script>
 
