@@ -7,7 +7,7 @@
 
 /* ============================================================
    VARIABLES
-   ============================================================ */
+============================================================ */
 
 :root {
 
@@ -23,10 +23,10 @@
   --vv-gray: #8A8A8A;
   --vv-light-gray: #F4F2F5;
 
+  --vv-white: #FFFFFF;
+
   --vv-line: #E7E1EA;
   --vv-bg: #F8F6F9;
-
-  --vv-white: #FFFFFF;
 
   --status-green: #008A52;
   --status-green-bg: #EAF8F0;
@@ -42,32 +42,25 @@
 
 /* ============================================================
    RESET
-   ============================================================ */
+============================================================ */
 
 *,
 *::before,
 *::after {
-
   box-sizing: border-box;
-
 }
 
 
 html,
 body {
-
   margin: 0;
   padding: 0;
-
   min-height: 100%;
-
 }
 
 
 body {
-
   background: var(--vv-bg);
-
   color: var(--vv-body);
 
   font-family:
@@ -76,7 +69,6 @@ body {
     sans-serif;
 
   font-size: 14px;
-
 }
 
 
@@ -84,45 +76,33 @@ button,
 input,
 textarea,
 select {
-
   font: inherit;
-
 }
 
 
 button {
-
   cursor: pointer;
-
 }
 
 
 img {
-
   display: block;
-
   max-width: 100%;
-
 }
 
 
 /* ============================================================
    APP
-   ============================================================ */
+============================================================ */
 
 #app {
-
   width: 100%;
-
   min-height: 100vh;
-
 }
 
 
 .app {
-
   width: 100%;
-
 }
 
 
@@ -131,14 +111,12 @@ img {
 ============================================================ */
 
 .hidden {
-
   display: none !important;
-
 }
 
 
 /* ============================================================
-   TOP PURPLE BRAND BAND
+   PURPLE HEADER
 ============================================================ */
 
 .band {
@@ -146,7 +124,6 @@ img {
   position: relative;
 
   width: 100%;
-
   max-width: 1200px;
 
   margin: 0 auto;
@@ -170,11 +147,8 @@ img {
 
 
 .band.compact {
-
   padding-top: 22px;
-
   padding-bottom: 22px;
-
 }
 
 
@@ -197,7 +171,8 @@ img {
 
   margin: 0;
 
-  color: rgba(255,255,255,.92);
+  color:
+    rgba(255,255,255,.92);
 
   font-size: 14px;
 
@@ -208,7 +183,8 @@ img {
 
 .eyebrow {
 
-  color: rgba(255,255,255,.92);
+  color:
+    rgba(255,255,255,.92);
 
   font-size: 12px;
 
@@ -232,7 +208,6 @@ img {
   display: inline-flex;
 
   align-items: center;
-
   justify-content: center;
 
   min-height: 34px;
@@ -257,16 +232,7 @@ img {
 
 
 .header-back:hover {
-
   background: var(--vv-red-dark);
-
-}
-
-
-.header-back:active {
-
-  transform: translateY(1px);
-
 }
 
 
@@ -347,13 +313,6 @@ img {
 }
 
 
-.home-card:active {
-
-  transform: translateY(0);
-
-}
-
-
 .home-card h2 {
 
   margin: 0 0 12px;
@@ -407,14 +366,6 @@ img {
 }
 
 
-.admin-button:hover {
-
-  background:
-    rgba(60,16,83,.04);
-
-}
-
-
 /* ============================================================
    PAGE PADDING
 ============================================================ */
@@ -438,6 +389,8 @@ img {
 
 .meta {
 
+  width: 100%;
+
   max-width: 1200px;
 
   margin: 0 auto;
@@ -456,9 +409,7 @@ img {
 
 
 .meta strong {
-
   color: var(--vv-squid);
-
 }
 
 
@@ -467,9 +418,7 @@ img {
 ============================================================ */
 
 .field {
-
   margin-bottom: 17px;
-
 }
 
 
@@ -560,7 +509,8 @@ img {
 
 .reviewer-row label {
 
-  color: rgba(255,255,255,.85);
+  color:
+    rgba(255,255,255,.85);
 
   font-size: 9px;
 
@@ -599,14 +549,6 @@ img {
 .reviewer-row input::placeholder {
 
   color:
-    rgba(255,255,255,.65);
-
-}
-
-
-.reviewer-row input:focus {
-
-  border-color:
     rgba(255,255,255,.65);
 
 }
@@ -658,13 +600,6 @@ img {
 }
 
 
-.btn-primary:active {
-
-  transform: translateY(1px);
-
-}
-
-
 /* ============================================================
    SECONDARY BUTTON
 ============================================================ */
@@ -709,7 +644,7 @@ img {
 
 
 /* ============================================================
-   TWO COLUMN BUTTONS
+   TWO BUTTONS
 ============================================================ */
 
 .grid2 {
@@ -717,7 +652,7 @@ img {
   display: grid;
 
   grid-template-columns:
-    repeat(2, minmax(0, 1fr));
+    repeat(2, minmax(0,1fr));
 
   gap: 9px;
 
@@ -746,7 +681,7 @@ img {
 
 
 /* ============================================================
-   CHECKLIST PROGRESS
+   PROGRESS
 ============================================================ */
 
 .progress-wrap {
@@ -787,12 +722,11 @@ img {
 
   height: 100%;
 
-  border-radius: inherit;
+  border-radius: 999px;
 
   background: var(--vv-red);
 
-  transition:
-    width .2s ease;
+  transition: width .2s ease;
 
 }
 
@@ -811,7 +745,7 @@ img {
 
 
 /* ============================================================
-   CHECKLIST SECTIONS
+   CHECKLIST
 ============================================================ */
 
 .section {
@@ -848,10 +782,6 @@ img {
 }
 
 
-/* ============================================================
-   CHECKLIST ITEMS
-============================================================ */
-
 .check-item {
 
   width: 100%;
@@ -872,88 +802,6 @@ img {
   align-items: center;
 
   gap: 10px;
-
-}
-
-
-.check-circle {
-
-  width: 25px;
-
-  height: 25px;
-
-  flex: 0 0 25px;
-
-  border: 2px solid #999;
-
-  border-radius: 50%;
-
-  background: var(--vv-white);
-
-}
-
-
-.check-circle.checked {
-
-  display: flex;
-
-  align-items: center;
-
-  justify-content: center;
-
-  border-color: var(--vv-red);
-
-  background: var(--vv-red);
-
-  color: var(--vv-white);
-
-}
-
-
-.check-text {
-
-  flex: 1;
-
-  color: var(--vv-body);
-
-  font-size: 13px;
-
-  line-height: 1.45;
-
-}
-
-
-/* ============================================================
-   COMMENT / PHOTO BUTTONS
-============================================================ */
-
-.comment-button,
-.photo-button {
-
-  min-height: 32px;
-
-  padding: 5px 9px;
-
-  border: 1px solid var(--vv-line);
-
-  border-radius: 7px;
-
-  background: var(--vv-white);
-
-  color: var(--vv-squid);
-
-  font-size: 9px;
-
-  font-weight: 800;
-
-}
-
-
-.comment-button:hover,
-.photo-button:hover {
-
-  background:
-    rgba(60,16,83,.04);
 
 }
 
@@ -1009,10 +857,7 @@ img {
 
 
 /* ============================================================
-   REPORT GRID
-
-   DESKTOP:
-   3 REPORTS PER ROW
+   REPORTS AREA
 ============================================================ */
 
 .reports {
@@ -1024,6 +869,24 @@ img {
   margin: 0 auto;
 
   padding: 20px 24px 90px;
+
+}
+
+
+/*
+  IMPORTANT:
+
+  The report lists themselves are grids.
+
+  This keeps Back to Home OUTSIDE the grid
+  and lets reports flow LEFT → RIGHT.
+*/
+
+#openList,
+#reportList,
+#responseList {
+
+  width: 100%;
 
   display: grid;
 
@@ -1039,8 +902,6 @@ img {
 
 /* ============================================================
    REPORT CARD
-
-   COMPACT
 ============================================================ */
 
 .report-card {
@@ -1067,6 +928,10 @@ img {
 }
 
 
+/* ============================================================
+   REPORT CARD COLOR
+============================================================ */
+
 .report-card.red {
 
   border-color:
@@ -1092,7 +957,7 @@ img {
 
 
 /* ============================================================
-   REPORT CARD HEADING
+   REPORT CARD TITLE
 ============================================================ */
 
 .report-card h3 {
@@ -1113,7 +978,7 @@ img {
 
 
 /* ============================================================
-   REPORT META
+   REPORT CARD INFO
 ============================================================ */
 
 .report-card .report-meta {
@@ -1208,14 +1073,20 @@ img {
 
 
 /* ============================================================
-   SUBMITTED REPORT REVIEW BUTTON
+   SUBMITTED REPORT REVIEW
 ============================================================ */
 
 .submitted-review-button {
 
+  display: flex !important;
+
+  align-items: center !important;
+
+  justify-content: center !important;
+
   width: 100% !important;
 
-  min-height: 34px !important;
+  min-height: 35px !important;
 
   padding: 7px 9px !important;
 
@@ -1274,36 +1145,53 @@ img {
 
 .report-card .admin-delete:hover {
 
-  background: var(--status-red-bg);
+  background:
+    var(--status-red-bg);
 
 }
 
 
 /* ============================================================
-   EMPTY STATE
+   EMPTY REPORT MESSAGE
 ============================================================ */
 
-.empty {
+#openList .empty,
+#reportList .empty,
+#responseList .empty {
+
+  grid-column: 1 / -1;
 
   width: 100%;
 
-  padding: 24px 15px;
+}
 
-  border: 1px dashed var(--vv-line);
 
-  border-radius: 8px;
+/* ============================================================
+   BACK TO HOME
 
-  background: var(--vv-white);
+   This is OUTSIDE the report grid because #openList,
+   #reportList and #responseList are the grids.
+============================================================ */
 
-  color: var(--vv-gray);
+#openHomeBtn,
+#reportsHomeBtn,
+#responsesHomeBtn {
 
-  font-size: 12px;
+  display: flex;
 
-  line-height: 1.5;
+  align-items: center;
 
-  text-align: center;
+  justify-content: center;
 
-  grid-column: 1 / -1;
+  width: 100%;
+
+  max-width: 420px;
+
+  min-height: 42px;
+
+  margin: 22px auto 0;
+
+  padding: 9px 15px;
 
 }
 
@@ -1325,27 +1213,8 @@ img {
 }
 
 
-.summary-section-title {
-
-  margin-top: 20px;
-
-  margin-bottom: 10px;
-
-  padding-bottom: 7px;
-
-  border-bottom: 2px solid var(--vv-red);
-
-  color: var(--vv-squid);
-
-  font-size: 15px;
-
-  font-weight: 800;
-
-}
-
-
 /* ============================================================
-   COMMENT DISPLAY
+   COMMENTS
 ============================================================ */
 
 .comment {
@@ -1460,7 +1329,7 @@ img {
 
 
 /* ============================================================
-   RESPONSE PHOTOS
+   PHOTOS
 ============================================================ */
 
 .response-photos {
@@ -1503,7 +1372,7 @@ img {
 
 
 /* ============================================================
-   SHIP RESPONSE DISPLAY
+   SHIP RESPONSE
 ============================================================ */
 
 .ship-response-display {
@@ -1639,42 +1508,6 @@ img {
 
 
 /* ============================================================
-   TABLE / GENERIC
-============================================================ */
-
-table {
-
-  width: 100%;
-
-  border-collapse: collapse;
-
-}
-
-
-th,
-td {
-
-  padding: 8px 9px;
-
-  border-bottom: 1px solid var(--vv-line);
-
-  text-align: left;
-
-  font-size: 11px;
-
-}
-
-
-th {
-
-  color: var(--vv-squid);
-
-  font-weight: 800;
-
-}
-
-
-/* ============================================================
    PRINT
 ============================================================ */
 
@@ -1702,12 +1535,12 @@ th {
 
     max-width: none;
 
-    background: var(--vv-squid) !important;
+    background:
+      var(--vv-squid) !important;
 
     print-color-adjust: exact;
 
-    -webkit-print-color-adjust:
-      exact;
+    -webkit-print-color-adjust: exact;
 
   }
 
@@ -1732,28 +1565,27 @@ th {
 
 /* ============================================================
    TABLET
-   2 PER ROW
+   2 REPORTS PER ROW
 ============================================================ */
 
-@media (
-  max-width: 950px
-) {
+@media (max-width: 950px) {
 
-  .reports {
+  #openList,
+  #reportList,
+  #responseList {
 
     grid-template-columns:
-      repeat(2, minmax(0, 1fr));
+      repeat(2, minmax(0,1fr));
 
     gap: 10px;
-
-    padding: 14px 18px 90px;
 
   }
 
 
   .home {
 
-    padding: 25px 22px;
+    padding:
+      25px 22px;
 
   }
 
@@ -1800,16 +1632,15 @@ th {
 
 /* ============================================================
    MOBILE
-   1 PER ROW
+   1 REPORT PER ROW
 ============================================================ */
 
-@media (
-  max-width: 620px
-) {
+@media (max-width: 620px) {
 
   .band {
 
-    padding: 24px 18px;
+    padding:
+      24px 18px;
 
   }
 
@@ -1838,7 +1669,8 @@ th {
 
   .home {
 
-    padding: 18px 12px 35px;
+    padding:
+      18px 12px 35px;
 
   }
 
@@ -1924,11 +1756,18 @@ th {
   }
 
 
-  .reports {
+  #openList,
+  #reportList,
+  #responseList {
 
     grid-template-columns: 1fr;
 
     gap: 9px;
+
+  }
+
+
+  .reports {
 
     padding:
       12px 10px 80px;
@@ -1984,12 +1823,10 @@ th {
 
 
 /* ============================================================
-   SMALL PHONES
+   SMALL PHONE
 ============================================================ */
 
-@media (
-  max-width: 400px
-) {
+@media (max-width: 400px) {
 
   .band h1 {
 
@@ -2022,13 +1859,6 @@ th {
   .report-actions button {
 
     width: 100%;
-
-  }
-
-
-  #stats {
-
-    grid-template-columns: 1fr 1fr;
 
   }
 
