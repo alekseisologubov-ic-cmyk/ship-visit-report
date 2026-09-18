@@ -16,7 +16,7 @@
 
 
   <!-- =====================================================
-       GOOGLE FONT
+       FONT
   ====================================================== -->
 
   <link
@@ -32,7 +32,6 @@
 
   <!-- =====================================================
        PDF LIBRARY
-       pdf.js uses window.jspdf
   ====================================================== -->
 
   <script
@@ -41,8 +40,17 @@
 
 
   <!-- =====================================================
-       YOUR CSS
-       style.css is in the ROOT folder
+       SUPABASE LIBRARY
+       IMPORTANT: must load BEFORE main.js
+  ====================================================== -->
+
+  <script
+    src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"
+  ></script>
+
+
+  <!-- =====================================================
+       CSS
   ====================================================== -->
 
   <link
@@ -94,7 +102,9 @@
       <div class="home-grid">
 
 
-        <!-- CREATE REPORT -->
+        <!-- =============================================
+             CREATE REPORT
+        ============================================== -->
 
         <button
           type="button"
@@ -106,6 +116,7 @@
             CREATE REPORT
           </h2>
 
+
           <p>
             Start a new ship visit report.
           </p>
@@ -113,7 +124,9 @@
         </button>
 
 
-        <!-- OPEN REPORTS -->
+        <!-- =============================================
+             OPEN REPORTS
+        ============================================== -->
 
         <button
           type="button"
@@ -125,6 +138,7 @@
             OPEN REPORTS
           </h2>
 
+
           <p>
             Continue reports that have been started but not submitted.
           </p>
@@ -132,7 +146,9 @@
         </button>
 
 
-        <!-- SUBMITTED REPORTS -->
+        <!-- =============================================
+             SUBMITTED REPORTS
+        ============================================== -->
 
         <button
           type="button"
@@ -144,14 +160,17 @@
             SUBMITTED REPORTS
           </h2>
 
+
           <p>
-            Review submitted reports, overall information and follow-up points.
+            Review submitted reports, overall findings and follow-up points.
           </p>
 
         </button>
 
 
-        <!-- SHIP RESPONSE -->
+        <!-- =============================================
+             SHIP RESPONSE REPORT
+        ============================================== -->
 
         <button
           type="button"
@@ -163,8 +182,9 @@
             SHIP RESPONSE REPORT
           </h2>
 
+
           <p>
-            Review and answer checklist points requiring ship follow-up.
+            Respond to checklist points marked for ship follow-up.
           </p>
 
         </button>
@@ -178,7 +198,7 @@
 
 
   <!-- =====================================================
-       CREATE REPORT
+       CREATE REPORT / SETUP
   ====================================================== -->
 
   <section
@@ -208,6 +228,8 @@
     <div class="page-pad">
 
 
+      <!-- SHIP -->
+
       <div class="field">
 
         <label for="ship">
@@ -225,6 +247,8 @@
       </div>
 
 
+      <!-- DATE ON -->
+
       <div class="field">
 
         <label for="dateOn">
@@ -240,6 +264,8 @@
       </div>
 
 
+      <!-- DATE OFF -->
+
       <div class="field">
 
         <label for="dateOff">
@@ -254,6 +280,8 @@
 
       </div>
 
+
+      <!-- REVIEWER -->
 
       <div class="field">
 
@@ -272,6 +300,8 @@
       </div>
 
 
+      <!-- START -->
+
       <button
         type="button"
         id="startBtn"
@@ -283,6 +313,8 @@
 
       <div style="height:10px"></div>
 
+
+      <!-- HOME -->
 
       <button
         type="button"
@@ -309,11 +341,14 @@
 
     <div class="band compact">
 
+
       <div class="eyebrow">
 
         —
 
-        <span id="hdrShip"></span>
+        <span
+          id="hdrShip"
+        ></span>
 
       </div>
 
@@ -339,8 +374,11 @@
 
       </div>
 
+
     </div>
 
+
+    <!-- VISIT INFO -->
 
     <div class="meta">
 
@@ -395,6 +433,8 @@
     ></div>
 
 
+    <!-- CHECKLIST FOOTER -->
+
     <div class="footer no-print">
 
 
@@ -403,11 +443,11 @@
         id="summaryBtn"
         class="btn-primary"
       >
-        Generate Summary
+        Report Summary
       </button>
 
 
-      <div style="height:9px"></div>
+      <div style="height:8px"></div>
 
 
       <button
@@ -446,7 +486,7 @@
 
 
       <p class="sub">
-        Review the findings and follow-up points before submission.
+        Review the findings before submitting the report.
       </p>
 
     </div>
@@ -455,7 +495,9 @@
     <div class="page-pad">
 
 
-      <!-- FOLLOW-UP FINDINGS -->
+      <!-- =============================================
+           FOLLOW-UP FINDINGS
+      ============================================== -->
 
       <div
         id="ship-review-content"
@@ -465,7 +507,9 @@
       <div style="height:20px"></div>
 
 
-      <!-- COMPLETE REPORT REVIEW -->
+      <!-- =============================================
+           COMPLETE REPORT REVIEW
+      ============================================== -->
 
       <div
         id="ship-review-all"
@@ -518,6 +562,7 @@
 
     <div class="band compact">
 
+
       <div class="eyebrow">
         — REPORT OVERALL
       </div>
@@ -531,9 +576,10 @@
 
 
       <p
-        class="sub"
         id="sumMeta"
+        class="sub"
       ></p>
+
 
     </div>
 
@@ -542,14 +588,15 @@
 
 
       <!--
-        reports.js renders the COMPLETE report here.
-        Every checklist point can include:
+        reports.js renders the complete
+        submitted report here.
 
-        - Review status
-        - Reviewer comments
-        - Reviewer photos
-        - Follow-up status
-        - Ship comments
+        Each checklist point can include:
+        - status
+        - reviewer comments
+        - reviewer photos
+        - follow-up status
+        - ship comments
       -->
 
       <div
@@ -558,12 +605,11 @@
 
 
       <!--
-        Hidden legacy summary fields used
-        by PDF generation.
+        Hidden fields used by the
+        PDF module for open reports.
       -->
 
       <div class="hidden">
-
 
         <div
           id="stats"
@@ -579,7 +625,6 @@
         <div
           id="sumSections"
         ></div>
-
 
       </div>
 
@@ -614,7 +659,7 @@
       </div>
 
 
-      <div style="height:9px"></div>
+      <div style="height:8px"></div>
 
 
       <div class="grid2">
@@ -625,7 +670,7 @@
           id="printBtn"
           class="btn-secondary"
         >
-          Print Report
+          Print
         </button>
 
 
@@ -657,6 +702,7 @@
 
     <div class="band compact">
 
+
       <div class="eyebrow">
         — POINTS TO FOLLOW UP
       </div>
@@ -668,8 +714,9 @@
 
 
       <p class="sub">
-        Review findings requiring ship follow-up.
+        Review findings requiring a ship response.
       </p>
+
 
     </div>
 
@@ -678,9 +725,8 @@
 
 
       <!--
-        reports.js renders only points where:
-
-        followUpNeeded = true
+        reports.js renders only:
+        followUpNeeded === true
       -->
 
       <div
@@ -718,7 +764,7 @@
       </div>
 
 
-      <div style="height:9px"></div>
+      <div style="height:8px"></div>
 
 
       <button
@@ -746,6 +792,7 @@
 
     <div class="band compact">
 
+
       <div class="eyebrow">
         — OPEN REPORTS
       </div>
@@ -760,16 +807,12 @@
         Reports currently in progress.
       </p>
 
+
     </div>
 
 
     <div class="reports">
 
-
-      <!--
-        reports.js loads Open Reports
-        from Supabase here.
-      -->
 
       <div
         id="openList"
@@ -801,6 +844,7 @@
 
     <div class="band compact">
 
+
       <div class="eyebrow">
         — SUBMITTED REPORTS
       </div>
@@ -812,19 +856,15 @@
 
 
       <p class="sub">
-        Review submitted ship visit reports.
+        Review completed ship visit reports.
       </p>
+
 
     </div>
 
 
     <div class="reports">
 
-
-      <!--
-        reports.js loads submitted reports
-        from Supabase here.
-      -->
 
       <div
         id="reportList"
@@ -856,6 +896,7 @@
 
     <div class="band compact">
 
+
       <div class="eyebrow">
         — SHIP RESPONSE REPORT
       </div>
@@ -870,23 +911,12 @@
         Respond to points marked for ship follow-up.
       </p>
 
+
     </div>
 
 
     <div class="reports">
 
-
-      <!--
-        main.js / reports.js populate:
-
-        Ship
-        Department
-        Checklist point
-        Reviewer comments
-        Reviewer photos
-        Ship comments
-        Ship response
-      -->
 
       <div
         id="responseList"
@@ -911,7 +941,9 @@
 
 
 <!-- =======================================================
-     APPLICATION
+     MAIN APPLICATION MODULE
+
+     This must be AFTER the Supabase CDN script above.
 ======================================================== -->
 
 <script
@@ -926,8 +958,7 @@
 
 <script>
 
-window.showShipVisitToast =
-function(message){
+window.showToast = function(message){
 
   let toast =
     document.getElementById(
@@ -960,6 +991,7 @@ function(message){
       color:#FFFFFF;
       font-family:Arial,sans-serif;
       font-size:12px;
+      line-height:1.4;
       box-shadow:0 4px 14px rgba(0,0,0,.25);
       display:none;
       pointer-events:none;
@@ -974,7 +1006,9 @@ function(message){
 
 
   toast.textContent =
-    message;
+    String(
+      message || ''
+    );
 
 
   toast.style.display =
@@ -1000,18 +1034,35 @@ function(message){
 };
 
 
-/*
-  Convenient alias used by modules.
-*/
+/* =====================================================
+   GLOBAL ERROR DISPLAY
+===================================================== */
 
-window.showToast =
-function(message){
+window.addEventListener(
+  'error',
+  function(event){
 
-  window.showShipVisitToast(
-    message
-  );
+    console.error(
+      'Ship Visit Report error:',
+      event.error ||
+      event.message
+    );
 
-};
+  }
+);
+
+
+window.addEventListener(
+  'unhandledrejection',
+  function(event){
+
+    console.error(
+      'Ship Visit Report promise error:',
+      event.reason
+    );
+
+  }
+);
 
 </script>
 
