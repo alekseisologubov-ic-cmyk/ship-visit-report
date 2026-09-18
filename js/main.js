@@ -1,42 +1,57 @@
 /*
   main.js
 
-  Main application controller.
+  Main controller for the Ship Visit Report application.
 
-  FLOW:
+  FLOW
 
   HOME
     |
     +-- CREATE REPORT
-    |       |
-    |       +-- Ship / Dates / Reviewer
-    |       |
-    |       +-- OPEN REPORT
-    |              |
-    |              +-- Checklist
-    |              |
-    |              +-- SHIP REVIEW
-    |                     |
-    |                     +-- SUBMIT
+    |      |
+    |      v
+    |    OPEN REPORT
+    |      |
+    |      v
+    |    CHECKLIST
+    |      |
+    |      v
+    |    SHIP REVIEW
+    |      |
+    |      v
+    |    SUBMIT
+    |      |
+    |      v
+    |    HOME
     |
     +-- OPEN REPORTS
-    |       |
-    |       +-- Continue Open Report
     |
     +-- SUBMITTED REPORTS
-    |       |
-    |       +-- REPORT OVERALL
-    |       |
-    |       +-- POINTS TO FOLLOW UP
-    |       |
-    |       +-- PDF
-    |       |
-    |       +-- PRINT
+    |      |
+    |      +-- REPORT OVERALL
+    |      |
+    |      +-- POINTS TO FOLLOW UP
+    |      |
+    |      +-- SAVE PDF
+    |      |
+    |      +-- PRINT
     |
     +-- SHIP RESPONSE REPORT
-            |
-            +-- Ship comments / responses
+           |
+           +-- Reviewer comments
+           +-- Reviewer photos
+           +-- Ship comments
+           +-- Save response
 */
+
+
+/* =========================================================
+   IMPORTS
+========================================================= */
+
+import {
+  SECTIONS
+} from './data.js';
 
 
 import {
@@ -47,39 +62,32 @@ import {
   getState,
   getReviewer,
   setReviewer,
-  getReportId,
-  setReportStatus,
-  getReportStatus
+  getReportId
 } from './state.js';
 
 
 import {
-  createOpenReport,
   saveOpenReport,
-  submitReport,
-  getReport,
   getOpenReports,
   getSubmittedReports,
-  saveShipResponse,
-  getReportColor,
-  getReportStatusText,
-  reportNeedsFollowUp,
-  getFollowUpPoints,
-  areFollowUpsComplete
+  getReport,
+  deleteOpenReport,
+  saveShipResponse
 } from './supabase.js';
 
 
 import {
   renderChecklist,
+  updateChecklistHeader,
   refreshChecklistUI,
-  updateChecklistHeader
+  saveChecklist
 } from './checklist.js';
 
 
 import {
-  renderShipReview,
-  renderCompleteReview,
-  prepareShipReview
+  prepareShipReview,
+  submitCurrentReport,
+  setReviewCallbacks
 } from './review.js';
 
 
@@ -88,7 +96,6 @@ import {
   renderSubmittedReports,
   renderReportOverall,
   renderReportFollowUps,
-  openReportFromDatabase,
   setReportCallbacks
 } from './reports.js';
 
@@ -101,7 +108,46 @@ import {
 
 
 /* =========================================================
-   DOM READY
+   APPLICATION STATE
+========================================================= */
+
+let currentSubmittedReport =
+  null;
+
+
+let currentResponseReport =
+  null;
+
+
+/* =========================================================
+   SCREENS
+========================================================= */
+
+const SCREENS = [
+
+  'home',
+
+  'setup',
+
+  'checklist',
+
+  'review',
+
+  'summary',
+
+  'followups',
+
+  'open',
+
+  'submitted',
+
+  'responses'
+
+];
+
+
+/* =========================================================
+   START
 ========================================================= */
 
 document.addEventListener(
@@ -111,65 +157,36 @@ document.addEventListener(
 
 
 /* =========================================================
-   GLOBAL APP STATE
-========================================================= */
-
-let currentScreen =
-  'home';
-
-
-let loadedSubmittedReport =
-  null;
-
-
-/* =========================================================
-   SCREEN DEFINITIONS
-========================================================= */
-
-const SCREENS = [
-  'home',
-  'setup',
-  'checklist',
-  'review',
-  'summary',
-  'open',
-  'submitted',
-  'followups',
-  'responses'
-];
-
-
-/* =========================================================
-   INITIALIZE APPLICATION
+   INITIALIZE
 ========================================================= */
 
 function initializeApp(){
 
-  bindNavigation();
+  setupDefaultDate();
+
+  bindHome();
 
   bindCreateReport();
 
-  bindChecklistNavigation();
+  bindChecklist();
 
-  bindReviewNavigation();
+  bindShipReview();
 
-  bindSummaryNavigation();
+  bindSummary();
 
-  bindOpenReportsNavigation();
+  bindOpenReports();
 
-  bindSubmittedReportsNavigation();
+  bindSubmittedReports();
 
-  bindFollowUpNavigation();
+  bindFollowUps();
 
-  bindShipResponseNavigation();
+  bindShipResponses();
 
   bindReportCallbacks();
 
-  bindPDFEvents();
+  bindReviewCallbacks();
 
-  bindPrintEvents();
-
-  setupDefaultDate();
+  bindPDFButtons();
 
   showScreen(
     'home'
@@ -186,8 +203,10 @@ export function showScreen(
   screen
 ){
 
-  if (
-    !SCREENS.includes(screen)
+  if(
+    !SCREENS.includes(
+      screen
+    )
   ){
 
     screen =
@@ -197,31 +216,27 @@ export function showScreen(
 
 
   SCREENS.forEach(
-    screenId => {
+    id => {
 
       const element =
         document.getElementById(
-          screenId
+          id
         );
 
 
-      if (
+      if(
         element
       ){
 
         element.classList.toggle(
           'hidden',
-          screenId !== screen
+          id !== screen
         );
 
       }
 
     }
   );
-
-
-  currentScreen =
-    screen;
 
 
   window.scrollTo(
@@ -233,71 +248,26 @@ export function showScreen(
 
 
 /* =========================================================
-   HOME / TOP NAVIGATION
+   HOME
 ========================================================= */
 
-function bindNavigation(){
+function bindHome(){
 
-  const homeButtons = [
-    'setupHome',
-    'openHomeBtn',
-    'reportsHomeBtn',
-    'followupsHomeBtn',
-    'responsesHomeBtn'
-  ];
-
-
-  homeButtons.forEach(
-    buttonId => {
-
-      const button =
-        document.getElementById(
-          buttonId
-        );
-
-
-      if (
-        button
-      ){
-
-        button.addEventListener(
-          'click',
-          () => {
-
-            showScreen(
-              'home'
-            );
-
-          }
-        );
-
-      }
-
-    }
-  );
-
-}
-
-
-/* =========================================================
-   CREATE REPORT
-========================================================= */
-
-function bindCreateReport(){
-
-  const createButton =
+  const create =
     document.getElementById(
       'createReport'
     );
 
 
-  if (
-    createButton
+  if(
+    create
   ){
 
-    createButton.addEventListener(
+    create.addEventListener(
       'click',
       () => {
+
+        clearSetupFields();
 
         setupDefaultDate();
 
@@ -311,17 +281,158 @@ function bindCreateReport(){
   }
 
 
-  const startButton =
+  const open =
+    document.getElementById(
+      'openReport'
+    );
+
+
+  if(
+    open
+  ){
+
+    open.addEventListener(
+      'click',
+      async () => {
+
+        await renderOpenReports();
+
+        showScreen(
+          'open'
+        );
+
+      }
+    );
+
+  }
+
+
+  const submitted =
+    document.getElementById(
+      'submittedReports'
+    );
+
+
+  if(
+    submitted
+  ){
+
+    submitted.addEventListener(
+      'click',
+      async () => {
+
+        await renderSubmittedReports();
+
+        showScreen(
+          'submitted'
+        );
+
+      }
+    );
+
+  }
+
+
+  const responses =
+    document.getElementById(
+      'shipResponseReport'
+    );
+
+
+  if(
+    responses
+  ){
+
+    responses.addEventListener(
+      'click',
+      async () => {
+
+        await renderShipResponseReports();
+
+        showScreen(
+          'responses'
+        );
+
+      }
+    );
+
+  }
+
+
+  bindHomeButton(
+    'setupHome'
+  );
+
+  bindHomeButton(
+    'openHomeBtn'
+  );
+
+  bindHomeButton(
+    'reportsHomeBtn'
+  );
+
+  bindHomeButton(
+    'responsesHomeBtn'
+  );
+
+  bindHomeButton(
+    'summaryHomeBtn'
+  );
+
+  bindHomeButton(
+    'followupsHomeBtn'
+  );
+
+}
+
+
+function bindHomeButton(
+  id
+){
+
+  const button =
+    document.getElementById(
+      id
+    );
+
+
+  if(
+    button
+  ){
+
+    button.addEventListener(
+      'click',
+      () => {
+
+        showScreen(
+          'home'
+        );
+
+      }
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   CREATE REPORT
+========================================================= */
+
+function bindCreateReport(){
+
+  const start =
     document.getElementById(
       'startBtn'
     );
 
 
-  if (
-    startButton
+  if(
+    start
   ){
 
-    startButton.addEventListener(
+    start.addEventListener(
       'click',
       handleStartReport
     );
@@ -337,18 +448,18 @@ function bindCreateReport(){
 
 function setupDefaultDate(){
 
-  const dateInput =
+  const input =
     document.getElementById(
       'dateOn'
     );
 
 
-  if (
-    dateInput &&
-    !dateInput.value
+  if(
+    input &&
+    !input.value
   ){
 
-    dateInput.value =
+    input.value =
       new Date()
         .toISOString()
         .slice(
@@ -357,6 +468,49 @@ function setupDefaultDate(){
         );
 
   }
+
+}
+
+
+/* =========================================================
+   CLEAR SETUP
+========================================================= */
+
+function clearSetupFields(){
+
+  const ids = [
+
+    'ship',
+
+    'dateOn',
+
+    'dateOff',
+
+    'reviewer'
+
+  ];
+
+
+  ids.forEach(
+    id => {
+
+      const element =
+        document.getElementById(
+          id
+        );
+
+
+      if(
+        element
+      ){
+
+        element.value =
+          '';
+
+      }
+
+    }
+  );
 
 }
 
@@ -403,7 +557,7 @@ async function handleStartReport(){
       .trim();
 
 
-  if (
+  if(
     !ship
   ){
 
@@ -416,7 +570,7 @@ async function handleStartReport(){
   }
 
 
-  if (
+  if(
     !reviewer
   ){
 
@@ -430,7 +584,7 @@ async function handleStartReport(){
 
 
   /*
-    Create brand-new report state.
+    Create brand-new local report.
   */
 
   startNewReport({
@@ -447,7 +601,7 @@ async function handleStartReport(){
 
 
   /*
-    Show checklist immediately.
+    Render checklist.
   */
 
   updateChecklistHeader();
@@ -460,14 +614,14 @@ async function handleStartReport(){
 
 
   /*
-    Create the Open Report in Supabase.
+    Save immediately to Supabase
+    as an OPEN report.
   */
 
   const result =
     await saveOpenReport({
 
-      reportId:
-        null,
+      reportId:null,
 
       meta:
         getMeta(),
@@ -478,18 +632,23 @@ async function handleStartReport(){
     });
 
 
-  if (
+  if(
+    !result ||
     !result.success
   ){
 
     alert(
       'The report could not be created in Supabase.\n\n' +
       (
-        result.error?.message ||
+        result?.error?.message ||
         'Unknown error'
       )
     );
 
+
+    resetReport();
+
+    clearSetupFields();
 
     showScreen(
       'setup'
@@ -501,29 +660,21 @@ async function handleStartReport(){
 
 
   /*
-    Store returned database ID.
+    Save database report ID.
   */
 
-  if (
+  if(
     result.data?.id
   ){
 
-    /*
-      state.js owns report ID,
-      so call setReportId().
-    */
+    const stateModule =
+      await import(
+        './state.js'
+      );
 
-    import(
-      './state.js'
-    )
-    .then(
-      module => {
 
-        module.setReportId(
-          result.data.id
-        );
-
-      }
+    stateModule.setReportId(
+      result.data.id
     );
 
   }
@@ -540,19 +691,19 @@ async function handleStartReport(){
    CHECKLIST
 ========================================================= */
 
-function bindChecklistNavigation(){
+function bindChecklist(){
 
-  const reviewerInput =
+  const reviewer =
     document.getElementById(
       'hdrReviewer'
     );
 
 
-  if (
-    reviewerInput
+  if(
+    reviewer
   ){
 
-    reviewerInput.addEventListener(
+    reviewer.addEventListener(
       'change',
       async event => {
 
@@ -560,10 +711,6 @@ function bindChecklistNavigation(){
           event.target.value
         );
 
-
-        /*
-          Save latest reviewer.
-        */
 
         await saveCurrentReport();
 
@@ -574,26 +721,30 @@ function bindChecklistNavigation(){
 
 
   /*
-    Generate Summary
+    Generate Summary button.
   */
 
-  const summaryButton =
+  const summary =
     document.getElementById(
       'summaryBtn'
     );
 
 
-  if (
-    summaryButton
+  if(
+    summary
   ){
 
-    summaryButton.addEventListener(
+    summary.addEventListener(
       'click',
       async () => {
 
         await saveCurrentReport();
 
-        showSummary();
+        buildCurrentSummary();
+
+        showScreen(
+          'summary'
+        );
 
       }
     );
@@ -613,7 +764,7 @@ async function saveCurrentReport(){
     getReportId();
 
 
-  if (
+  if(
     !reportId
   ){
 
@@ -636,13 +787,13 @@ async function saveCurrentReport(){
     });
 
 
-  if (
-    !result.success
+  if(
+    !result?.success
   ){
 
     console.error(
-      'Could not save current report:',
-      result.error
+      'Current report save failed:',
+      result?.error
     );
 
     return false;
@@ -659,52 +810,91 @@ async function saveCurrentReport(){
    SHIP REVIEW
 ========================================================= */
 
-function bindReviewNavigation(){
+function bindShipReview(){
 
-  /*
-    The button can be called
-    Ship Review from either the
-    checklist or summary.
-  */
-
-  const reviewButtons =
-    document.querySelectorAll(
-      '[data-action="ship-review"]'
-    );
-
-
-  reviewButtons.forEach(
-    button => {
-
-      button.addEventListener(
-        'click',
-        async () => {
-
-          await openShipReview();
-
-        }
-      );
-
-    }
-  );
-
-
-  /*
-    If there is a normal
-    ID button, support it too.
-  */
-
-  const reviewButton =
+  const button =
     document.getElementById(
       'shipReviewBtn'
     );
 
 
-  if (
-    reviewButton
+  if(
+    button
   ){
 
-    reviewButton.addEventListener(
+    button.addEventListener(
+      'click',
+      async () => {
+
+        await openShipReview();
+
+      }
+    );
+
+  }
+
+
+  const reviewBack =
+    document.getElementById(
+      'reviewBackBtn'
+    );
+
+
+  if(
+    reviewBack
+  ){
+
+    reviewBack.addEventListener(
+      'click',
+      () => {
+
+        updateChecklistHeader();
+
+        renderChecklist();
+
+        showScreen(
+          'checklist'
+        );
+
+      }
+    );
+
+  }
+
+
+  const submit =
+    document.getElementById(
+      'reviewSubmitBtn'
+    );
+
+
+  if(
+    submit
+  ){
+
+    submit.addEventListener(
+      'click',
+      async () => {
+
+        await handleSubmit();
+
+      }
+    );
+
+  }
+
+
+  const summaryReview =
+    document.getElementById(
+      'summaryShipReviewBtn'
+    );
+
+
+  if(
+    summaryReview
+  ){
+
+    summaryReview.addEventListener(
       'click',
       async () => {
 
@@ -728,7 +918,7 @@ async function openShipReview(){
     await saveCurrentReport();
 
 
-  if (
+  if(
     !saved
   ){
 
@@ -745,21 +935,13 @@ async function openShipReview(){
     await prepareShipReview();
 
 
-  if (
+  if(
     !prepared
   ){
 
     return;
 
   }
-
-
-  /*
-    Both the new review container
-    and legacy containers are supported.
-  */
-
-  renderReviewContainers();
 
 
   showScreen(
@@ -769,32 +951,82 @@ async function openShipReview(){
 }
 
 
-function renderReviewContainers(){
+/* =========================================================
+   REVIEW CALLBACK
+========================================================= */
 
-  try{
+function bindReviewCallbacks(){
 
-    renderShipReview();
+  setReviewCallbacks({
 
-  }catch(error){
+    submitted:
+      async submittedReport => {
 
-    console.error(
-      'Could not render Ship Review:',
-      error
+        /*
+          Store submitted report temporarily
+          in case the user wants to inspect it.
+        */
+
+        currentSubmittedReport =
+          submittedReport ||
+          null;
+
+
+        /*
+          Report is now submitted.
+        */
+
+        resetReport();
+
+        clearSetupFields();
+
+        showScreen(
+          'home'
+        );
+
+
+        showToast(
+          'Report submitted successfully.'
+        );
+
+      }
+
+  });
+
+}
+
+
+/* =========================================================
+   SUBMIT
+========================================================= */
+
+async function handleSubmit(){
+
+  const confirmed =
+    window.confirm(
+      'Submit this Ship Visit Report?\n\n' +
+      'The report will move from Open Reports to Submitted Reports.'
     );
+
+
+  if(
+    !confirmed
+  ){
+
+    return;
 
   }
 
 
-  try{
+  const submitted =
+    await submitCurrentReport();
 
-    renderCompleteReview();
 
-  }catch(error){
+  if(
+    !submitted
+  ){
 
-    console.error(
-      'Could not render complete review:',
-      error
-    );
+    return;
 
   }
 
@@ -805,23 +1037,19 @@ function renderReviewContainers(){
    SUMMARY
 ========================================================= */
 
-function bindSummaryNavigation(){
+function bindSummary(){
 
-  /*
-    Back to checklist
-  */
-
-  const backButton =
+  const back =
     document.getElementById(
       'backBtn'
     );
 
 
-  if (
-    backButton
+  if(
+    back
   ){
 
-    backButton.addEventListener(
+    back.addEventListener(
       'click',
       () => {
 
@@ -838,55 +1066,22 @@ function bindSummaryNavigation(){
 
   }
 
+}
+
+
+/* =========================================================
+   CURRENT SUMMARY
+========================================================= */
+
+function buildCurrentSummary(){
 
   /*
-    Ship Review from summary.
+    This summary is mainly useful while
+    the report is still open.
+
+    Submitted reports use reports.js
+    and REPORT OVERALL separately.
   */
-
-  const summaryReviewButton =
-    document.getElementById(
-      'summaryShipReviewBtn'
-    );
-
-
-  if (
-    summaryReviewButton
-  ){
-
-    summaryReviewButton.addEventListener(
-      'click',
-      async () => {
-
-        await openShipReview();
-
-      }
-    );
-
-  }
-
-}
-
-
-/* =========================================================
-   SHOW SUMMARY
-========================================================= */
-
-export function showSummary(){
-
-  buildSummaryFromCurrentState();
-
-  showScreen(
-    'summary'
-  );
-
-}
-
-
-/* =========================================================
-   BUILD SUMMARY
-========================================================= */
-
-function buildSummaryFromCurrentState(){
 
   const meta =
     getMeta();
@@ -896,34 +1091,34 @@ function buildSummaryFromCurrentState(){
     getState();
 
 
-  const summaryTitle =
+  const title =
     document.getElementById(
       'sumTitle'
     );
 
 
-  if (
-    summaryTitle
+  if(
+    title
   ){
 
-    summaryTitle.textContent =
+    title.textContent =
       meta.ship ||
       'Visit Summary';
 
   }
 
 
-  const summaryMeta =
+  const metaElement =
     document.getElementById(
       'sumMeta'
     );
 
 
-  if (
-    summaryMeta
+  if(
+    metaElement
   ){
 
-    summaryMeta.textContent =
+    metaElement.textContent =
       `${meta.dateOn || ''}` +
       (
         meta.dateOff
@@ -932,28 +1127,27 @@ function buildSummaryFromCurrentState(){
       ) +
       ` • Reviewer: ${
         meta.reviewer ||
-        getReviewer() ||
         ''
       }`;
 
   }
 
 
-  /*
-    Totals
-  */
-
   let total =
     0;
+
 
   let checked =
     0;
 
+
   let comments =
     0;
 
+
   let photos =
     0;
+
 
   let followUps =
     0;
@@ -961,14 +1155,13 @@ function buildSummaryFromCurrentState(){
 
   Object.values(
     state
-  )
-  .forEach(
+  ).forEach(
     item => {
 
       total++;
 
 
-      if (
+      if(
         item.checked
       ){
 
@@ -985,14 +1178,6 @@ function buildSummaryFromCurrentState(){
           : 0;
 
 
-      comments +=
-        Array.isArray(
-          item.shipComments
-        )
-          ? item.shipComments.length
-          : 0;
-
-
       photos +=
         Array.isArray(
           item.photos
@@ -1001,13 +1186,14 @@ function buildSummaryFromCurrentState(){
           : 0;
 
 
-      if (
+      if(
         item.followUpNeeded
       ){
 
         followUps++;
 
       }
+
 
     }
   );
@@ -1019,14 +1205,13 @@ function buildSummaryFromCurrentState(){
     );
 
 
-  if (
+  if(
     stats
   ){
 
     stats.innerHTML = `
 
       <div class="stat">
-
         <div class="stat-number">
           ${checked}/${total}
         </div>
@@ -1034,12 +1219,10 @@ function buildSummaryFromCurrentState(){
         <div class="stat-label">
           Points Checked
         </div>
-
       </div>
 
 
       <div class="stat">
-
         <div class="stat-number">
           ${comments}
         </div>
@@ -1047,12 +1230,10 @@ function buildSummaryFromCurrentState(){
         <div class="stat-label">
           Comments
         </div>
-
       </div>
 
 
       <div class="stat">
-
         <div class="stat-number">
           ${photos}
         </div>
@@ -1060,12 +1241,10 @@ function buildSummaryFromCurrentState(){
         <div class="stat-label">
           Photos
         </div>
-
       </div>
 
 
       <div class="stat">
-
         <div class="stat-number">
           ${followUps}
         </div>
@@ -1073,7 +1252,6 @@ function buildSummaryFromCurrentState(){
         <div class="stat-label">
           Follow-Ups
         </div>
-
       </div>
 
     `;
@@ -1081,51 +1259,33 @@ function buildSummaryFromCurrentState(){
   }
 
 
-  /*
-    Overall summary text.
-  */
-
   const overall =
     document.getElementById(
       'overall'
     );
 
 
-  if (
-    overall &&
-    !overall.value
+  if(
+    overall
   ){
 
     overall.value =
-      `Ship visit report for ${meta.ship || ''}, ` +
-      `${meta.dateOn || ''}` +
-      (
-        meta.dateOff
-          ? ` to ${meta.dateOff}`
-          : ''
-      ) +
-      `. Reviewed by ${
-        meta.reviewer ||
-        ''
-      }. ` +
-      `${checked} of ${total} points checked. ` +
-      `${followUps} point(s) require ship follow-up.`;
+      `Ship visit report for ${meta.ship || ''}. ` +
+      `Reviewed by ${meta.reviewer || ''}. ` +
+      `${checked} of ${total} checklist points checked. ` +
+      `${followUps} point(s) marked for ship follow-up.`;
 
   }
 
 
-  /*
-    Section summary
-  */
-
-  const sectionsContainer =
+  const container =
     document.getElementById(
       'sumSections'
     );
 
 
-  if (
-    !sectionsContainer
+  if(
+    !container
   ){
 
     return;
@@ -1133,277 +1293,158 @@ function buildSummaryFromCurrentState(){
   }
 
 
-  sectionsContainer.innerHTML =
+  container.innerHTML =
     '';
 
 
-  for (
-    const section of
-    getSections()
-  ){
+  SECTIONS.forEach(
+    section => {
 
-    const sectionItems =
-      section.items.map(
-        (text,index) => {
+      let sectionChecked =
+        0;
+
+
+      let sectionFollowUps =
+        0;
+
+
+      const photos = [];
+
+
+      section.items.forEach(
+        (_,index) => {
 
           const key =
             `${section.id}__${index}`;
 
 
-          return {
-            key,
-            text,
-            item:
-              state[key]
-          };
-
-        }
-      );
+          const item =
+            state[key];
 
 
-    const sectionChecked =
-      sectionItems.filter(
-        point =>
-          point.item?.checked
-      ).length;
+          if(
+            item?.checked
+          ){
+
+            sectionChecked++;
+
+          }
 
 
-    const sectionFollowUps =
-      sectionItems.filter(
-        point =>
-          point.item?.followUpNeeded
-      );
+          if(
+            item?.followUpNeeded
+          ){
 
+            sectionFollowUps++;
 
-    const sectionPhotos =
-      sectionItems.reduce(
-        (
-          result,
-          point
-        ) => {
+          }
+
 
           (
-            point.item?.photos ||
+            item?.photos ||
             []
-          )
-          .forEach(
+          ).forEach(
             photo => {
 
-              result.push(
+              photos.push(
                 photo
               );
 
             }
           );
 
-
-          return result;
-
-        },
-        []
+        }
       );
 
 
-    const block =
-      document.createElement(
-        'div'
-      );
+      const block =
+        document.createElement(
+          'div'
+        );
 
 
-    block.className =
-      'summary-section';
+      block.className =
+        'summary-section';
 
 
-    block.innerHTML = `
+      block.innerHTML = `
 
-      <h2>
-        ${escapeHtml(
-          section.title
-        )}
-      </h2>
+        <h2>
+          ${escapeHtml(
+            section.title
+          )}
+        </h2>
 
 
-      <textarea
-        rows="4"
-      >${
-        escapeHtml(
-          `${sectionChecked} of ${section.items.length} points checked.` +
-          (
-            sectionFollowUps.length
-              ? ` ${sectionFollowUps.length} follow-up point(s) assigned to the ship.`
-              : ''
+        <textarea
+          rows="4"
+          readonly
+        >${
+          escapeHtml(
+            `${sectionChecked} of ${section.items.length} points checked.` +
+            (
+              sectionFollowUps
+                ? ` ${sectionFollowUps} point(s) require ship follow-up.`
+                : ''
+            )
           )
-        )
-      }</textarea>
+        }</textarea>
 
 
-      ${
-        sectionPhotos.length
-          ? `
+        ${
+          photos.length
+            ? `
 
-            <div
-              style="
-                margin-top:9px;
-                color:var(--vv-squid);
-                font-size:10px;
-                font-weight:800;
-              "
-            >
-              ATTACHED PHOTOS
-            </div>
+              <div
+                style="
+                  margin-top:8px;
+                  color:var(--vv-squid);
+                  font-size:10px;
+                  font-weight:800;
+                "
+              >
+                ATTACHED PHOTOS
+              </div>
 
 
-            <div class="summary-photos">
+              <div class="summary-photos">
 
-              ${
-                sectionPhotos
-                  .map(
-                    photo =>
-                      `
+                ${
+                  photos
+                    .map(
+                      photo => `
+
                         <div class="summary-photo">
 
                           <img
                             src="${photo}"
-                            alt="Report photo"
+                            alt="Checklist photo"
                           >
 
                         </div>
+
                       `
-                  )
-                  .join('')
-              }
+                    )
+                    .join('')
+                }
 
-            </div>
+              </div>
 
-          `
-          : ''
-      }
+            `
+            : ''
+        }
 
-    `;
-
-
-    sectionsContainer.appendChild(
-      block
-    );
-
-  }
-
-}
+      `;
 
 
-/* =========================================================
-   GET SECTIONS
-========================================================= */
-
-function getSections(){
-
-  /*
-    This dynamic import avoids keeping
-    data duplicated in this module.
-  */
-
-  /*
-    We can't synchronously return from a
-    dynamic import, so use the already-loaded
-    global module when available.
-
-    main.js gets this through the module cache.
-  */
-
-  if (
-    window.__SHIP_VISIT_SECTIONS__
-  ){
-
-    return window.__SHIP_VISIT_SECTIONS__;
-
-  }
-
-
-  /*
-    Fallback to the small local structure.
-    This should be replaced by the
-    shared data reference in data.js.
-  */
-
-  return [
-
-    {
-      id:'culinary',
-      title:'CULINARY',
-      items:[]
-    },
-
-    {
-      id:'bar',
-      title:'BAR',
-      items:[]
-    },
-
-    {
-      id:'restaurant',
-      title:'RESTAURANT',
-      items:[]
-    },
-
-    {
-      id:'procurement',
-      title:'PROCUREMENT',
-      items:[]
-    },
-
-    {
-      id:'sanitation',
-      title:'SANITATION',
-      items:[]
-    }
-
-  ];
-
-}
-
-
-/* =========================================================
-   OPEN REPORTS
-========================================================= */
-
-document
-  .getElementById(
-    'openReport'
-  )
-  ?.addEventListener(
-    'click',
-    async () => {
-
-      await renderOpenReports();
-
-      showScreen(
-        'open'
+      container.appendChild(
+        block
       );
 
     }
   );
 
-
-/* =========================================================
-   SUBMITTED REPORTS
-========================================================= */
-
-document
-  .getElementById(
-    'submittedReports'
-  )
-  ?.addEventListener(
-    'click',
-    async () => {
-
-      await renderSubmittedReports();
-
-      showScreen(
-        'submitted'
-      );
-
-    }
-  );
+}
 
 
 /* =========================================================
@@ -1413,6 +1454,10 @@ document
 function bindReportCallbacks(){
 
   setReportCallbacks({
+
+    /*
+      OPEN REPORT
+    */
 
     openReport:
       async report => {
@@ -1426,7 +1471,6 @@ function bindReportCallbacks(){
 
         renderChecklist();
 
-
         showScreen(
           'checklist'
         );
@@ -1434,10 +1478,14 @@ function bindReportCallbacks(){
       },
 
 
+    /*
+      REPORT OVERALL
+    */
+
     viewSummary:
       async report => {
 
-        loadedSubmittedReport =
+        currentSubmittedReport =
           report;
 
 
@@ -1445,11 +1493,6 @@ function bindReportCallbacks(){
           report
         );
 
-
-        /*
-          The Overall report view is
-          the summary-style submitted report.
-        */
 
         renderReportOverall(
           report
@@ -1463,10 +1506,14 @@ function bindReportCallbacks(){
       },
 
 
+    /*
+      POINTS TO FOLLOW UP
+    */
+
     viewFollowUps:
       async report => {
 
-        loadedSubmittedReport =
+        currentSubmittedReport =
           report;
 
 
@@ -1497,22 +1544,86 @@ function bindReportCallbacks(){
 
 
 /* =========================================================
-   FOLLOW-UP NAVIGATION
+   OPEN REPORTS
 ========================================================= */
 
-function bindFollowUpNavigation(){
+function bindOpenReports(){
 
-  const back =
+  const home =
+    document.getElementById(
+      'openHomeBtn'
+    );
+
+
+  if(
+    home
+  ){
+
+    home.addEventListener(
+      'click',
+      () => {
+
+        showScreen(
+          'home'
+        );
+
+      }
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   SUBMITTED REPORTS
+========================================================= */
+
+function bindSubmittedReports(){
+
+  const home =
+    document.getElementById(
+      'reportsHomeBtn'
+    );
+
+
+  if(
+    home
+  ){
+
+    home.addEventListener(
+      'click',
+      () => {
+
+        showScreen(
+          'home'
+        );
+
+      }
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   FOLLOW-UP VIEW
+========================================================= */
+
+function bindFollowUps(){
+
+  const home =
     document.getElementById(
       'followupsHomeBtn'
     );
 
 
-  if (
-    back
+  if(
+    home
   ){
 
-    back.addEventListener(
+    home.addEventListener(
       'click',
       () => {
 
@@ -1526,30 +1637,26 @@ function bindFollowUpNavigation(){
   }
 
 
-  /*
-    Generate follow-up PDF.
-  */
-
-  const followupPdf =
+  const pdf =
     document.getElementById(
       'followupPdfBtn'
     );
 
 
-  if (
-    followupPdf
+  if(
+    pdf
   ){
 
-    followupPdf.addEventListener(
+    pdf.addEventListener(
       'click',
       () => {
 
-        if (
-          loadedSubmittedReport
+        if(
+          currentSubmittedReport
         ){
 
           generateFollowUpPDF(
-            loadedSubmittedReport
+            currentSubmittedReport
           );
 
         }
@@ -1560,21 +1667,17 @@ function bindFollowUpNavigation(){
   }
 
 
-  /*
-    Print follow-up.
-  */
-
-  const followupPrint =
+  const print =
     document.getElementById(
       'followupPrintBtn'
     );
 
 
-  if (
-    followupPrint
+  if(
+    print
   ){
 
-    followupPrint.addEventListener(
+    print.addEventListener(
       'click',
       () => {
 
@@ -1589,48 +1692,22 @@ function bindFollowUpNavigation(){
 
 
 /* =========================================================
-   SHIP RESPONSE REPORT
+   SHIP RESPONSE
 ========================================================= */
 
-function bindShipResponseNavigation(){
+function bindShipResponses(){
 
-  const responseButton =
-    document.getElementById(
-      'shipResponseReport'
-    );
-
-
-  if (
-    responseButton
-  ){
-
-    responseButton.addEventListener(
-      'click',
-      async () => {
-
-        await renderAllShipResponses();
-
-        showScreen(
-          'responses'
-        );
-
-      }
-    );
-
-  }
-
-
-  const homeButton =
+  const home =
     document.getElementById(
       'responsesHomeBtn'
     );
 
 
-  if (
-    homeButton
+  if(
+    home
   ){
 
-    homeButton.addEventListener(
+    home.addEventListener(
       'click',
       () => {
 
@@ -1647,10 +1724,10 @@ function bindShipResponseNavigation(){
 
 
 /* =========================================================
-   SHIP RESPONSE LIST
+   RENDER SHIP RESPONSE REPORTS
 ========================================================= */
 
-async function renderAllShipResponses(){
+async function renderShipResponseReports(){
 
   const container =
     document.getElementById(
@@ -1658,7 +1735,7 @@ async function renderAllShipResponses(){
     );
 
 
-  if (
+  if(
     !container
   ){
 
@@ -1679,8 +1756,9 @@ async function renderAllShipResponses(){
     await getSubmittedReports();
 
 
-  if (
-    !result
+  if(
+    !result ||
+    !result.success
   ){
 
     container.innerHTML =
@@ -1696,8 +1774,7 @@ async function renderAllShipResponses(){
 
 
   const reports =
-    result.data ||
-    [];
+    result.data || [];
 
 
   const groups =
@@ -1707,22 +1784,21 @@ async function renderAllShipResponses(){
   reports.forEach(
     report => {
 
-      const followUps =
-        getFollowUpPoints(
+      const points =
+        extractFollowUpPoints(
           report
         );
 
 
-      if (
-        followUps.length
+      if(
+        points.length
       ){
 
         groups.push({
 
           report,
 
-          points:
-            followUps
+          points
 
         });
 
@@ -1732,14 +1808,17 @@ async function renderAllShipResponses(){
   );
 
 
-  if (
+  if(
     !groups.length
   ){
 
     container.innerHTML =
       `
         <div class="empty">
-          No points currently require ship follow-up.
+
+          No points currently require
+          ship follow-up.
+
         </div>
       `;
 
@@ -1759,7 +1838,99 @@ async function renderAllShipResponses(){
       .join('');
 
 
-  bindShipResponseSaveButtons();
+  bindShipResponseInputs();
+
+}
+
+
+/* =========================================================
+   EXTRACT FOLLOW-UP POINTS
+========================================================= */
+
+function extractFollowUpPoints(
+  report
+){
+
+  const savedState =
+    report
+      ?.report_data
+      ?.state ||
+    {};
+
+
+  const points =
+    [];
+
+
+  SECTIONS.forEach(
+    section => {
+
+      section.items.forEach(
+        (
+          text,
+          index
+        ) => {
+
+          const key =
+            `${section.id}__${index}`;
+
+
+          const item =
+            savedState[key];
+
+
+          if(
+            item &&
+            item.followUpNeeded
+          ){
+
+            points.push({
+
+              key,
+
+              section:
+                section.title,
+
+              text,
+
+              checked:
+                Boolean(
+                  item.checked
+                ),
+
+              comments:
+                Array.isArray(
+                  item.comments
+                )
+                  ? item.comments
+                  : [],
+
+              photos:
+                Array.isArray(
+                  item.photos
+                )
+                  ? item.photos
+                  : [],
+
+              shipComments:
+                Array.isArray(
+                  item.shipComments
+                )
+                  ? item.shipComments
+                  : []
+
+            });
+
+          }
+
+        }
+      );
+
+    }
+  );
+
+
+  return points;
 
 }
 
@@ -1780,21 +1951,18 @@ function renderShipResponseGroup(
     group.points;
 
 
-  const completeCount =
+  const completed =
     points.filter(
       point =>
-
         Array.isArray(
           point.shipComments
         ) &&
-
         point.shipComments.length > 0
-
     ).length;
 
 
-  const complete =
-    completeCount ===
+  const allComplete =
+    completed ===
     points.length;
 
 
@@ -1802,13 +1970,10 @@ function renderShipResponseGroup(
 
     <div
       class="report-card ${
-        complete
+        allComplete
           ? 'green'
           : 'blue'
       }"
-      data-response-report-card="${escapeHtml(
-        report.id
-      )}"
     >
 
       <h3>
@@ -1840,6 +2005,7 @@ function renderShipResponseGroup(
 
         <br>
 
+
         <b>Reviewer:</b>
 
         ${escapeHtml(
@@ -1852,19 +2018,19 @@ function renderShipResponseGroup(
 
         <span
           class="status ${
-            complete
+            allComplete
               ? 'green'
               : 'blue'
           }"
         >
 
           ${
-            complete
+            allComplete
               ? 'SHIP RESPONSE COMPLETE'
               : 'FOLLOW-UP OPEN'
           }
 
-          — ${completeCount}/${points.length}
+          — ${completed}/${points.length}
 
         </span>
 
@@ -1872,20 +2038,22 @@ function renderShipResponseGroup(
 
 
       ${
-        points.map(
-          point =>
-            renderShipResponsePoint(
-              report.id,
-              point
-            )
-        ).join('')
+        points
+          .map(
+            point =>
+              renderShipResponsePoint(
+                report.id,
+                point
+              )
+          )
+          .join('')
       }
 
 
       <button
         type="button"
         class="btn-primary save-ship-response"
-        data-save-ship-response="${escapeHtml(
+        data-report-id="${escapeHtml(
           report.id
         )}"
         style="
@@ -1894,6 +2062,7 @@ function renderShipResponseGroup(
       >
         Save Ship Responses
       </button>
+
 
     </div>
 
@@ -1912,22 +2081,15 @@ function renderShipResponsePoint(
 ){
 
   const shipComments =
-    Array.isArray(
-      point.shipComments
-    )
-      ? point.shipComments
-      : [];
+    point.shipComments || [];
 
 
   return `
 
     <div
       class="response-point"
-      data-response-point="${escapeHtml(
-        point.key
-      )}"
       style="
-        padding:13px 0;
+        padding:14px 0;
         border-top:1px solid var(--vv-line);
       "
     >
@@ -1977,13 +2139,12 @@ function renderShipResponsePoint(
 
 
       ${
-        point.comments &&
         point.comments.length
           ? `
 
             <div
               style="
-                margin-top:9px;
+                margin-top:10px;
               "
             >
 
@@ -1992,6 +2153,7 @@ function renderShipResponsePoint(
                   color:var(--vv-squid);
                   font-size:9px;
                   font-weight:800;
+                  margin-bottom:5px;
                 "
               >
                 REVIEWER COMMENTS
@@ -2011,10 +2173,12 @@ function renderShipResponsePoint(
                       >
 
                         <b>
+
                           ${escapeHtml(
                             comment.name ||
                             'Reviewer'
                           )}:
+
                         </b>
 
                         ${escapeHtml(
@@ -2037,13 +2201,12 @@ function renderShipResponsePoint(
 
 
       ${
-        point.photos &&
         point.photos.length
           ? `
 
             <div
               style="
-                margin-top:9px;
+                margin-top:10px;
               "
             >
 
@@ -2052,6 +2215,7 @@ function renderShipResponsePoint(
                   color:var(--vv-squid);
                   font-size:9px;
                   font-weight:800;
+                  margin-bottom:6px;
                 "
               >
                 REVIEWER PHOTOS
@@ -2063,7 +2227,6 @@ function renderShipResponsePoint(
                   display:flex;
                   flex-wrap:wrap;
                   gap:8px;
-                  margin-top:6px;
                 "
               >
 
@@ -2074,11 +2237,12 @@ function renderShipResponsePoint(
 
                         <div
                           style="
-                            width:100px;
-                            height:100px;
+                            width:105px;
+                            height:105px;
                             overflow:hidden;
                             border:1px solid var(--vv-line);
-                            border-radius:7px;
+                            border-radius:8px;
+                            background:#fff;
                           "
                         >
 
@@ -2114,7 +2278,7 @@ function renderShipResponsePoint(
 
             <div
               style="
-                margin-top:10px;
+                margin-top:11px;
               "
             >
 
@@ -2123,9 +2287,10 @@ function renderShipResponsePoint(
                   color:var(--status-green);
                   font-size:9px;
                   font-weight:800;
+                  margin-bottom:5px;
                 "
               >
-                SHIP COMMENTS
+                EXISTING SHIP COMMENTS
               </div>
 
 
@@ -2142,10 +2307,12 @@ function renderShipResponsePoint(
                       >
 
                         <strong>
+
                           ${escapeHtml(
                             comment.name ||
                             'Ship'
                           )}:
+
                         </strong>
 
                         ${escapeHtml(
@@ -2170,7 +2337,7 @@ function renderShipResponsePoint(
       <div
         class="field"
         style="
-          margin-top:10px;
+          margin-top:11px;
           margin-bottom:0;
         "
       >
@@ -2202,10 +2369,10 @@ function renderShipResponsePoint(
 
 
 /* =========================================================
-   SAVE SHIP RESPONSES
+   SHIP RESPONSE INPUTS
 ========================================================= */
 
-function bindShipResponseSaveButtons(){
+function bindShipResponseInputs(){
 
   document
     .querySelectorAll(
@@ -2214,160 +2381,201 @@ function bindShipResponseSaveButtons(){
     .forEach(
       button => {
 
-        button.onclick =
-        async () => {
+        button.addEventListener(
+          'click',
+          async () => {
 
-          const reportId =
-            button.dataset.saveShipResponse;
-
-
-          const result =
-            await getReport(
-              reportId
+            await saveShipResponseGroup(
+              button.dataset.reportId,
+              button
             );
-
-
-          if (
-            !result.success
-          ){
-
-            alert(
-              'Could not load the report.'
-            );
-
-            return;
 
           }
-
-
-          const report =
-            result.data;
-
-
-          const state =
-            JSON.parse(
-              JSON.stringify(
-                report.report_data?.state ||
-                {}
-              )
-            );
-
-
-          const inputs =
-            document.querySelectorAll(
-              `[data-response-report="${reportId}"]`
-            );
-
-
-          inputs.forEach(
-            input => {
-
-              const key =
-                input.dataset.responseKey;
-
-
-              const text =
-                input.value.trim();
-
-
-              if (
-                !text
-              ){
-
-                return;
-
-              }
-
-
-              if (
-                !state[key]
-              ){
-
-                return;
-
-              }
-
-
-              if (
-                !Array.isArray(
-                  state[key]
-                    .shipComments
-                )
-              ){
-
-                state[key]
-                  .shipComments =
-                  [];
-
-              }
-
-
-              state[key]
-                .shipComments
-                .push({
-
-                  name:'Ship',
-
-                  text,
-
-                  timestamp:
-                    new Date()
-                      .toISOString()
-
-                });
-
-
-              /*
-                Clear input after capturing it.
-              */
-
-              input.value =
-                '';
-
-            }
-          );
-
-
-          const save =
-            await saveShipResponse({
-
-              reportId,
-
-              state
-
-            });
-
-
-          if (
-            !save.success
-          ){
-
-            alert(
-              'Could not save ship responses.\n\n' +
-              (
-                save.error?.message ||
-                'Unknown error'
-              )
-            );
-
-            return;
-
-          }
-
-
-          showToast(
-            save.complete
-              ? 'Ship response complete.'
-              : 'Ship response saved.'
-          );
-
-
-          await renderAllShipResponses();
-
-        };
+        );
 
       }
     );
+
+}
+
+
+/* =========================================================
+   SAVE SHIP RESPONSE GROUP
+========================================================= */
+
+async function saveShipResponseGroup(
+  reportId,
+  button
+){
+
+  if(
+    !reportId
+  ){
+
+    return;
+
+  }
+
+
+  /*
+    Load latest version from Supabase.
+  */
+
+  const result =
+    await getReport(
+      reportId
+    );
+
+
+  if(
+    !result.success ||
+    !result.data
+  ){
+
+    alert(
+      'Could not load report.'
+    );
+
+    return;
+
+  }
+
+
+  const report =
+    result.data;
+
+
+  const state =
+    JSON.parse(
+      JSON.stringify(
+        report
+          .report_data
+          ?.state ||
+        {}
+      )
+    );
+
+
+  /*
+    Find all inputs belonging
+    to this report.
+  */
+
+  document
+    .querySelectorAll(
+      `[data-response-report="${reportId}"]`
+    )
+    .forEach(
+      input => {
+
+        const text =
+          input.value.trim();
+
+
+        if(
+          !text
+        ){
+
+          return;
+
+        }
+
+
+        const key =
+          input.dataset.responseKey;
+
+
+        if(
+          !state[key]
+        ){
+
+          return;
+
+        }
+
+
+        if(
+          !Array.isArray(
+            state[key]
+              .shipComments
+          )
+        ){
+
+          state[key]
+            .shipComments =
+            [];
+
+        }
+
+
+        state[key]
+          .shipComments
+          .push({
+
+            name:
+              'Ship',
+
+            text,
+
+            timestamp:
+              new Date()
+                .toISOString()
+
+          });
+
+
+        input.value =
+          '';
+
+      }
+    );
+
+
+  /*
+    Save complete state back to
+    the same submitted report.
+  */
+
+  const save =
+    await saveShipResponse({
+
+      reportId,
+
+      state
+
+    });
+
+
+  if(
+    !save.success
+  ){
+
+    alert(
+      'Could not save ship responses.\n\n' +
+      (
+        save.error?.message ||
+        'Unknown error'
+      )
+    );
+
+    return;
+
+  }
+
+
+  showToast(
+    save.complete
+      ? 'All ship follow-ups completed.'
+      : 'Ship response saved.'
+  );
+
+
+  /*
+    Refresh screen so the report
+    changes to green when complete.
+  */
+
+  await renderShipResponseReports();
 
 }
 
@@ -2376,19 +2584,19 @@ function bindShipResponseSaveButtons(){
    PDF
 ========================================================= */
 
-function bindPDFEvents(){
+function bindPDFButtons(){
 
-  const pdfButton =
+  const pdf =
     document.getElementById(
       'pdfBtn'
     );
 
 
-  if (
-    pdfButton
+  if(
+    pdf
   ){
 
-    pdfButton.addEventListener(
+    pdf.addEventListener(
       'click',
       () => {
 
@@ -2400,51 +2608,17 @@ function bindPDFEvents(){
   }
 
 
-  /*
-    Alternative button ID.
-  */
-
-  const savePdf =
-    document.getElementById(
-      'savePdfBtn'
-    );
-
-
-  if (
-    savePdf
-  ){
-
-    savePdf.addEventListener(
-      'click',
-      () => {
-
-        generatePDF();
-
-      }
-    );
-
-  }
-
-}
-
-
-/* =========================================================
-   PRINT
-========================================================= */
-
-function bindPrintEvents(){
-
-  const printButton =
+  const print =
     document.getElementById(
       'printBtn'
     );
 
 
-  if (
-    printButton
+  if(
+    print
   ){
 
-    printButton.addEventListener(
+    print.addEventListener(
       'click',
       () => {
 
@@ -2456,72 +2630,6 @@ function bindPrintEvents(){
   }
 
 }
-
-
-/* =========================================================
-   HOME → OPEN REPORTS
-========================================================= */
-
-document
-  .getElementById(
-    'openReport'
-  )
-  ?.addEventListener(
-    'click',
-    async () => {
-
-      await renderOpenReports();
-
-      showScreen(
-        'open'
-      );
-
-    }
-  );
-
-
-/* =========================================================
-   HOME → SUBMITTED REPORTS
-========================================================= */
-
-document
-  .getElementById(
-    'submittedReports'
-  )
-  ?.addEventListener(
-    'click',
-    async () => {
-
-      await renderSubmittedReports();
-
-      showScreen(
-        'submitted'
-      );
-
-    }
-  );
-
-
-/* =========================================================
-   HOME → CREATE REPORT
-========================================================= */
-
-document
-  .getElementById(
-    'createReport'
-  )
-  ?.addEventListener(
-    'click',
-    () => {
-
-      setupDefaultDate();
-
-      showScreen(
-        'setup'
-      );
-
-    }
-  );
 
 
 /* =========================================================
@@ -2556,13 +2664,27 @@ function showToast(
   message
 ){
 
+  if(
+    typeof window.showToast ===
+    'function'
+  ){
+
+    window.showToast(
+      message
+    );
+
+    return;
+
+  }
+
+
   let toast =
     document.getElementById(
       'main-toast'
     );
 
 
-  if (
+  if(
     !toast
   ){
 
@@ -2576,8 +2698,38 @@ function showToast(
       'main-toast';
 
 
-    toast.className =
-      'toast';
+    toast.style.cssText = `
+
+      position:fixed;
+
+      left:50%;
+
+      bottom:90px;
+
+      transform:translateX(-50%);
+
+      z-index:99999;
+
+      max-width:90%;
+
+      padding:10px 15px;
+
+      border-radius:8px;
+
+      background:#1B1B1B;
+
+      color:#fff;
+
+      font-family:Arial,sans-serif;
+
+      font-size:12px;
+
+      box-shadow:
+        0 4px 14px rgba(0,0,0,.25);
+
+      pointer-events:none;
+
+    `;
 
 
     document.body.appendChild(
@@ -2615,7 +2767,7 @@ function showToast(
 
 
 /* =========================================================
-   BROWSER ERROR HANDLER
+   GLOBAL ERROR HANDLING
 ========================================================= */
 
 window.addEventListener(
@@ -2623,7 +2775,7 @@ window.addEventListener(
   event => {
 
     console.error(
-      'Application error:',
+      'Ship Visit Report error:',
       event.error ||
       event.message
     );
@@ -2632,16 +2784,12 @@ window.addEventListener(
 );
 
 
-/* =========================================================
-   UNHANDLED PROMISE HANDLER
-========================================================= */
-
 window.addEventListener(
   'unhandledrejection',
   event => {
 
     console.error(
-      'Unhandled application promise:',
+      'Ship Visit Report promise error:',
       event.reason
     );
 
