@@ -3,14 +3,26 @@
 
   Handles the checklist screen.
 
-  Responsibilities:
-  - Render Culinary / Bar / Restaurant / Procurement / Sanitation
-  - Check and uncheck points
-  - Add reviewer comments
-  - Add photos
-  - Mark Follow-Up Needed from Ship
-  - Display existing ship comments
-  - Save changes to Supabase
+  Each checklist point supports:
+
+  - Checked / Not Checked
+  - Reviewer comments
+  - Reviewer photos
+  - Follow-Up Needed from Ship
+  - Existing Ship comments
+  - Automatic Supabase save
+
+  Data flow:
+
+  Checklist Point
+      |
+      +-- Reviewer Comment(s)
+      |
+      +-- Photo(s)
+      |
+      +-- Follow-Up Needed
+              |
+              +-- Ship Comment(s)
 */
 
 
@@ -39,22 +51,17 @@ import {
 
 
 /* =========================================================
-   MODULE CALLBACKS
+   CALLBACK
 ========================================================= */
 
-/*
-  main.js can register a callback here to update
-  the global application UI after checklist changes.
-*/
-
-let onChecklistChanged = null;
+let checklistChangedCallback = null;
 
 
 export function setChecklistChangedCallback(
   callback
 ) {
 
-  onChecklistChanged =
+  checklistChangedCallback =
     typeof callback === 'function'
       ? callback
       : null;
@@ -63,10 +70,12 @@ export function setChecklistChangedCallback(
 
 
 /* =========================================================
-   ESCAPE HTML
+   HTML ESCAPE
 ========================================================= */
 
-function escapeHtml(value) {
+function escapeHtml(
+  value
+) {
 
   return String(
     value ?? ''
@@ -85,84 +94,36 @@ function escapeHtml(value) {
 
 
 /* =========================================================
-   TOAST
+   MESSAGE
 ========================================================= */
 
 function showMessage(
   message
 ) {
 
-  let element =
-    document.getElementById(
-      'checklist-toast'
+  if (
+    typeof window.showToast ===
+    'function'
+  ) {
+
+    window.showToast(
+      message
     );
 
-
-  if (!element) {
-
-    element =
-      document.createElement(
-        'div'
-      );
-
-
-    element.id =
-      'checklist-toast';
-
-
-    element.style.cssText = `
-      position:fixed;
-      left:50%;
-      bottom:90px;
-      transform:translateX(-50%);
-      z-index:99999;
-      max-width:90%;
-      padding:10px 15px;
-      border-radius:8px;
-      background:#1B1B1B;
-      color:#fff;
-      font-size:12px;
-      box-shadow:0 4px 14px rgba(0,0,0,.25);
-      pointer-events:none;
-    `;
-
-
-    document.body.appendChild(
-      element
-    );
+    return;
 
   }
 
 
-  element.textContent =
-    message;
-
-
-  element.style.display =
-    'block';
-
-
-  clearTimeout(
-    element._timer
+  console.log(
+    message
   );
-
-
-  element._timer =
-    setTimeout(
-      () => {
-
-        element.style.display =
-          'none';
-
-      },
-      2500
-    );
 
 }
 
 
 /* =========================================================
-   SAVE CURRENT REPORT
+   SAVE CURRENT OPEN REPORT
 ========================================================= */
 
 async function saveCurrentReport() {
@@ -171,23 +132,17 @@ async function saveCurrentReport() {
     getReportId();
 
 
-  if (!reportId) {
+  if (
+    !reportId
+  ) {
 
     showMessage(
-      'Start the report before saving checklist changes.'
+      'Report ID is not available yet.'
     );
 
     return false;
 
   }
-
-
-  const meta =
-    getMeta();
-
-
-  const state =
-    getState();
 
 
   const result =
@@ -195,20 +150,30 @@ async function saveCurrentReport() {
 
       reportId,
 
-      meta,
+      meta:
+        getMeta(),
 
-      state
+      state:
+        getState()
 
     });
 
 
   if (
+    !result ||
     !result.success
   ) {
 
-    showMessage(
-      'Could not save the report.'
+    console.error(
+      'Checklist save failed:',
+      result?.error
     );
+
+
+    showMessage(
+      'Could not save report.'
+    );
+
 
     return false;
 
@@ -216,10 +181,23 @@ async function saveCurrentReport() {
 
 
   if (
-    onChecklistChanged
+    checklistChangedCallback
   ) {
 
-    onChecklistChanged();
+    try {
+
+      await checklistChangedCallback(
+        result.data
+      );
+
+    } catch (error) {
+
+      console.error(
+        'Checklist callback failed:',
+        error
+      );
+
+    }
 
   }
 
@@ -230,7 +208,7 @@ async function saveCurrentReport() {
 
 
 /* =========================================================
-   TOTAL COUNTS
+   CHECKLIST COUNTS
 ========================================================= */
 
 export function getChecklistCounts() {
@@ -254,20 +232,20 @@ export function getChecklistCounts() {
   let followUps =
     0;
 
-  let shipResponses =
+  let shipComments =
     0;
 
 
   Object.values(
     state
-  )
-  .forEach(
+  ).forEach(
     item => {
 
       total++;
 
 
       if (
+        item &&
         item.checked
       ) {
 
@@ -276,35 +254,51 @@ export function getChecklistCounts() {
       }
 
 
-      comments +=
+      if (
+        item &&
         Array.isArray(
           item.comments
         )
-          ? item.comments.length
-          : 0;
+      ) {
 
+        comments +=
+          item.comments.length;
 
-      photos +=
-        Array.isArray(
-          item.photos
-        )
-          ? item.photos.length
-          : 0;
+      }
 
 
       if (
+        item &&
+        Array.isArray(
+          item.photos
+        )
+      ) {
+
+        photos +=
+          item.photos.length;
+
+      }
+
+
+      if (
+        item &&
         item.followUpNeeded
       ) {
 
         followUps++;
 
+      }
 
-        shipResponses +=
-          Array.isArray(
-            item.shipComments
-          )
-            ? item.shipComments.length
-            : 0;
+
+      if (
+        item &&
+        Array.isArray(
+          item.shipComments
+        )
+      ) {
+
+        shipComments +=
+          item.shipComments.length;
 
       }
 
@@ -324,7 +318,7 @@ export function getChecklistCounts() {
 
     followUps,
 
-    shipResponses
+    shipComments
 
   };
 
@@ -332,7 +326,7 @@ export function getChecklistCounts() {
 
 
 /* =========================================================
-   SECTION COUNTS
+   SECTION COUNT
 ========================================================= */
 
 function getSectionCount(
@@ -383,7 +377,13 @@ export function renderChecklist() {
     );
 
 
-  if (!container) {
+  if (
+    !container
+  ) {
+
+    console.error(
+      'Checklist container #sections not found.'
+    );
 
     return;
 
@@ -395,7 +395,10 @@ export function renderChecklist() {
 
 
   SECTIONS.forEach(
-    (section,sectionIndex) => {
+    (
+      section,
+      sectionIndex
+    ) => {
 
       const sectionElement =
         createSectionElement(
@@ -428,13 +431,13 @@ function createSectionElement(
   sectionIndex
 ) {
 
-  const sectionElement =
+  const element =
     document.createElement(
       'div'
     );
 
 
-  sectionElement.className =
+  element.className =
     'section' +
     (
       sectionIndex === 0
@@ -443,7 +446,7 @@ function createSectionElement(
     );
 
 
-  sectionElement.innerHTML = `
+  element.innerHTML = `
 
     <div class="section-head">
 
@@ -454,13 +457,7 @@ function createSectionElement(
       </h2>
 
 
-      <div
-        style="
-          display:flex;
-          align-items:center;
-          gap:10px
-        "
-      >
+      <div class="section-right">
 
         <span
           class="section-count"
@@ -486,7 +483,7 @@ function createSectionElement(
 
 
   const header =
-    sectionElement.querySelector(
+    element.querySelector(
       '.section-head'
     );
 
@@ -495,18 +492,16 @@ function createSectionElement(
     'click',
     () => {
 
-      sectionElement
-        .classList
-        .toggle(
-          'open'
-        );
+      element.classList.toggle(
+        'open'
+      );
 
     }
   );
 
 
   const body =
-    sectionElement.querySelector(
+    element.querySelector(
       '.section-body'
     );
 
@@ -537,34 +532,33 @@ function createSectionElement(
 
 
   section.items.forEach(
-    (text,index) => {
+    (
+      text,
+      index
+    ) => {
 
-      const itemElement =
-        createItemElement(
+      body.appendChild(
+        createChecklistItem(
           section,
           text,
           index
-        );
-
-
-      body.appendChild(
-        itemElement
+        )
       );
 
     }
   );
 
 
-  return sectionElement;
+  return element;
 
 }
 
 
 /* =========================================================
-   CREATE CHECKLIST ITEM
+   CREATE ITEM
 ========================================================= */
 
-function createItemElement(
+function createChecklistItem(
   section,
   text,
   index
@@ -638,6 +632,8 @@ function createItemElement(
       id="extra-${key}"
     >
 
+      <!-- REVIEWER COMMENTS -->
+
       <div
         class="comments-list"
         id="comments-${key}"
@@ -663,11 +659,15 @@ function createItemElement(
       </div>
 
 
+      <!-- PHOTOS -->
+
       <div
         class="photos"
         id="photos-${key}"
       ></div>
 
+
+      <!-- FOLLOW-UP -->
 
       <div class="followup-row">
 
@@ -689,17 +689,27 @@ function createItemElement(
       </div>
 
 
+      <!-- EXISTING SHIP COMMENTS -->
+
       <div
         class="ship-comments"
         id="ship-comments-${key}"
       ></div>
 
 
+      <!-- PHOTO INPUT
+
+           IMPORTANT:
+           data-key connects the photo
+           to this exact checklist point.
+      -->
+
       <input
         type="file"
         accept="image/*"
         capture="environment"
-        class="hidden"
+        class="hidden photo-input"
+        data-key="${key}"
         id="photo-input-${key}"
       >
 
@@ -719,9 +729,10 @@ function createItemElement(
 
 function bindChecklistEvents() {
 
-  /*
-    CHECK / UNCHECK
-  */
+
+  /* =======================================================
+     CHECK BUTTONS
+  ======================================================= */
 
   document
     .querySelectorAll(
@@ -741,6 +752,15 @@ function bindChecklistEvents() {
               button.dataset.key;
 
 
+            if (
+              !key
+            ) {
+
+              return;
+
+            }
+
+
             toggleChecked(
               key
             );
@@ -758,9 +778,9 @@ function bindChecklistEvents() {
     );
 
 
-  /*
-    COMMENT OPEN
-  */
+  /* =======================================================
+     COMMENT BUTTONS
+  ======================================================= */
 
   document
     .querySelectorAll(
@@ -780,25 +800,27 @@ function bindChecklistEvents() {
               button.dataset.key;
 
 
-            const extra =
+            openDetailArea(
+              key
+            );
+
+
+            const input =
               document.getElementById(
-                `extra-${key}`
+                `comment-input-${key}`
               );
 
 
-            if (!extra) {
-              return;
+            if (
+              input
+            ) {
+
+              setTimeout(
+                () => input.focus(),
+                50
+              );
+
             }
-
-
-            extra.classList.toggle(
-              'hidden'
-            );
-
-
-            button.classList.toggle(
-              'active'
-            );
 
           }
         );
@@ -807,9 +829,9 @@ function bindChecklistEvents() {
     );
 
 
-  /*
-    PHOTO BUTTON
-  */
+  /* =======================================================
+     PHOTO BUTTONS
+  ======================================================= */
 
   document
     .querySelectorAll(
@@ -850,9 +872,11 @@ function bindChecklistEvents() {
     );
 
 
-  /*
-    PHOTO INPUT
-  */
+  /* =======================================================
+     PHOTO INPUTS
+
+     ONLY ONE CHANGE EVENT PER INPUT.
+  ======================================================= */
 
   document
     .querySelectorAll(
@@ -863,11 +887,15 @@ function bindChecklistEvents() {
 
         input.addEventListener(
           'change',
-          event => {
+          async event => {
 
-            handlePhoto(
+            const key =
+              input.dataset.key;
+
+
+            await handlePhoto(
               event,
-              input.dataset.key
+              key
             );
 
           }
@@ -877,48 +905,9 @@ function bindChecklistEvents() {
     );
 
 
-  /*
-    The CSS class above is not
-    present on the generated file input
-    in some older versions, therefore
-    also bind every file input.
-  */
-
-  document
-    .querySelectorAll(
-      'input[type="file"]'
-    )
-    .forEach(
-      input => {
-
-        input.addEventListener(
-          'change',
-          event => {
-
-            if (
-              !input.dataset.key
-            ) {
-
-              return;
-
-            }
-
-
-            handlePhoto(
-              event,
-              input.dataset.key
-            );
-
-          }
-        );
-
-      }
-    );
-
-
-  /*
-    ADD REVIEWER COMMENT
-  */
+  /* =======================================================
+     REVIEWER COMMENT BUTTONS
+  ======================================================= */
 
   document
     .querySelectorAll(
@@ -944,8 +933,12 @@ function bindChecklistEvents() {
               );
 
 
-            if (!input) {
+            if (
+              !input
+            ) {
+
               return;
+
             }
 
 
@@ -953,7 +946,9 @@ function bindChecklistEvents() {
               input.value.trim();
 
 
-            if (!text) {
+            if (
+              !text
+            ) {
 
               input.focus();
 
@@ -986,9 +981,9 @@ function bindChecklistEvents() {
     );
 
 
-  /*
-    FOLLOW-UP CHECKBOX
-  */
+  /* =======================================================
+     FOLLOW-UP CHECKBOXES
+  ======================================================= */
 
   document
     .querySelectorAll(
@@ -1014,6 +1009,11 @@ function bindChecklistEvents() {
             );
 
 
+            openDetailArea(
+              key
+            );
+
+
             refreshChecklistUI();
 
 
@@ -1029,10 +1029,54 @@ function bindChecklistEvents() {
 
 
 /* =========================================================
+   OPEN DETAIL AREA
+========================================================= */
+
+function openDetailArea(
+  key
+) {
+
+  const extra =
+    document.getElementById(
+      `extra-${key}`
+    );
+
+
+  if (
+    extra
+  ) {
+
+    extra.classList.remove(
+      'hidden'
+    );
+
+  }
+
+
+  const noteButton =
+    document.querySelector(
+      `.note-button[data-key="${key}"]`
+    );
+
+
+  if (
+    noteButton
+  ) {
+
+    noteButton.classList.add(
+      'active'
+    );
+
+  }
+
+}
+
+
+/* =========================================================
    PHOTO HANDLER
 ========================================================= */
 
-function handlePhoto(
+async function handlePhoto(
   event,
   key
 ) {
@@ -1050,124 +1094,236 @@ function handlePhoto(
   }
 
 
+  if (
+    !key
+  ) {
+
+    console.error(
+      'Photo key is missing.'
+    );
+
+    return;
+
+  }
+
+
   /*
-    Large images are resized before
-    being saved so the report remains
-    manageable.
+    Make sure this point's
+    detail area is visible.
   */
 
-  const reader =
-    new FileReader();
+  openDetailArea(
+    key
+  );
 
 
-  reader.onload =
-    readerEvent => {
+  try {
 
-      const image =
-        new Image();
-
-
-      image.onload =
-        async () => {
-
-          const maxWidth =
-            1000;
+    const dataUrl =
+      await compressImage(
+        file
+      );
 
 
-          const scale =
-            Math.min(
-              1,
-              maxWidth /
-              image.width
-            );
+    addPhoto(
+      key,
+      dataUrl
+    );
 
 
-          const canvas =
-            document.createElement(
-              'canvas'
-            );
+    renderPhotos(
+      key
+    );
 
 
-          canvas.width =
-            Math.round(
-              image.width *
-              scale
-            );
+    await saveCurrentReport();
 
 
-          canvas.height =
-            Math.round(
-              image.height *
-              scale
-            );
+    showMessage(
+      'Photo added.'
+    );
+
+  } catch (error) {
+
+    console.error(
+      'Photo processing failed:',
+      error
+    );
 
 
-          const context =
-            canvas.getContext(
-              '2d'
-            );
+    showMessage(
+      'Could not add photo.'
+    );
+
+  } finally {
+
+    /*
+      Allows the SAME photo to be
+      selected again later.
+    */
+
+    event.target.value =
+      '';
+
+  }
+
+}
 
 
-          context.drawImage(
-            image,
-            0,
-            0,
-            canvas.width,
-            canvas.height
-          );
+/* =========================================================
+   IMAGE COMPRESSION
+========================================================= */
+
+function compressImage(
+  file
+) {
+
+  return new Promise(
+    (
+      resolve,
+      reject
+    ) => {
+
+      const reader =
+        new FileReader();
 
 
-          const dataUrl =
-            canvas.toDataURL(
-              'image/jpeg',
-              .78
-            );
+      reader.onload =
+        event => {
+
+          const image =
+            new Image();
 
 
-          addPhoto(
-            key,
-            dataUrl
-          );
+          image.onload =
+            () => {
+
+              const maxWidth =
+                1200;
 
 
-          renderPhotos(
-            key
-          );
+              const scale =
+                Math.min(
+                  1,
+                  maxWidth /
+                  image.width
+                );
 
 
-          /*
-            Photo automatically opens
-            the point detail area.
-          */
-
-          document
-            .getElementById(
-              `extra-${key}`
-            )
-            ?.classList
-            .remove(
-              'hidden'
-            );
+              const width =
+                Math.max(
+                  1,
+                  Math.round(
+                    image.width *
+                    scale
+                  )
+                );
 
 
-          await saveCurrentReport();
+              const height =
+                Math.max(
+                  1,
+                  Math.round(
+                    image.height *
+                    scale
+                  )
+                );
+
+
+              const canvas =
+                document.createElement(
+                  'canvas'
+                );
+
+
+              canvas.width =
+                width;
+
+
+              canvas.height =
+                height;
+
+
+              const context =
+                canvas.getContext(
+                  '2d'
+                );
+
+
+              if (
+                !context
+              ) {
+
+                reject(
+                  new Error(
+                    'Could not create image canvas.'
+                  )
+                );
+
+                return;
+
+              }
+
+
+              context.drawImage(
+                image,
+                0,
+                0,
+                width,
+                height
+              );
+
+
+              const output =
+                canvas.toDataURL(
+                  'image/jpeg',
+                  0.78
+                );
+
+
+              resolve(
+                output
+              );
+
+            };
+
+
+          image.onerror =
+            () => {
+
+              reject(
+                new Error(
+                  'Could not read image.'
+                )
+              );
+
+            };
+
+
+          image.src =
+            event.target.result;
 
         };
 
 
-      image.src =
-        readerEvent.target.result;
+      reader.onerror =
+        () => {
 
-    };
+          reject(
+            new Error(
+              'Could not read selected file.'
+            )
+          );
+
+        };
 
 
-  reader.readAsDataURL(
-    file
+      reader.readAsDataURL(
+        file
+      );
+
+    }
   );
-
-
-  event.target.value =
-    '';
 
 }
 
@@ -1219,30 +1375,32 @@ function renderComments(
 
 
   container.innerHTML =
-    comments
-      .map(
-        comment => `
+    comments.length
+      ? comments
+          .map(
+            comment => `
 
-          <div class="comment">
+              <div class="comment">
 
-            <b>
-              ${escapeHtml(
-                comment.name ||
-                getReviewer() ||
-                'Reviewer'
-              )}:
-            </b>
+                <b>
+                  ${escapeHtml(
+                    comment.name ||
+                    getReviewer() ||
+                    'Reviewer'
+                  )}:
+                </b>
 
-            ${escapeHtml(
-              comment.text ||
-              ''
-            )}
+                ${escapeHtml(
+                  comment.text ||
+                  ''
+                )}
 
-          </div>
+              </div>
 
-        `
-      )
-      .join('');
+            `
+          )
+          .join('')
+      : '';
 
 }
 
@@ -1298,7 +1456,10 @@ function renderPhotos(
 
 
   photos.forEach(
-    (photo,index) => {
+    (
+      photo,
+      index
+    ) => {
 
       const wrapper =
         document.createElement(
@@ -1340,6 +1501,12 @@ function renderPhotos(
 
       remove.textContent =
         '×';
+
+
+      remove.setAttribute(
+        'aria-label',
+        'Remove photo'
+      );
 
 
       remove.addEventListener(
@@ -1449,15 +1616,17 @@ function renderShipComments(
 
     <div
       style="
-        margin-top:10px;
+        margin-top:11px;
+        margin-bottom:5px;
         color:var(--vv-squid);
         font-size:10px;
         font-weight:800;
         letter-spacing:.04em;
       "
     >
-      SHIP COMMENTS
+      SHIP COMMENTS / RESPONSES
     </div>
+
 
     ${
       comments
@@ -1471,12 +1640,12 @@ function renderShipComments(
               "
             >
 
-              <b>
+              <strong>
                 ${escapeHtml(
                   comment.name ||
                   'Ship'
                 )}:
-              </b>
+              </strong>
 
               ${escapeHtml(
                 comment.text ||
@@ -1496,80 +1665,27 @@ function renderShipComments(
 
 
 /* =========================================================
-   REFRESH WHOLE UI
+   REFRESH UI
 ========================================================= */
 
 export function refreshChecklistUI() {
 
-  const counts =
-    getChecklistCounts();
+  const state =
+    getState();
 
 
-  const progressElement =
-    document.getElementById(
-      'progress'
-    );
+  let total =
+    0;
 
-
-  const fillElement =
-    document.getElementById(
-      'fill'
-    );
-
-
-  if (
-    progressElement
-  ) {
-
-    progressElement.textContent =
-      `${counts.checked} of ${counts.total} points reviewed`;
-
-  }
-
-
-  if (
-    fillElement
-  ) {
-
-    const percentage =
-      counts.total
-        ? Math.round(
-            counts.checked /
-            counts.total *
-            100
-          )
-        : 0;
-
-
-    fillElement.style.width =
-      `${percentage}%`;
-
-  }
+  let checked =
+    0;
 
 
   SECTIONS.forEach(
     section => {
 
-      const checked =
-        getSectionCount(
-          section
-        );
-
-
-      const counter =
-        document.getElementById(
-          `count-${section.id}`
-        );
-
-
-      if (
-        counter
-      ) {
-
-        counter.textContent =
-          `${checked}/${section.items.length}`;
-
-      }
+      let sectionChecked =
+        0;
 
 
       section.items.forEach(
@@ -1580,9 +1696,7 @@ export function refreshChecklistUI() {
 
 
           const item =
-            getItem(
-              key
-            );
+            state[key];
 
 
           if (
@@ -1594,21 +1708,35 @@ export function refreshChecklistUI() {
           }
 
 
+          total++;
+
+
+          if (
+            item.checked
+          ) {
+
+            checked++;
+
+            sectionChecked++;
+
+          }
+
+
           /*
-            Check button
+            CHECK
           */
 
-          const check =
+          const checkButton =
             document.querySelector(
               `.check-btn[data-key="${key}"]`
             );
 
 
           if (
-            check
+            checkButton
           ) {
 
-            check.classList.toggle(
+            checkButton.classList.toggle(
               'checked',
               Boolean(
                 item.checked
@@ -1619,7 +1747,7 @@ export function refreshChecklistUI() {
 
 
           /*
-            Follow-up checkbox
+            FOLLOW-UP
           */
 
           const followup =
@@ -1641,7 +1769,7 @@ export function refreshChecklistUI() {
 
 
           /*
-            Follow-up label
+            FOLLOW-UP LABEL
           */
 
           const label =
@@ -1655,11 +1783,13 @@ export function refreshChecklistUI() {
           ) {
 
             const complete =
-              item.followUpNeeded &&
-              Array.isArray(
-                item.shipComments
-              ) &&
-              item.shipComments.length > 0;
+              Boolean(
+                item.followUpNeeded &&
+                Array.isArray(
+                  item.shipComments
+                ) &&
+                item.shipComments.length > 0
+              );
 
 
             label.classList.toggle(
@@ -1669,6 +1799,10 @@ export function refreshChecklistUI() {
 
           }
 
+
+          /*
+            CONTENT
+          */
 
           renderComments(
             key
@@ -1686,83 +1820,158 @@ export function refreshChecklistUI() {
 
 
           /*
-            Automatically open the
-            detail area when there is
+            Open details whenever
+            the point already contains
             content.
           */
 
-          if(
-            (
-              item.comments &&
-              item.comments.length
-            ) ||
+          if (
 
             (
-              item.photos &&
-              item.photos.length
-            ) ||
-
-            item.followUpNeeded ||
-
-            (
-              item.shipComments &&
-              item.shipComments.length
+              Array.isArray(
+                item.comments
+              ) &&
+              item.comments.length > 0
             )
-          ){
 
-            document
-              .getElementById(
-                `extra-${key}`
-              )
-              ?.classList
-              .remove(
-                'hidden'
-              );
+            ||
+
+            (
+              Array.isArray(
+                item.photos
+              ) &&
+              item.photos.length > 0
+            )
+
+            ||
+
+            item.followUpNeeded
+
+            ||
+
+            (
+              Array.isArray(
+                item.shipComments
+              ) &&
+              item.shipComments.length > 0
+            )
+
+          ) {
+
+            openDetailArea(
+              key
+            );
 
           }
 
         }
       );
 
+
+      /*
+        SECTION COUNT
+      */
+
+      const counter =
+        document.getElementById(
+          `count-${section.id}`
+        );
+
+
+      if (
+        counter
+      ) {
+
+        counter.textContent =
+          `${sectionChecked}/${section.items.length}`;
+
+      }
+
     }
   );
+
+
+  /*
+    GLOBAL PROGRESS
+  */
+
+  const fill =
+    document.getElementById(
+      'fill'
+    );
+
+
+  const progress =
+    document.getElementById(
+      'progress'
+    );
+
+
+  const percentage =
+    total
+      ? Math.round(
+          checked /
+          total *
+          100
+        )
+      : 0;
+
+
+  if (
+    fill
+  ) {
+
+    fill.style.width =
+      `${percentage}%`;
+
+  }
+
+
+  if (
+    progress
+  ) {
+
+    progress.textContent =
+      `${checked} of ${total} points reviewed`;
+
+  }
 
 }
 
 
 /* =========================================================
-   UPDATE CHECKLIST META
+   UPDATE HEADER
 ========================================================= */
 
-export function updateChecklistHeader(){
+export function updateChecklistHeader() {
 
   const meta =
     getMeta();
 
 
-  const shipElement =
+  const ship =
     document.getElementById(
       'hdrShip'
     );
 
 
-  const reviewerElement =
+  const reviewer =
     document.getElementById(
       'hdrReviewer'
     );
 
 
-  const visitElement =
+  const visit =
     document.getElementById(
       'visitMeta'
     );
 
 
   if (
-    shipElement
-  ){
+    ship
+  ) {
 
-    shipElement.textContent =
+    ship.textContent =
       (
         meta.ship ||
         ''
@@ -1772,10 +1981,10 @@ export function updateChecklistHeader(){
 
 
   if (
-    reviewerElement
-  ){
+    reviewer
+  ) {
 
-    reviewerElement.value =
+    reviewer.value =
       getReviewer() ||
       meta.reviewer ||
       '';
@@ -1784,10 +1993,10 @@ export function updateChecklistHeader(){
 
 
   if (
-    visitElement
-  ){
+    visit
+  ) {
 
-    visitElement.textContent =
+    visit.textContent =
       `${meta.dateOn || ''}` +
       (
         meta.dateOff
@@ -1801,79 +2010,27 @@ export function updateChecklistHeader(){
 
 
 /* =========================================================
-   CLEAR CHECKLIST UI
+   GET FOLLOW-UP POINTS
 ========================================================= */
 
-export function clearChecklistUI(){
-
-  const container =
-    document.getElementById(
-      'sections'
-    );
-
-
-  if (
-    container
-  ){
-
-    container.innerHTML =
-      '';
-
-  }
-
-
-  const fill =
-    document.getElementById(
-      'fill'
-    );
-
-
-  if (
-    fill
-  ){
-
-    fill.style.width =
-      '0%';
-
-  }
-
-
-  const progress =
-    document.getElementById(
-      'progress'
-    );
-
-
-  if (
-    progress
-  ){
-
-    progress.textContent =
-      '0 points reviewed';
-
-  }
-
-}
-
-
-/* =========================================================
-   GET REVIEW FOLLOW-UP POINTS
-========================================================= */
-
-export function getChecklistFollowUps(){
-
-  const result = [];
-
+export function getChecklistFollowUps() {
 
   const state =
     getState();
+
+
+  const points =
+    [];
 
 
   SECTIONS.forEach(
     section => {
 
       section.items.forEach(
-        (text,index) => {
+        (
+          text,
+          index
+        ) => {
 
           const key =
             `${section.id}__${index}`;
@@ -1883,12 +2040,12 @@ export function getChecklistFollowUps(){
             state[key];
 
 
-          if(
+          if (
             item &&
             item.followUpNeeded
-          ){
+          ) {
 
-            result.push({
+            points.push({
 
               key,
 
@@ -1896,6 +2053,11 @@ export function getChecklistFollowUps(){
                 section.title,
 
               text,
+
+              checked:
+                Boolean(
+                  item.checked
+                ),
 
               comments:
                 Array.isArray(
@@ -1929,18 +2091,159 @@ export function getChecklistFollowUps(){
   );
 
 
-  return result;
+  return points;
 
 }
 
 
 /* =========================================================
-   SAVE BEFORE LEAVING CHECKLIST
+   GET ALL POINTS
 ========================================================= */
 
-export async function saveChecklist(){
+export function getAllChecklistPoints() {
+
+  const state =
+    getState();
+
+
+  const points =
+    [];
+
+
+  SECTIONS.forEach(
+    section => {
+
+      section.items.forEach(
+        (
+          text,
+          index
+        ) => {
+
+          const key =
+            `${section.id}__${index}`;
+
+
+          const item =
+            state[key];
+
+
+          points.push({
+
+            key,
+
+            section:
+              section.title,
+
+            text,
+
+            checked:
+              Boolean(
+                item?.checked
+              ),
+
+            comments:
+              Array.isArray(
+                item?.comments
+              )
+                ? item.comments
+                : [],
+
+            photos:
+              Array.isArray(
+                item?.photos
+              )
+                ? item.photos
+                : [],
+
+            followUpNeeded:
+              Boolean(
+                item?.followUpNeeded
+              ),
+
+            shipComments:
+              Array.isArray(
+                item?.shipComments
+              )
+                ? item.shipComments
+                : []
+
+          });
+
+        }
+      );
+
+    }
+  );
+
+
+  return points;
+
+}
+
+
+/* =========================================================
+   SAVE CHECKLIST
+========================================================= */
+
+export async function saveChecklist() {
 
   return saveCurrentReport();
+
+}
+
+
+/* =========================================================
+   CLEAR CHECKLIST
+========================================================= */
+
+export function clearChecklistUI() {
+
+  const container =
+    document.getElementById(
+      'sections'
+    );
+
+
+  if (
+    container
+  ) {
+
+    container.innerHTML =
+      '';
+
+  }
+
+
+  const fill =
+    document.getElementById(
+      'fill'
+    );
+
+
+  if (
+    fill
+  ) {
+
+    fill.style.width =
+      '0%';
+
+  }
+
+
+  const progress =
+    document.getElementById(
+      'progress'
+    );
+
+
+  if (
+    progress
+  ) {
+
+    progress.textContent =
+      '0 of 0 points reviewed';
+
+  }
 
 }
 
@@ -1962,6 +2265,8 @@ export default {
   getChecklistCounts,
 
   getChecklistFollowUps,
+
+  getAllChecklistPoints,
 
   saveChecklist,
 
