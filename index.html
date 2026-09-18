@@ -1,89 +1,952 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
+
 <head>
+
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1.0">
-  <title>Ship Visit Report</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <link rel="stylesheet" href="./css/style.css">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <title>
+    Virgin Voyages — Ship Visit Report
+  </title>
+
+
+  <!-- =====================================================
+       FONT
+  ====================================================== -->
+
+  <link
+    rel="preconnect"
+    href="https://fonts.googleapis.com"
+  >
+
+  <link
+    href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap"
+    rel="stylesheet"
+  >
+
+
+  <!-- =====================================================
+       PDF LIBRARY
+  ====================================================== -->
+
+  <script
+    src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"
+  ></script>
+
+
+  <!-- =====================================================
+       GLOBAL STYLES
+  ====================================================== -->
+
+  <link
+    rel="stylesheet"
+    href="./css/style.css"
+  >
+
 </head>
+
+
 <body>
-<div class="app">
 
-<section id="home" class="screen">
-  <div class="band">
-    <div class="eyebrow">— VIRGIN VOYAGES</div>
-    <h1>Ship Visit Report</h1>
-    <p class="sub">Create, review and manage ship visit reports.</p>
-  </div>
-  <div class="home-grid">
-    <button class="home-card" id="createReport"><h2>CREATE REPORT</h2><p>Start a new ship visit report.</p></button>
-    <button class="home-card" id="openReports"><h2>OPEN REPORTS</h2><p>Continue reports that have been started but not submitted.</p></button>
-    <button class="home-card" id="submittedReports"><h2>SUBMITTED REPORTS</h2><p>Review submitted reports and follow-up status.</p></button>
-  </div>
-</section>
+<div id="app">
 
-<section id="setup" class="screen hidden">
-  <div class="band compact"><div class="eyebrow">— CREATE REPORT</div><h1>Ship Visit Details</h1><p class="sub">Enter the visit information.</p></div>
-  <div class="pad">
-    <div class="field"><label>SHIP</label><input id="ship" placeholder="e.g. Valiant Lady"></div>
-    <div class="field"><label>DATE ON</label><input id="dateOn" type="date"></div>
-    <div class="field"><label>DATE OFF</label><input id="dateOff" type="date"></div>
-    <div class="field"><label>REVIEWER</label><input id="reviewer" placeholder="Your name"></div>
-    <button class="btn-primary" id="startBtn">Create Report</button>
-    <button class="btn-secondary mt10" id="setupHome">Back to Home</button>
-  </div>
-</section>
 
-<section id="open" class="screen hidden">
-  <div class="band compact"><div class="eyebrow">— OPEN REPORTS</div><h1>Open Reports</h1><p class="sub">Reports started but not submitted.</p></div>
-  <div class="reports"><div id="openList"></div><button class="btn-secondary" id="openHome">Back to Home</button></div>
-</section>
+  <!-- =====================================================
+       HOME
+  ====================================================== -->
 
-<section id="checklist" class="screen hidden">
-  <div class="band compact">
-    <div class="eyebrow">— <span id="hdrShip"></span></div>
-    <h1>Ship Visit Report</h1>
-    <div class="reviewer-row"><label>REVIEWER</label><input id="hdrReviewer"></div>
-  </div>
-  <div class="meta"><strong>Visit:</strong> <span id="visitMeta"></span></div>
-  <div class="progress-wrap"><div class="progress-bar"><div id="fill" class="progress-fill"></div></div><div id="progress" class="progress-label">0 of 0 points reviewed</div></div>
-  <div id="sections"></div>
-  <div class="footer no-print"><div class="grid2"><button class="btn-secondary" id="checklistHome">Home</button><button class="btn-primary" id="shipReviewBtn">Ship Review</button></div></div>
-</section>
+  <section
+    id="home"
+    class="screen"
+  >
 
-<section id="shipReview" class="screen hidden">
-  <div class="band compact"><div class="eyebrow">— SHIP REVIEW</div><h1 id="shipReviewTitle">Ship Review</h1><p class="sub" id="shipReviewMeta"></p></div>
-  <div class="review-page">
-    <div class="review-summary" id="reviewSummary"></div>
-    <div id="followupList"></div>
-  </div>
-  <div class="footer no-print"><div class="grid2"><button class="btn-secondary" id="reviewBack">Back to Checklist</button><button class="btn-primary" id="submitBtn">Submit Report</button></div></div>
-</section>
+    <div class="band">
 
-<section id="summary" class="screen hidden">
-  <div class="band compact"><div class="eyebrow">— REPORT OVERALL</div><h1 id="sumTitle">Report Overall</h1><p class="sub" id="sumMeta"></p></div>
-  <div class="summary"><div class="stats" id="stats"></div><div id="overallContent"></div></div>
-  <div class="footer no-print"><div class="grid2"><button class="btn-secondary" id="summaryBack">Back</button><button class="btn-secondary" id="pdfBtn">Save PDF</button></div><button class="btn-secondary mt10" id="printBtn">Print Report</button></div>
-</section>
+      <div class="eyebrow">
+        — VIRGIN VOYAGES
+      </div>
 
-<section id="submitted" class="screen hidden">
-  <div class="band compact"><div class="eyebrow">— SUBMITTED REPORTS</div><h1>Report Archive</h1><p class="sub">Every submitted report has two review views.</p></div>
-  <div class="reports"><div id="submittedList"></div><button class="btn-secondary" id="submittedHome">Back to Home</button></div>
-</section>
+      <h1>
+        Ship Visit Report
+      </h1>
 
-<section id="followups" class="screen hidden">
-  <div class="band compact"><div class="eyebrow">— POINTS TO FOLLOW UP</div><h1 id="followTitle">Points to Follow Up</h1><p class="sub" id="followMeta"></p></div>
-  <div class="review-page"><div id="followOnlyList"></div></div>
-  <div class="footer no-print"><div class="grid2"><button class="btn-secondary" id="followBack">Back</button><button class="btn-secondary" id="followPdf">Save PDF</button></div></div>
-</section>
+      <p class="sub">
+        Create, review and manage ship visit reports.
+      </p>
+
+    </div>
+
+
+    <div class="home">
+
+      <div class="home-grid">
+
+
+        <!-- CREATE -->
+
+        <button
+          type="button"
+          id="createReport"
+          class="home-card"
+        >
+
+          <h2>
+            CREATE REPORT
+          </h2>
+
+          <p>
+            Start a new ship visit report.
+          </p>
+
+        </button>
+
+
+        <!-- OPEN -->
+
+        <button
+          type="button"
+          id="openReport"
+          class="home-card"
+        >
+
+          <h2>
+            OPEN REPORTS
+          </h2>
+
+          <p>
+            Continue reports that have been started but not submitted.
+          </p>
+
+        </button>
+
+
+        <!-- SUBMITTED -->
+
+        <button
+          type="button"
+          id="submittedReports"
+          class="home-card"
+        >
+
+          <h2>
+            SUBMITTED REPORTS
+          </h2>
+
+          <p>
+            Review completed ship visit reports.
+          </p>
+
+        </button>
+
+
+        <!-- SHIP RESPONSE -->
+
+        <button
+          type="button"
+          id="shipResponseReport"
+          class="home-card"
+        >
+
+          <h2>
+            SHIP RESPONSE REPORT
+          </h2>
+
+          <p>
+            Review and respond to points marked for ship follow-up.
+          </p>
+
+        </button>
+
+
+      </div>
+
+    </div>
+
+  </section>
+
+
+  <!-- =====================================================
+       CREATE REPORT
+  ====================================================== -->
+
+  <section
+    id="setup"
+    class="screen hidden"
+  >
+
+    <div class="band compact">
+
+      <div class="eyebrow">
+        — CREATE REPORT
+      </div>
+
+      <h1>
+        Ship Visit Details
+      </h1>
+
+      <p class="sub">
+        Enter the visit information.
+      </p>
+
+    </div>
+
+
+    <div class="page-pad">
+
+
+      <div class="field">
+
+        <label for="ship">
+          SHIP
+        </label>
+
+        <input
+          id="ship"
+          type="text"
+          placeholder="e.g. Valiant Lady"
+        >
+
+      </div>
+
+
+      <div class="field">
+
+        <label for="dateOn">
+          DATE ON
+        </label>
+
+        <input
+          id="dateOn"
+          type="date"
+        >
+
+      </div>
+
+
+      <div class="field">
+
+        <label for="dateOff">
+          DATE OFF
+        </label>
+
+        <input
+          id="dateOff"
+          type="date"
+        >
+
+      </div>
+
+
+      <div class="field">
+
+        <label for="reviewer">
+          REVIEWER
+        </label>
+
+        <input
+          id="reviewer"
+          type="text"
+          placeholder="Reviewer name"
+        >
+
+      </div>
+
+
+      <button
+        type="button"
+        id="startBtn"
+        class="btn-primary"
+      >
+        Start Report
+      </button>
+
+
+      <div style="height:10px"></div>
+
+
+      <button
+        type="button"
+        id="setupHome"
+        class="btn-secondary"
+      >
+        Back to Home
+      </button>
+
+
+    </div>
+
+  </section>
+
+
+  <!-- =====================================================
+       CHECKLIST
+  ====================================================== -->
+
+  <section
+    id="checklist"
+    class="screen hidden"
+  >
+
+    <div class="band compact">
+
+      <div class="eyebrow">
+
+        —
+
+        <span id="hdrShip">
+        </span>
+
+      </div>
+
+
+      <h1>
+        Ship Visit Report
+      </h1>
+
+
+      <div class="reviewer-row">
+
+        <label for="hdrReviewer">
+          REVIEWER
+        </label>
+
+
+        <input
+          id="hdrReviewer"
+          type="text"
+          placeholder="Reviewer"
+        >
+
+      </div>
+
+    </div>
+
+
+    <div class="meta">
+
+      <strong>
+        Visit:
+      </strong>
+
+      <span
+        id="visitMeta"
+      ></span>
+
+    </div>
+
+
+    <div class="progress-wrap">
+
+      <div class="progress-bar">
+
+        <div
+          id="fill"
+          class="progress-fill"
+        ></div>
+
+      </div>
+
+
+      <div
+        id="progress"
+        class="progress-label"
+      >
+        0 of 0 points reviewed
+      </div>
+
+    </div>
+
+
+    <!--
+      checklist.js renders the five
+      department sections here.
+    -->
+
+    <div
+      id="sections"
+    ></div>
+
+
+    <div class="footer no-print">
+
+      <button
+        type="button"
+        id="summaryBtn"
+        class="btn-primary"
+      >
+        Generate Summary
+      </button>
+
+
+      <div style="height:9px"></div>
+
+
+      <button
+        type="button"
+        id="shipReviewBtn"
+        class="btn-secondary"
+      >
+        Ship Review
+      </button>
+
+    </div>
+
+  </section>
+
+
+  <!-- =====================================================
+       SHIP REVIEW
+  ====================================================== -->
+
+  <section
+    id="review"
+    class="screen hidden"
+  >
+
+    <div class="band compact">
+
+      <div class="eyebrow">
+        — SHIP REVIEW
+      </div>
+
+      <h1>
+        Ship Review
+      </h1>
+
+      <p class="sub">
+        Review the findings and follow-up points before submission.
+      </p>
+
+    </div>
+
+
+    <div class="page-pad">
+
+
+      <!--
+        Review module places the
+        follow-up findings here.
+      -->
+
+      <div
+        id="ship-review-content"
+      ></div>
+
+
+      <div
+        style="
+          height:20px;
+        "
+      ></div>
+
+
+      <!--
+        Complete report review.
+      -->
+
+      <div
+        id="ship-review-all"
+      ></div>
+
+
+    </div>
+
+
+    <div class="footer no-print">
+
+
+      <div class="grid2">
+
+        <button
+          type="button"
+          id="reviewBackBtn"
+          class="btn-secondary"
+        >
+          Back to Checklist
+        </button>
+
+
+        <button
+          type="button"
+          id="reviewSubmitBtn"
+          class="btn-primary"
+        >
+          Submit Report
+        </button>
+
+      </div>
+
+
+    </div>
+
+  </section>
+
+
+  <!-- =====================================================
+       OVERALL REPORT
+  ====================================================== -->
+
+  <section
+    id="summary"
+    class="screen hidden"
+  >
+
+    <div class="band compact">
+
+      <div class="eyebrow">
+        — REPORT OVERALL
+      </div>
+
+      <h1
+        id="sumTitle"
+      >
+        Report Overall
+      </h1>
+
+      <p
+        class="sub"
+        id="sumMeta"
+      ></p>
+
+    </div>
+
+
+    <div class="summary">
+
+
+      <!--
+        Reports module renders the complete
+        report here.
+      -->
+
+      <div
+        id="report-overall-content"
+      ></div>
+
+
+      <!--
+        Legacy/current summary controls
+        are retained for PDF generation.
+      -->
+
+      <div class="hidden">
+
+        <div
+          id="stats"
+        ></div>
+
+
+        <textarea
+          id="overall"
+          rows="5"
+        ></textarea>
+
+
+        <div
+          id="sumSections"
+        ></div>
+
+      </div>
+
+
+    </div>
+
+
+    <div class="footer no-print">
+
+      <div class="grid2">
+
+
+        <button
+          type="button"
+          id="summaryShipReviewBtn"
+          class="btn-secondary"
+        >
+          Ship Review
+        </button>
+
+
+        <button
+          type="button"
+          id="pdfBtn"
+          class="btn-secondary"
+        >
+          Save PDF
+        </button>
+
+
+      </div>
+
+
+      <div style="height:9px"></div>
+
+
+      <div class="grid2">
+
+
+        <button
+          type="button"
+          id="printBtn"
+          class="btn-secondary"
+        >
+          Print Report
+        </button>
+
+
+        <button
+          type="button"
+          id="summaryHomeBtn"
+          class="btn-secondary"
+        >
+          Back to Home
+        </button>
+
+
+      </div>
+
+    </div>
+
+  </section>
+
+
+  <!-- =====================================================
+       FOLLOW-UP VIEW
+  ====================================================== -->
+
+  <section
+    id="followups"
+    class="screen hidden"
+  >
+
+    <div class="band compact">
+
+      <div class="eyebrow">
+        — POINTS TO FOLLOW UP
+      </div>
+
+      <h1>
+        Points to Follow Up
+      </h1>
+
+      <p class="sub">
+        Review findings requiring ship follow-up.
+      </p>
+
+    </div>
+
+
+    <div class="summary">
+
+
+      <!--
+        Reports module renders all
+        follow-up points here.
+      -->
+
+      <div
+        id="report-followups-content"
+      ></div>
+
+
+    </div>
+
+
+    <div class="footer no-print">
+
+      <div class="grid2">
+
+
+        <button
+          type="button"
+          id="followupsHomeBtn"
+          class="btn-secondary"
+        >
+          Back to Home
+        </button>
+
+
+        <button
+          type="button"
+          id="followupPdfBtn"
+          class="btn-primary"
+        >
+          Save Follow-Up PDF
+        </button>
+
+
+      </div>
+
+
+      <div style="height:9px"></div>
+
+
+      <button
+        type="button"
+        id="followupPrintBtn"
+        class="btn-secondary"
+      >
+        Print Follow-Up Report
+      </button>
+
+
+    </div>
+
+  </section>
+
+
+  <!-- =====================================================
+       OPEN REPORTS
+  ====================================================== -->
+
+  <section
+    id="open"
+    class="screen hidden"
+  >
+
+    <div class="band compact">
+
+      <div class="eyebrow">
+        — OPEN REPORTS
+      </div>
+
+      <h1>
+        Open Reports
+      </h1>
+
+      <p class="sub">
+        Reports currently in progress.
+      </p>
+
+    </div>
+
+
+    <div class="reports">
+
+
+      <!-- reports.js renders here -->
+
+      <div
+        id="openList"
+      ></div>
+
+
+      <button
+        type="button"
+        id="openHomeBtn"
+        class="btn-secondary"
+      >
+        Back to Home
+      </button>
+
+
+    </div>
+
+  </section>
+
+
+  <!-- =====================================================
+       SUBMITTED REPORTS
+  ====================================================== -->
+
+  <section
+    id="submitted"
+    class="screen hidden"
+  >
+
+    <div class="band compact">
+
+      <div class="eyebrow">
+        — SUBMITTED REPORTS
+      </div>
+
+      <h1>
+        Submitted Reports
+      </h1>
+
+      <p class="sub">
+        Review completed ship visit reports.
+      </p>
+
+    </div>
+
+
+    <div class="reports">
+
+
+      <!-- reports.js renders here -->
+
+      <div
+        id="reportList"
+      ></div>
+
+
+      <button
+        type="button"
+        id="reportsHomeBtn"
+        class="btn-secondary"
+      >
+        Back to Home
+      </button>
+
+
+    </div>
+
+  </section>
+
+
+  <!-- =====================================================
+       SHIP RESPONSE REPORT
+  ====================================================== -->
+
+  <section
+    id="responses"
+    class="screen hidden"
+  >
+
+    <div class="band compact">
+
+      <div class="eyebrow">
+        — SHIP RESPONSE REPORT
+      </div>
+
+      <h1>
+        Ship Response Report
+      </h1>
+
+      <p class="sub">
+        Review and answer points requiring ship follow-up.
+      </p>
+
+    </div>
+
+
+    <div class="reports">
+
+
+      <!--
+        main.js / reports.js populate this
+        with all submitted reports that
+        have follow-up points.
+      -->
+
+      <div
+        id="responseList"
+      ></div>
+
+
+      <button
+        type="button"
+        id="responsesHomeBtn"
+        class="btn-secondary"
+      >
+        Back to Home
+      </button>
+
+
+    </div>
+
+  </section>
+
 
 </div>
-<div id="toast" class="toast hidden"></div>
 
-<script type="module" src="./js/main.js"></script>
+
+<!-- =======================================================
+     APPLICATION MODULE
+======================================================== -->
+
+<script
+  type="module"
+  src="./js/main.js"
+></script>
+
+
+<!-- =======================================================
+     SMALL GLOBAL HELPERS
+======================================================== -->
+
+<script>
+
+window.showShipVisitToast =
+function(message){
+
+  let toast =
+    document.getElementById(
+      'ship-visit-toast'
+    );
+
+
+  if(!toast){
+
+    toast =
+      document.createElement(
+        'div'
+      );
+
+
+    toast.id =
+      'ship-visit-toast';
+
+
+    toast.style.cssText = `
+      position:fixed;
+      left:50%;
+      bottom:90px;
+      transform:translateX(-50%);
+      z-index:99999;
+      max-width:90%;
+      padding:10px 15px;
+      border-radius:8px;
+      background:#1B1B1B;
+      color:#fff;
+      font-family:Arial,sans-serif;
+      font-size:12px;
+      box-shadow:0 4px 14px rgba(0,0,0,.25);
+      display:none;
+    `;
+
+
+    document.body.appendChild(
+      toast
+    );
+
+  }
+
+
+  toast.textContent =
+    message;
+
+
+  toast.style.display =
+    'block';
+
+
+  clearTimeout(
+    toast._timer
+  );
+
+
+  toast._timer =
+    setTimeout(
+      function(){
+
+        toast.style.display =
+          'none';
+
+      },
+      3000
+    );
+
+};
+
+
+</script>
+
+
 </body>
 </html>
