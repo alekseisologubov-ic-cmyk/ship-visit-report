@@ -1,5 +1,6 @@
 /*
   ============================================================
+  VIRGIN VOYAGES
   SHIP VISIT REPORT
   review.js
   ============================================================
@@ -25,19 +26,19 @@ import {
 } from './supabase.js';
 
 
-let callbacks = {
-
-  sentToShip:null
-
-};
-
-
 /* =========================================================
    CALLBACKS
 ========================================================= */
 
+let callbacks = {
+
+  sentToShip: null
+
+};
+
+
 export function setReviewCallbacks(
-  newCallbacks={}
+  newCallbacks = {}
 ){
 
   callbacks = {
@@ -52,7 +53,7 @@ export function setReviewCallbacks(
 
 
 /* =========================================================
-   ESCAPE
+   ESCAPE HTML
 ========================================================= */
 
 function escapeHtml(
@@ -66,13 +67,9 @@ function escapeHtml(
     character => ({
 
       '&':'&amp;',
-
       '<':'&lt;',
-
       '>':'&gt;',
-
       '"':'&quot;',
-
       "'":'&#39;'
 
     }[character])
@@ -82,7 +79,7 @@ function escapeHtml(
 
 
 /* =========================================================
-   CHECKED POINTS
+   GET CHECKED POINTS
 ========================================================= */
 
 export function getCheckedReviewPoints(){
@@ -91,8 +88,7 @@ export function getCheckedReviewPoints(){
     getState();
 
 
-  const points =
-    [];
+  const points = [];
 
 
   SECTIONS.forEach(
@@ -172,7 +168,7 @@ export function getCheckedReviewPoints(){
 
 
 /* =========================================================
-   RENDER REVIEW
+   RENDER SHIP REVIEW
 ========================================================= */
 
 export function renderShipReview(){
@@ -221,14 +217,14 @@ export function renderShipReview(){
         "
       >
 
-        READY TO SEND TO SHIP
+        REPORT READY FOR SHIP REVIEW
 
       </div>
 
 
       <div
         style="
-          margin-top:5px;
+          margin-top:6px;
           color:var(--vv-gray);
           font-size:12px;
           line-height:1.6;
@@ -236,18 +232,12 @@ export function renderShipReview(){
       >
 
         <b>Ship:</b>
-
-        ${escapeHtml(
-          meta.ship
-        )}
+        ${escapeHtml(meta.ship)}
 
         <br>
 
         <b>Visit:</b>
-
-        ${escapeHtml(
-          meta.dateOn
-        )}
+        ${escapeHtml(meta.dateOn)}
 
         ${
           meta.dateOff
@@ -258,7 +248,6 @@ export function renderShipReview(){
         <br>
 
         <b>Reviewer:</b>
-
         ${escapeHtml(
           getReviewer() ||
           meta.reviewer
@@ -275,7 +264,7 @@ export function renderShipReview(){
     points.length === 0
   ){
 
-    html += `
+    container.innerHTML = `
 
       <div class="empty">
 
@@ -284,10 +273,6 @@ export function renderShipReview(){
       </div>
 
     `;
-
-
-    container.innerHTML =
-      html;
 
 
     return;
@@ -308,18 +293,12 @@ export function renderShipReview(){
       "
     >
 
-      <b>
-        ${points.length}
-      </b>
-
+      <b>${points.length}</b>
       checked point(s)
 
       <br>
 
-      <b>
-        ${followUps.length}
-      </b>
-
+      <b>${followUps.length}</b>
       point(s) require ship follow-up.
 
     </div>
@@ -327,8 +306,7 @@ export function renderShipReview(){
   `;
 
 
-  const groups =
-    [];
+  const groups = [];
 
 
   points.forEach(
@@ -349,7 +327,7 @@ export function renderShipReview(){
           section:
             point.section,
 
-          points:[]
+          points: []
 
         };
 
@@ -426,9 +404,10 @@ export function renderShipReview(){
 
       <div
         style="
-          margin-top:16px;
-          padding-top:15px;
-          border-top:1px solid var(--vv-line);
+          margin-top:18px;
+          padding:14px;
+          background:var(--vv-bg);
+          border-radius:8px;
         "
       >
 
@@ -440,7 +419,7 @@ export function renderShipReview(){
           "
         >
 
-          SEND REPORT TO SHIP
+          READY TO SEND
 
         </div>
 
@@ -454,10 +433,9 @@ export function renderShipReview(){
           "
         >
 
-          After sending, the report will appear
-          in Ship Response Report. The ship will
-          complete the follow-up responses and submit
-          the report.
+          When you send this report, it will leave
+          Open Reports and move to Ship Response Report.
+          The ship will then complete the follow-up responses.
 
         </div>
 
@@ -478,7 +456,7 @@ function renderReviewPoint(
   point
 ){
 
-  return `
+  let html = `
 
     <div
       style="
@@ -490,6 +468,7 @@ function renderReviewPoint(
         border-radius:8px;
       "
     >
+
 
       <div
         style="
@@ -538,131 +517,187 @@ function renderReviewPoint(
       </div>
 
 
-      ${
-        point.followUpNeeded
-          ? `
-
-            <div
-              style="
-                margin-top:9px;
-              "
-            >
-
-              <span class="status blue">
-
-                FOLLOW-UP NEEDED FROM SHIP
-
-              </span>
-
-            </div>
-
-          `
-          : ''
-      }
+  `;
 
 
-      ${
-        point.comments.length
-          ? `
+  /* =======================================================
+     FOLLOW-UP
+  ======================================================= */
 
-            <div
-              style="
-                margin-top:10px;
-              "
-            >
+  if(
+    point.followUpNeeded
+  ){
 
-              <div class="response-label">
+    html += `
 
-                REVIEWER COMMENTS
+      <div
+        style="
+          margin-top:9px;
+        "
+      >
 
-              </div>
+        <span class="status blue">
 
+          FOLLOW-UP NEEDED FROM SHIP
 
-              ${
-                point.comments
-                  .map(
-                    comment => `
+        </span>
 
-                      <div class="comment">
+      </div>
 
-                        <strong>
+    `;
 
-                          ${escapeHtml(
-                            comment.name ||
-                            'Reviewer'
-                          )}:
-
-                        </strong>
+  }
 
 
-                        ${escapeHtml(
-                          comment.text ||
-                          ''
-                        )}
+  /* =======================================================
+     REVIEWER COMMENTS
+  ======================================================= */
 
-                      </div>
+  if(
+    point.comments.length > 0
+  ){
 
-                    `
-                  )
-                  .join('')
-              }
+    html += `
 
-            </div>
+      <div
+        style="
+          margin-top:11px;
+        "
+      >
 
-          `
-          : ''
-      }
+        <div
+          style="
+            color:var(--vv-squid);
+            font-size:9px;
+            font-weight:800;
+            letter-spacing:.04em;
+            margin-bottom:5px;
+          "
+        >
 
+          REVIEWER COMMENTS
 
-      ${
-        point.photos.length
-          ? `
-
-            <div
-              style="
-                margin-top:10px;
-              "
-            >
-
-              <div class="response-label">
-
-                ATTACHED PHOTOS
-
-              </div>
+        </div>
 
 
-              <div class="response-photos">
+        ${
+          point.comments
+            .map(
+              comment => `
 
-                ${
-                  point.photos
-                    .map(
-                      photo => `
+                <div
+                  class="comment"
+                >
 
-                        <div class="response-photo">
+                  <strong>
 
-                          <img
-                            src="${photo}"
-                            alt="Reviewer photo"
-                          >
+                    ${escapeHtml(
+                      comment.name ||
+                      'Reviewer'
+                    )}:
 
-                        </div>
+                  </strong>
 
-                      `
-                    )
-                    .join('')
-                }
 
-              </div>
+                  ${escapeHtml(
+                    comment.text ||
+                    ''
+                  )}
 
-            </div>
+                </div>
 
-          `
-          : ''
-      }
+              `
+            )
+            .join('')
+        }
+
+      </div>
+
+    `;
+
+  }else{
+
+    /*
+      Do not display an empty
+      reviewer comment area.
+    */
+
+  }
+
+
+  /* =======================================================
+     PHOTOS
+  ======================================================= */
+
+  if(
+    point.photos.length > 0
+  ){
+
+    html += `
+
+      <div
+        style="
+          margin-top:11px;
+        "
+      >
+
+        <div
+          style="
+            color:var(--vv-squid);
+            font-size:9px;
+            font-weight:800;
+            letter-spacing:.04em;
+            margin-bottom:6px;
+          "
+        >
+
+          ATTACHED PHOTOS
+
+        </div>
+
+
+        <div
+          class="response-photos"
+        >
+
+          ${
+            point.photos
+              .map(
+                photo => `
+
+                  <div
+                    class="response-photo"
+                  >
+
+                    <img
+                      src="${photo}"
+                      alt="Reviewer photo"
+                    >
+
+                  </div>
+
+                `
+              )
+              .join('')
+          }
+
+        </div>
+
+      </div>
+
+    `;
+
+  }
+
+
+  html += `
 
     </div>
 
   `;
+
+
+  return html;
 
 }
 
@@ -748,7 +783,7 @@ export async function prepareShipReview(){
 
 
 /* =========================================================
-   SEND TO SHIP
+   SEND REPORT TO SHIP
 ========================================================= */
 
 export async function sendCurrentReportToShip(){
@@ -790,7 +825,8 @@ export async function sendCurrentReportToShip(){
 
 
   /*
-    Save latest checklist state first.
+    Save the latest comments,
+    photos and follow-up flags.
   */
 
   const saved =
@@ -825,7 +861,7 @@ export async function sendCurrentReportToShip(){
   const confirmed =
     window.confirm(
       'Send this report to the ship?\n\n' +
-      'The report will move to Ship Response Report.'
+      'The report will leave Open Reports and move to Ship Response Report.'
     );
 
 
@@ -870,6 +906,15 @@ export async function sendCurrentReportToShip(){
 
   }
 
+
+  /*
+    IMPORTANT:
+
+    Call the callback so main.js can:
+      - show "Report Sent"
+      - clear the active report
+      - open Ship Response Report
+  */
 
   if(
     callbacks.sentToShip
