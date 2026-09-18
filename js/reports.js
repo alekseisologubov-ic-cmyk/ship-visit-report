@@ -1,8 +1,22 @@
 /*
   ============================================================
+  VIRGIN VOYAGES
   SHIP VISIT REPORT
   reports.js
   ============================================================
+
+  SUBMITTED REPORTS
+
+  Main screen:
+    - Shows report information
+    - Shows status
+    - Shows ONE Review Report button
+    - Admin can delete
+
+  Report review screen:
+    - Report Overall
+    - Points To Follow Up
+    - PDF / Print are handled inside the report
 */
 
 
@@ -25,6 +39,10 @@ import {
 } from './state.js';
 
 
+/* =========================================================
+   CALLBACKS
+========================================================= */
+
 let callbacks = {
 
   openReport:null,
@@ -37,10 +55,6 @@ let callbacks = {
 
 };
 
-
-/* =========================================================
-   CALLBACKS
-========================================================= */
 
 export function setReportCallbacks(
   newCallbacks={}
@@ -58,7 +72,7 @@ export function setReportCallbacks(
 
 
 /* =========================================================
-   ESCAPE
+   HTML ESCAPE
 ========================================================= */
 
 function escapeHtml(
@@ -72,13 +86,9 @@ function escapeHtml(
     character => ({
 
       '&':'&amp;',
-
       '<':'&lt;',
-
       '>':'&gt;',
-
       '"':'&quot;',
-
       "'":'&#39;'
 
     }[character])
@@ -88,7 +98,7 @@ function escapeHtml(
 
 
 /* =========================================================
-   DATE
+   DATE FORMAT
 ========================================================= */
 
 function formatDate(
@@ -96,7 +106,9 @@ function formatDate(
   withTime=false
 ){
 
-  if(!value){
+  if(
+    !value
+  ){
 
     return '';
 
@@ -150,6 +162,10 @@ function isAdmin(){
 }
 
 
+/* =========================================================
+   ADMIN DELETE BUTTON
+========================================================= */
+
 function adminDeleteButton(
   reportId
 ){
@@ -171,8 +187,22 @@ function adminDeleteButton(
       data-admin-delete="${escapeHtml(
         reportId
       )}"
+      style="
+        margin-top:8px;
+        width:100%;
+        padding:8px 12px;
+        border:1px solid #CC0000;
+        border-radius:7px;
+        background:#FFFFFF;
+        color:#CC0000;
+        font-size:10px;
+        font-weight:700;
+        cursor:pointer;
+      "
     >
+
       Delete Report
+
     </button>
 
   `;
@@ -192,7 +222,9 @@ export async function renderOpenReports(){
     );
 
 
-  if(!container){
+  if(
+    !container
+  ){
 
     return;
 
@@ -284,12 +316,12 @@ export async function renderOpenReports(){
 
       <div class="empty">
 
-        Could not load open reports.
+        Could not load Open Reports.
 
         <br><br>
 
         ${escapeHtml(
-          error.message ||
+          error?.message ||
           'Unknown error'
         )}
 
@@ -303,7 +335,7 @@ export async function renderOpenReports(){
 
 
 /* =========================================================
-   OPEN CARD
+   OPEN REPORT CARD
 ========================================================= */
 
 function renderOpenReportCard(
@@ -327,9 +359,6 @@ function renderOpenReportCard(
 
     <div
       class="report-card red"
-      data-report-id="${escapeHtml(
-        report.id
-      )}"
     >
 
       <h3>
@@ -381,12 +410,21 @@ function renderOpenReportCard(
           )
         )}
 
-        <br>
+        ${
+          followUps
+            ? `
 
+              <br>
 
-        <b>Follow-Ups:</b>
+              <b>
+                Follow-Ups:
+              </b>
 
-        ${followUps}
+              ${followUps}
+
+            `
+            : ''
+        }
 
         <br>
 
@@ -400,7 +438,11 @@ function renderOpenReportCard(
       </div>
 
 
-      <div class="report-actions">
+      <div
+        style="
+          margin-top:12px;
+        "
+      >
 
         <button
           type="button"
@@ -408,6 +450,13 @@ function renderOpenReportCard(
           data-open-report="${escapeHtml(
             report.id
           )}"
+          style="
+            width:100%;
+            min-height:40px;
+            padding:8px 14px;
+            border-radius:7px;
+            font-size:11px;
+          "
         >
 
           Open Report
@@ -463,7 +512,7 @@ function bindOpenReportButtons(){
 
 
 /* =========================================================
-   OPEN REPORT
+   OPEN ONE REPORT
 ========================================================= */
 
 export async function openReport(
@@ -471,20 +520,107 @@ export async function openReport(
   destination='checklist'
 ){
 
-  const result =
-    await getReport(
-      reportId
+  try{
+
+    const result =
+      await getReport(
+        reportId
+      );
+
+
+    if(
+      !result ||
+      !result.success ||
+      !result.data
+    ){
+
+      throw (
+        result?.error ||
+        new Error(
+          'Could not open report.'
+        )
+      );
+
+    }
+
+
+    loadReport(
+      result.data
     );
 
 
-  if(
-    !result ||
-    !result.success ||
-    !result.data
-  ){
+    if(
+      destination === 'checklist'
+    ){
+
+      if(
+        callbacks.openReport
+      ){
+
+        await callbacks.openReport(
+          result.data
+        );
+
+      }
+
+
+      return true;
+
+    }
+
+
+    if(
+      destination === 'summary'
+    ){
+
+      if(
+        callbacks.viewSummary
+      ){
+
+        await callbacks.viewSummary(
+          result.data
+        );
+
+      }
+
+
+      return true;
+
+    }
+
+
+    if(
+      destination === 'followups'
+    ){
+
+      if(
+        callbacks.viewFollowUps
+      ){
+
+        await callbacks.viewFollowUps(
+          result.data
+        );
+
+      }
+
+
+      return true;
+
+    }
+
+
+    return true;
+
+  }catch(error){
+
+    console.error(
+      'openReport:',
+      error
+    );
+
 
     alert(
-      result?.error?.message ||
+      error?.message ||
       'Could not open report.'
     );
 
@@ -493,64 +629,11 @@ export async function openReport(
 
   }
 
-
-  loadReport(
-    result.data
-  );
-
-
-  if(
-    destination === 'checklist' &&
-    callbacks.openReport
-  ){
-
-    await callbacks.openReport(
-      result.data
-    );
-
-
-    return true;
-
-  }
-
-
-  if(
-    destination === 'summary' &&
-    callbacks.viewSummary
-  ){
-
-    await callbacks.viewSummary(
-      result.data
-    );
-
-
-    return true;
-
-  }
-
-
-  if(
-    destination === 'followups' &&
-    callbacks.viewFollowUps
-  ){
-
-    await callbacks.viewFollowUps(
-      result.data
-    );
-
-
-    return true;
-
-  }
-
-
-  return true;
-
 }
 
 
 /* =========================================================
-   DELETE
+   ADMIN DELETE
 ========================================================= */
 
 function bindAdminDeleteButtons(){
@@ -564,9 +647,12 @@ function bindAdminDeleteButtons(){
 
         button.addEventListener(
           'click',
-          async () => {
+          async event => {
 
-            await handleDelete(
+            event.stopPropagation();
+
+
+            await handleAdminDelete(
               button.dataset.adminDelete
             );
 
@@ -579,7 +665,7 @@ function bindAdminDeleteButtons(){
 }
 
 
-async function handleDelete(
+async function handleAdminDelete(
   reportId
 ){
 
@@ -597,14 +683,14 @@ async function handleDelete(
   }
 
 
-  const confirmed =
+  const first =
     window.confirm(
       'Delete this report permanently?'
     );
 
 
   if(
-    !confirmed
+    !first
   ){
 
     return;
@@ -676,7 +762,7 @@ async function handleDelete(
     alert(
       'Could not delete report.\n\n' +
       (
-        error.message ||
+        error?.message ||
         'Unknown error'
       )
     );
@@ -698,7 +784,9 @@ export async function renderSubmittedReports(){
     );
 
 
-  if(!container){
+  if(
+    !container
+  ){
 
     return;
 
@@ -768,6 +856,10 @@ export async function renderSubmittedReports(){
     }
 
 
+    /*
+      ONE CLEAN CARD PER REPORT.
+    */
+
     container.innerHTML =
       reports
         .map(
@@ -776,7 +868,7 @@ export async function renderSubmittedReports(){
         .join('');
 
 
-    bindSubmittedButtons();
+    bindSubmittedReportButtons();
 
   }catch(error){
 
@@ -790,12 +882,12 @@ export async function renderSubmittedReports(){
 
       <div class="empty">
 
-        Could not load submitted reports.
+        Could not load Submitted Reports.
 
         <br><br>
 
         ${escapeHtml(
-          error.message ||
+          error?.message ||
           'Unknown error'
         )}
 
@@ -809,7 +901,7 @@ export async function renderSubmittedReports(){
 
 
 /* =========================================================
-   SUBMITTED CARD
+   SUBMITTED REPORT CARD
 ========================================================= */
 
 function renderSubmittedReportCard(
@@ -835,25 +927,26 @@ function renderSubmittedReportCard(
     );
 
 
-  const color =
-    getReportColor(
-      report
-    );
-
-
-  const status =
-    getReportStatusText(
-      report
-    );
-
-
   return `
 
     <div
-      class="report-card ${color}"
+      class="report-card green"
+      style="
+        padding:16px;
+        margin-bottom:14px;
+      "
     >
 
-      <h3>
+      <!-- ===============================================
+           REPORT NAME
+      ================================================= -->
+
+      <h3
+        style="
+          margin-bottom:10px;
+          font-size:17px;
+        "
+      >
 
         ${escapeHtml(
           report.ship ||
@@ -863,9 +956,20 @@ function renderSubmittedReportCard(
       </h3>
 
 
-      <div class="report-meta">
+      <!-- ===============================================
+           INFORMATION
+      ================================================= -->
 
-        <b>Visit:</b>
+      <div
+        class="report-meta"
+        style="
+          line-height:1.7;
+        "
+      >
+
+        <b>
+          Visit:
+        </b>
 
         ${escapeHtml(
           report.date_on ||
@@ -883,7 +987,9 @@ function renderSubmittedReportCard(
         <br>
 
 
-        <b>Reviewer:</b>
+        <b>
+          Reviewer:
+        </b>
 
         ${escapeHtml(
           report.reviewer ||
@@ -893,7 +999,9 @@ function renderSubmittedReportCard(
         <br>
 
 
-        <b>Submitted:</b>
+        <b>
+          Submitted:
+        </b>
 
         ${escapeHtml(
           formatDate(
@@ -906,7 +1014,9 @@ function renderSubmittedReportCard(
         <br>
 
 
-        <b>Follow-Ups:</b>
+        <b>
+          Follow-Ups:
+        </b>
 
         ${completed}/${followUps}
 
@@ -914,92 +1024,79 @@ function renderSubmittedReportCard(
 
 
         <span
-          class="status ${color}"
+          class="status green"
+          style="
+            margin-top:4px;
+          "
         >
 
-          ${escapeHtml(
-            status
-          )}
+          SUBMITTED
 
         </span>
 
       </div>
 
 
+      <!-- ===============================================
+           ONLY REVIEW BUTTON
+      ================================================= -->
+
       <div
         style="
-          margin-top:12px;
-          color:var(--vv-gray);
-          font-size:11px;
+          margin-top:14px;
         "
       >
 
-        Select what you want to review:
-
-      </div>
-
-
-      <div class="report-actions">
-
         <button
           type="button"
-          class="open"
-          data-overall-report="${escapeHtml(
+          class="submitted-review-button"
+          data-review-submitted="${escapeHtml(
             report.id
           )}"
+          style="
+            width:100%;
+            min-height:40px;
+            padding:8px 14px;
+            border:1px solid var(--vv-squid);
+            border-radius:7px;
+            background:var(--vv-squid);
+            color:#FFFFFF;
+            font-family:inherit;
+            font-size:11px;
+            font-weight:800;
+            cursor:pointer;
+          "
         >
 
-          Report Overall
-
-        </button>
-
-
-        <button
-          type="button"
-          data-followup-report="${escapeHtml(
-            report.id
-          )}"
-        >
-
-          Points To Follow Up
+          REVIEW REPORT
 
         </button>
 
       </div>
 
 
-      <div class="report-actions">
-
-        <button
-          type="button"
-          data-pdf-report="${escapeHtml(
-            report.id
-          )}"
-        >
-
-          Save PDF
-
-        </button>
-
-
-        <button
-          type="button"
-          data-print-report="${escapeHtml(
-            report.id
-          )}"
-        >
-
-          Print
-
-        </button>
-
-      </div>
-
+      <!-- ===============================================
+           ADMIN DELETE
+      ================================================= -->
 
       ${
-        adminDeleteButton(
-          report.id
-        )
+        isAdmin()
+          ? `
+
+            <div
+              style="
+                margin-top:7px;
+              "
+            >
+
+              ${adminDeleteButton(
+                report.id
+              )}
+
+            </div>
+
+          `
+          : ''
       }
 
     </div>
@@ -1010,14 +1107,14 @@ function renderSubmittedReportCard(
 
 
 /* =========================================================
-   SUBMITTED BUTTONS
+   SUBMITTED BUTTON
 ========================================================= */
 
-function bindSubmittedButtons(){
+function bindSubmittedReportButtons(){
 
   document
     .querySelectorAll(
-      '[data-overall-report]'
+      '[data-review-submitted]'
     )
     .forEach(
       button => {
@@ -1027,169 +1124,8 @@ function bindSubmittedButtons(){
           async () => {
 
             await openReport(
-              button.dataset.overallReport,
+              button.dataset.reviewSubmitted,
               'summary'
-            );
-
-          }
-        );
-
-      }
-    );
-
-
-  document
-    .querySelectorAll(
-      '[data-followup-report]'
-    )
-    .forEach(
-      button => {
-
-        button.addEventListener(
-          'click',
-          async () => {
-
-            await openReport(
-              button.dataset.followupReport,
-              'followups'
-            );
-
-          }
-        );
-
-      }
-    );
-
-
-  document
-    .querySelectorAll(
-      '[data-pdf-report]'
-    )
-    .forEach(
-      button => {
-
-        button.addEventListener(
-          'click',
-          async () => {
-
-            const result =
-              await getReport(
-                button.dataset.pdfReport
-              );
-
-
-            if(
-              !result ||
-              !result.success ||
-              !result.data
-            ){
-
-              alert(
-                'Could not load report.'
-              );
-
-
-              return;
-
-            }
-
-
-            loadReport(
-              result.data
-            );
-
-
-            currentReportForSummary =
-              result.data;
-
-
-            if(
-              callbacks.viewSummary
-            ){
-
-              await callbacks.viewSummary(
-                result.data
-              );
-
-            }
-
-
-            setTimeout(
-              () => {
-
-                document.dispatchEvent(
-                  new CustomEvent(
-                    'shipVisitGeneratePDF'
-                  )
-                );
-
-              },
-              200
-            );
-
-          }
-        );
-
-      }
-    );
-
-
-  document
-    .querySelectorAll(
-      '[data-print-report]'
-    )
-    .forEach(
-      button => {
-
-        button.addEventListener(
-          'click',
-          async () => {
-
-            const result =
-              await getReport(
-                button.dataset.printReport
-              );
-
-
-            if(
-              !result ||
-              !result.success ||
-              !result.data
-            ){
-
-              alert(
-                'Could not load report.'
-              );
-
-
-              return;
-
-            }
-
-
-            loadReport(
-              result.data
-            );
-
-
-            if(
-              callbacks.viewSummary
-            ){
-
-              await callbacks.viewSummary(
-                result.data
-              );
-
-            }
-
-
-            setTimeout(
-              () => {
-
-                window.print();
-
-              },
-              200
             );
 
           }
@@ -1202,13 +1138,6 @@ function bindSubmittedButtons(){
   bindAdminDeleteButtons();
 
 }
-
-
-/* =========================================================
-   CURRENT REPORT FOR PDF
-========================================================= */
-
-let currentReportForSummary = null;
 
 
 /* =========================================================
@@ -1225,15 +1154,13 @@ export function renderReportOverall(
     );
 
 
-  if(!container){
+  if(
+    !container
+  ){
 
     return;
 
   }
-
-
-  currentReportForSummary =
-    report;
 
 
   const state =
@@ -1261,8 +1188,7 @@ export function renderReportOverall(
 
       <div class="empty">
 
-        No checklist points were marked
-        as checked.
+        No checklist points were marked as checked.
 
       </div>
 
@@ -1389,7 +1315,9 @@ function renderOverallGroups(
         );
 
 
-      if(!group){
+      if(
+        !group
+      ){
 
         group = {
 
@@ -1428,7 +1356,6 @@ function renderOverallGroups(
 
           <div
             style="
-              margin-top:18px;
               margin-bottom:10px;
               padding-bottom:7px;
               border-bottom:2px solid var(--vv-red);
@@ -1448,10 +1375,7 @@ function renderOverallGroups(
           ${
             group.points
               .map(
-                point =>
-                  renderOverallPoint(
-                    point
-                  )
+                renderOverallPoint
               )
               .join('')
           }
@@ -1473,18 +1397,25 @@ function renderOverallPoint(
   point
 ){
 
+  const completed =
+    point.followUpNeeded &&
+    point.shipComments.length > 0;
+
+
   return `
 
     <div
       style="
         margin-bottom:12px;
         padding:13px;
-        background:#fff;
+        background:#FFFFFF;
         border:1px solid var(--vv-line);
         border-left:4px solid var(--vv-squid);
         border-radius:8px;
       "
     >
+
+      <!-- POINT -->
 
       <div
         style="
@@ -1503,13 +1434,15 @@ function renderOverallPoint(
             align-items:center;
             justify-content:center;
             background:var(--vv-red);
-            color:#fff;
+            color:#FFFFFF;
             border-radius:50%;
             font-size:12px;
             font-weight:800;
           "
         >
+
           ✓
+
         </div>
 
 
@@ -1531,8 +1464,11 @@ function renderOverallPoint(
       </div>
 
 
+      <!-- FOLLOW-UP STATUS -->
+
       ${
         point.followUpNeeded
+
           ? `
 
             <div
@@ -1541,118 +1477,51 @@ function renderOverallPoint(
               "
             >
 
-              <span class="status blue">
+              <span
+                class="status ${
+                  completed
+                    ? 'green'
+                    : 'blue'
+                }"
+              >
 
-                FOLLOW-UP NEEDED FROM SHIP
+                ${
+                  completed
+                    ? 'SHIP FOLLOW-UP COMPLETED'
+                    : 'FOLLOW-UP NEEDED FROM SHIP'
+                }
 
               </span>
 
             </div>
 
           `
+
           : ''
+
       }
 
+
+      <!-- REVIEWER COMMENTS -->
 
       ${
-        point.comments.length
-          ? `
-
-            <div
-              style="
-                margin-top:10px;
-              "
-            >
-
-              <div class="response-label">
-
-                REVIEWER COMMENTS
-
-              </div>
-
-
-              ${
-                point.comments
-                  .map(
-                    comment => `
-
-                      <div class="comment">
-
-                        <strong>
-
-                          ${escapeHtml(
-                            comment.name ||
-                            'Reviewer'
-                          )}:
-
-                        </strong>
-
-
-                        ${escapeHtml(
-                          comment.text ||
-                          ''
-                        )}
-
-                      </div>
-
-                    `
-                  )
-                  .join('')
-              }
-
-            </div>
-
-          `
-          : ''
+        renderComments(
+          point.comments,
+          'REVIEWER COMMENTS'
+        )
       }
 
+
+      <!-- REVIEWER PHOTOS -->
 
       ${
-        point.photos.length
-          ? `
-
-            <div
-              style="
-                margin-top:10px;
-              "
-            >
-
-              <div class="response-label">
-
-                ATTACHED PHOTOS
-
-              </div>
-
-
-              <div class="response-photos">
-
-                ${
-                  point.photos
-                    .map(
-                      photo => `
-
-                        <div class="response-photo">
-
-                          <img
-                            src="${photo}"
-                            alt="Report photo"
-                          >
-
-                        </div>
-
-                      `
-                    )
-                    .join('')
-                }
-
-              </div>
-
-            </div>
-
-          `
-          : ''
+        renderPhotos(
+          point.photos
+        )
       }
 
+
+      <!-- SHIP RESPONSES -->
 
       ${
         point.followUpNeeded
@@ -1670,6 +1539,157 @@ function renderOverallPoint(
 
 
 /* =========================================================
+   COMMENTS
+========================================================= */
+
+function renderComments(
+  comments,
+  title
+){
+
+  if(
+    !Array.isArray(
+      comments
+    ) ||
+    comments.length === 0
+  ){
+
+    return '';
+
+  }
+
+
+  return `
+
+    <div
+      style="
+        margin-top:10px;
+      "
+    >
+
+      <div class="response-label">
+
+        ${escapeHtml(
+          title
+        )}
+
+      </div>
+
+
+      ${
+        comments
+          .map(
+            comment => `
+
+              <div class="comment">
+
+                <strong>
+
+                  ${escapeHtml(
+                    comment.name ||
+                    'Reviewer'
+                  )}:
+
+                </strong>
+
+
+                <div
+                  style="
+                    margin-top:3px;
+                  "
+                >
+
+                  ${escapeHtml(
+                    comment.text ||
+                    ''
+                  )}
+
+                </div>
+
+              </div>
+
+            `
+          )
+          .join('')
+      }
+
+    </div>
+
+  `;
+
+}
+
+
+/* =========================================================
+   PHOTOS
+========================================================= */
+
+function renderPhotos(
+  photos
+){
+
+  if(
+    !Array.isArray(
+      photos
+    ) ||
+    photos.length === 0
+  ){
+
+    return '';
+
+  }
+
+
+  return `
+
+    <div
+      style="
+        margin-top:10px;
+      "
+    >
+
+      <div class="response-label">
+
+        ATTACHED PHOTOS
+
+      </div>
+
+
+      <div
+        class="response-photos"
+      >
+
+        ${
+          photos
+            .map(
+              photo => `
+
+                <div
+                  class="response-photo"
+                >
+
+                  <img
+                    src="${photo}"
+                    alt="Reviewer photo"
+                  >
+
+                </div>
+
+              `
+            )
+            .join('')
+        }
+
+      </div>
+
+    </div>
+
+  `;
+
+}
+
+
+/* =========================================================
    SHIP COMMENTS
 ========================================================= */
 
@@ -1678,7 +1698,9 @@ function renderShipComments(
 ){
 
   if(
-    !comments ||
+    !Array.isArray(
+      comments
+    ) ||
     comments.length === 0
   ){
 
@@ -1688,7 +1710,7 @@ function renderShipComments(
         style="
           margin-top:10px;
           padding:8px 10px;
-          background:#fff8f8;
+          background:#FFF8F8;
           border-left:3px solid var(--vv-red);
           border-radius:6px;
           color:var(--vv-red);
@@ -1714,9 +1736,11 @@ function renderShipComments(
     >
 
       <div
-        class="response-label"
         style="
           color:var(--status-green);
+          font-size:9px;
+          font-weight:800;
+          margin-bottom:5px;
         "
       >
 
@@ -1744,10 +1768,18 @@ function renderShipComments(
                 </strong>
 
 
-                ${escapeHtml(
-                  comment.text ||
-                  ''
-                )}
+                <div
+                  style="
+                    margin-top:3px;
+                  "
+                >
+
+                  ${escapeHtml(
+                    comment.text ||
+                    ''
+                  )}
+
+                </div>
 
               </div>
 
@@ -1764,7 +1796,7 @@ function renderShipComments(
 
 
 /* =========================================================
-   FOLLOW UPS
+   FOLLOW-UP REPORT
 ========================================================= */
 
 export function renderReportFollowUps(
@@ -1777,7 +1809,9 @@ export function renderReportFollowUps(
     );
 
 
-  if(!container){
+  if(
+    !container
+  ){
 
     return;
 
@@ -1810,7 +1844,8 @@ export function renderReportFollowUps(
 
       <div class="empty">
 
-        No points were marked for ship follow-up.
+        No points were marked
+        Follow-Up Needed from Ship.
 
       </div>
 
@@ -1822,15 +1857,55 @@ export function renderReportFollowUps(
   }
 
 
-  container.innerHTML =
-    points
-      .map(
-        point =>
-          renderFollowUpPoint(
-            point
-          )
-      )
-      .join('');
+  const completed =
+    points.filter(
+      point =>
+        point.shipComments.length > 0
+    ).length;
+
+
+  container.innerHTML = `
+
+    <div
+      style="
+        margin-bottom:16px;
+        padding:12px;
+        background:var(--vv-bg);
+        border-top:3px solid var(--vv-red);
+        border-radius:7px;
+        font-size:11px;
+        line-height:1.6;
+      "
+    >
+
+      <strong>
+        Follow-Up Points:
+      </strong>
+
+      ${points.length}
+
+
+      <br>
+
+
+      <strong>
+        Responses Completed:
+      </strong>
+
+      ${completed}/${points.length}
+
+    </div>
+
+
+    ${
+      points
+        .map(
+          renderFollowUpPoint
+        )
+        .join('')
+    }
+
+  `;
 
 }
 
@@ -1903,102 +1978,17 @@ function renderFollowUpPoint(
 
 
       ${
-        point.comments.length
-          ? `
-
-            <div
-              style="
-                margin-top:10px;
-              "
-            >
-
-              <div class="response-label">
-
-                REVIEWER COMMENTS
-
-              </div>
-
-
-              ${
-                point.comments
-                  .map(
-                    comment => `
-
-                      <div class="comment">
-
-                        <strong>
-
-                          ${escapeHtml(
-                            comment.name ||
-                            'Reviewer'
-                          )}:
-
-                        </strong>
-
-
-                        ${escapeHtml(
-                          comment.text ||
-                          ''
-                        )}
-
-                      </div>
-
-                    `
-                  )
-                  .join('')
-              }
-
-            </div>
-
-          `
-          : ''
+        renderComments(
+          point.comments,
+          'REVIEWER COMMENTS'
+        )
       }
 
 
       ${
-        point.photos.length
-          ? `
-
-            <div
-              style="
-                margin-top:10px;
-              "
-            >
-
-              <div class="response-label">
-
-                ATTACHED PHOTOS
-
-              </div>
-
-
-              <div class="response-photos">
-
-                ${
-                  point.photos
-                    .map(
-                      photo => `
-
-                        <div class="response-photo">
-
-                          <img
-                            src="${photo}"
-                            alt="Report photo"
-                          >
-
-                        </div>
-
-                      `
-                    )
-                    .join('')
-                }
-
-              </div>
-
-            </div>
-
-          `
-          : ''
+        renderPhotos(
+          point.photos
+        )
       }
 
 
@@ -2031,6 +2021,7 @@ function showToast(
     window.showToast(
       message
     );
+
 
     return;
 
