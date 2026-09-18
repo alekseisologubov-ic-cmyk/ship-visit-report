@@ -46,6 +46,7 @@
 
   <!-- =====================================================
        SUPABASE
+       MUST LOAD BEFORE main.js
   ====================================================== -->
 
   <script
@@ -66,7 +67,6 @@
 
 
 <body>
-
 
 <div
   id="app"
@@ -103,6 +103,7 @@
 
       <div class="home-grid">
 
+        <!-- CREATE -->
 
         <button
           type="button"
@@ -121,6 +122,8 @@
         </button>
 
 
+        <!-- OPEN -->
+
         <button
           type="button"
           id="openReport"
@@ -132,11 +135,13 @@
           </h2>
 
           <p>
-            Continue reports that have been started but not submitted.
+            Continue reports that are still in progress.
           </p>
 
         </button>
 
+
+        <!-- SUBMITTED -->
 
         <button
           type="button"
@@ -149,11 +154,13 @@
           </h2>
 
           <p>
-            Review completed reports, findings and follow-up points.
+            Review completed ship visit reports.
           </p>
 
         </button>
 
+
+        <!-- SHIP RESPONSE -->
 
         <button
           type="button"
@@ -166,11 +173,10 @@
           </h2>
 
           <p>
-            Respond to checklist points requiring ship follow-up.
+            Respond to reports sent to the ship.
           </p>
 
         </button>
-
 
       </div>
 
@@ -188,20 +194,8 @@
           type="button"
           id="adminButton"
           class="admin-button"
-          style="
-            padding:8px 14px;
-            background:#FFFFFF;
-            color:#3C1053;
-            border:1.5px solid #3C1053;
-            border-radius:7px;
-            font-size:10px;
-            font-weight:800;
-            letter-spacing:.03em;
-          "
         >
-
           ADMIN
-
         </button>
 
       </div>
@@ -212,7 +206,7 @@
 
 
   <!-- =====================================================
-       CREATE REPORT
+       SETUP
   ====================================================== -->
 
   <section
@@ -224,8 +218,8 @@
 
       <button
         type="button"
-        class="header-back"
         id="setupHeaderBack"
+        class="header-back"
       >
         ← Back
       </button>
@@ -256,12 +250,10 @@
           SHIP
         </label>
 
-
         <input
           id="ship"
           type="text"
           placeholder="e.g. Brilliant Lady"
-          autocomplete="off"
         >
 
       </div>
@@ -272,7 +264,6 @@
         <label for="dateOn">
           DATE ON
         </label>
-
 
         <input
           id="dateOn"
@@ -288,7 +279,6 @@
           DATE OFF
         </label>
 
-
         <input
           id="dateOff"
           type="date"
@@ -303,12 +293,10 @@
           REVIEWER
         </label>
 
-
         <input
           id="reviewer"
           type="text"
           placeholder="Reviewer name"
-          autocomplete="off"
         >
 
       </div>
@@ -323,7 +311,7 @@
       </button>
 
 
-      <div style="height:9px"></div>
+      <div style="height:8px"></div>
 
 
       <button
@@ -352,8 +340,8 @@
 
       <button
         type="button"
-        class="header-back"
         id="checklistHeaderBack"
+        class="header-back"
       >
         ← Back
       </button>
@@ -362,10 +350,7 @@
       <div class="eyebrow">
 
         —
-
-        <span
-          id="hdrShip"
-        ></span>
+        <span id="hdrShip"></span>
 
       </div>
 
@@ -386,7 +371,6 @@
           id="hdrReviewer"
           type="text"
           placeholder="Reviewer"
-          autocomplete="off"
         >
 
       </div>
@@ -400,10 +384,7 @@
         Visit:
       </strong>
 
-
-      <span
-        id="visitMeta"
-      ></span>
+      <span id="visitMeta"></span>
 
     </div>
 
@@ -473,8 +454,8 @@
 
       <button
         type="button"
-        class="header-back"
         id="reviewHeaderBack"
+        class="header-back"
       >
         ← Back
       </button>
@@ -491,7 +472,7 @@
 
 
       <p class="sub">
-        Review the checked findings before submission.
+        Review the checked findings before sending to the ship.
       </p>
 
     </div>
@@ -499,17 +480,13 @@
 
     <div class="page-pad">
 
-      <div
-        id="ship-review-content"
-      ></div>
+      <div id="ship-review-content"></div>
 
 
-      <div style="height:20px"></div>
+      <div style="height:15px"></div>
 
 
-      <div
-        id="ship-review-all"
-      ></div>
+      <div id="ship-review-all"></div>
 
     </div>
 
@@ -532,7 +509,7 @@
           id="reviewSubmitBtn"
           class="btn-primary"
         >
-          Submit Report
+          Send to Ship
         </button>
 
       </div>
@@ -555,8 +532,8 @@
 
       <button
         type="button"
-        class="header-back"
         id="summaryHeaderBack"
+        class="header-back"
       >
         ← Back
       </button>
@@ -573,8 +550,8 @@
 
 
       <p
-        class="sub"
         id="sumMeta"
+        class="sub"
       ></p>
 
     </div>
@@ -587,8 +564,6 @@
       ></div>
 
 
-      <!-- Hidden PDF support -->
-
       <div class="hidden">
 
         <div id="stats"></div>
@@ -596,7 +571,6 @@
 
         <textarea
           id="overall"
-          rows="6"
         ></textarea>
 
 
@@ -625,7 +599,7 @@
           id="summarySubmitBtn"
           class="btn-primary"
         >
-          Submit Report
+          Send to Ship
         </button>
 
       </div>
@@ -648,8 +622,8 @@
 
       <button
         type="button"
-        class="header-back"
         id="followupsHeaderBack"
+        class="header-back"
       >
         ← Back
       </button>
@@ -734,8 +708,8 @@
 
       <button
         type="button"
-        class="header-back"
         id="openHeaderBack"
+        class="header-back"
       >
         ← Back
       </button>
@@ -760,9 +734,7 @@
 
     <div class="reports">
 
-      <div
-        id="openList"
-      ></div>
+      <div id="openList"></div>
 
 
       <button
@@ -791,8 +763,8 @@
 
       <button
         type="button"
-        class="header-back"
         id="submittedHeaderBack"
+        class="header-back"
       >
         ← Back
       </button>
@@ -817,9 +789,7 @@
 
     <div class="reports">
 
-      <div
-        id="reportList"
-      ></div>
+      <div id="reportList"></div>
 
 
       <button
@@ -836,7 +806,7 @@
 
 
   <!-- =====================================================
-       SHIP RESPONSE REPORT
+       SHIP RESPONSE
   ====================================================== -->
 
   <section
@@ -848,8 +818,8 @@
 
       <button
         type="button"
-        class="header-back"
         id="responsesHeaderBack"
+        class="header-back"
       >
         ← Back
       </button>
@@ -866,7 +836,7 @@
 
 
       <p class="sub">
-        Respond to points marked for ship follow-up.
+        Complete responses for reports sent to the ship.
       </p>
 
     </div>
@@ -874,9 +844,7 @@
 
     <div class="reports">
 
-      <div
-        id="responseList"
-      ></div>
+      <div id="responseList"></div>
 
 
       <button
@@ -896,7 +864,7 @@
 
 
 <!-- =======================================================
-     MAIN APPLICATION
+     MAIN APP
 ======================================================== -->
 
 <script
@@ -920,9 +888,7 @@ function(message){
     );
 
 
-  if(
-    !toast
-  ){
+  if(!toast){
 
     toast =
       document.createElement(
