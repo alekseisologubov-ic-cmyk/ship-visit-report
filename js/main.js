@@ -1077,29 +1077,51 @@ function bindReviewCallbacks(){
     sentToShip:
       async report => {
 
+        /*
+          Clear active reviewer state.
+        */
+
         resetReport();
 
         clearSetupFields();
+
 
         currentSubmittedReport =
           null;
 
 
+        /*
+          IMPORTANT:
+          go directly to Ship Response Report
+          after successful send.
+        */
+
         showScreen(
-          'home'
+          'responses'
         );
 
+
+        /*
+          Show confirmation message.
+        */
 
         showToast(
-          'Report sent to Ship Response Report.'
+          'REPORT SENT TO SHIP'
         );
+
+
+        /*
+          Refresh the Ship Response
+          Report list from Supabase.
+        */
+
+        await loadShipReviewReports();
 
       }
 
   });
 
 }
-
 
 /* =========================================================
    SUMMARY BUTTONS
