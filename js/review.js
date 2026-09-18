@@ -1,26 +1,30 @@
 /*
+  ============================================================
+  SHIP VISIT REPORT
   review.js
+  ============================================================
 
-  Handles the SHIP REVIEW stage.
-
-  Flow:
-
-  OPEN REPORT
-      ↓
-  Reviewer completes checklist
-      ↓
   SHIP REVIEW
-      ↓
-  Reviewer sees:
-    - All points
-    - Reviewer comments
-    - Reviewer photos
-    - Points marked Follow-Up Needed
-      ↓
-  SUBMIT REPORT
-      ↓
-  SUBMITTED REPORT
+
+  Shows ONLY checklist points that were reviewed/checked.
+
+  For each checked point:
+
+  - Checklist point
+  - Reviewer comments
+  - Attached photos
+  - Follow-Up Needed from Ship
+  - Existing Ship response
+
+  Unchecked points are NOT displayed.
+
+  After review:
+      SUBMIT REPORT
+        |
+        v
+      Submitted Reports
 */
+
 
 import {
   SECTIONS
@@ -32,8 +36,7 @@ import {
   getMeta,
   getReviewer,
   getReportId,
-  setReportStatus,
-  getReportStatus
+  setReportStatus
 } from './state.js';
 
 
@@ -47,23 +50,30 @@ import {
    CALLBACK
 ========================================================= */
 
-let onSubmitted = null;
+let callbacks = {
+
+  submitted: null
+
+};
 
 
-export function setReviewCallbacks({
-  submitted
-} = {}) {
+export function setReviewCallbacks(
+  newCallbacks = {}
+) {
 
-  onSubmitted =
-    typeof submitted === 'function'
-      ? submitted
-      : null;
+  callbacks = {
+
+    ...callbacks,
+
+    ...newCallbacks
+
+  };
 
 }
 
 
 /* =========================================================
-   ESCAPE
+   ESCAPE HTML
 ========================================================= */
 
 function escapeHtml(
@@ -75,11 +85,13 @@ function escapeHtml(
   ).replace(
     /[&<>"']/g,
     character => ({
+
       '&':'&amp;',
       '<':'&lt;',
       '>':'&gt;',
       '"':'&quot;',
       "'":'&#39;'
+
     }[character])
   );
 
@@ -87,106 +99,10 @@ function escapeHtml(
 
 
 /* =========================================================
-   REVIEW COUNTS
+   GET CHECKED POINTS
 ========================================================= */
 
-function getReviewCounts() {
-
-  const state =
-    getState();
-
-
-  let total =
-    0;
-
-  let checked =
-    0;
-
-  let comments =
-    0;
-
-  let photos =
-    0;
-
-  let followUps =
-    0;
-
-
-  Object.values(
-    state
-  ).forEach(
-    item => {
-
-      total++;
-
-
-      if (
-        item.checked
-      ) {
-
-        checked++;
-
-      }
-
-
-      if (
-        Array.isArray(
-          item.comments
-        )
-      ) {
-
-        comments +=
-          item.comments.length;
-
-      }
-
-
-      if (
-        Array.isArray(
-          item.photos
-        )
-      ) {
-
-        photos +=
-          item.photos.length;
-
-      }
-
-
-      if (
-        item.followUpNeeded
-      ) {
-
-        followUps++;
-
-      }
-
-    }
-  );
-
-
-  return {
-
-    total,
-
-    checked,
-
-    comments,
-
-    photos,
-
-    followUps
-
-  };
-
-}
-
-
-/* =========================================================
-   FOLLOW-UP POINTS
-========================================================= */
-
-export function getFollowUpPoints() {
+export function getCheckedReviewPoints() {
 
   const state =
     getState();
@@ -200,7 +116,10 @@ export function getFollowUpPoints() {
     section => {
 
       section.items.forEach(
-        (text,index) => {
+        (
+          text,
+          index
+        ) => {
 
           const key =
             `${section.id}__${index}`;
@@ -209,89 +128,19 @@ export function getFollowUpPoints() {
           const item =
             state[key];
 
+
+          /*
+            ONLY CHECKED POINTS
+          */
 
           if (
-            item &&
-            item.followUpNeeded
+            !item ||
+            !item.checked
           ) {
 
-            points.push({
-
-              key,
-
-              section:
-                section.title,
-
-              text,
-
-              checked:
-                Boolean(
-                  item.checked
-                ),
-
-              comments:
-                Array.isArray(
-                  item.comments
-                )
-                  ? item.comments
-                  : [],
-
-              photos:
-                Array.isArray(
-                  item.photos
-                )
-                  ? item.photos
-                  : [],
-
-              shipComments:
-                Array.isArray(
-                  item.shipComments
-                )
-                  ? item.shipComments
-                  : []
-
-            });
+            return;
 
           }
-
-        }
-      );
-
-    }
-  );
-
-
-  return points;
-
-}
-
-
-/* =========================================================
-   ALL REPORT POINTS
-========================================================= */
-
-export function getAllReportPoints() {
-
-  const state =
-    getState();
-
-
-  const points =
-    [];
-
-
-  SECTIONS.forEach(
-    section => {
-
-      section.items.forEach(
-        (text,index) => {
-
-          const key =
-            `${section.id}__${index}`;
-
-
-          const item =
-            state[key];
 
 
           points.push({
@@ -304,9 +153,7 @@ export function getAllReportPoints() {
             text,
 
             checked:
-              Boolean(
-                item.checked
-              ),
+              true,
 
             comments:
               Array.isArray(
@@ -349,6 +196,79 @@ export function getAllReportPoints() {
 
 
 /* =========================================================
+   GET FOLLOW-UP POINTS
+========================================================= */
+
+export function getReviewFollowUps() {
+
+  return getCheckedReviewPoints()
+    .filter(
+      point =>
+        point.followUpNeeded
+    );
+
+}
+
+
+/* =========================================================
+   COUNTS
+========================================================= */
+
+function getReviewCounts() {
+
+  const points =
+    getCheckedReviewPoints();
+
+
+  const comments =
+    points.reduce(
+      (
+        total,
+        point
+      ) =>
+        total +
+        point.comments.length +
+        point.shipComments.length,
+      0
+    );
+
+
+  const photos =
+    points.reduce(
+      (
+        total,
+        point
+      ) =>
+        total +
+        point.photos.length,
+      0
+    );
+
+
+  const followUps =
+    points.filter(
+      point =>
+        point.followUpNeeded
+    ).length;
+
+
+  return {
+
+    checked:
+      points.length,
+
+    comments,
+
+    photos,
+
+    followUps
+
+  };
+
+}
+
+
+/* =========================================================
    RENDER SHIP REVIEW
 ========================================================= */
 
@@ -364,6 +284,10 @@ export function renderShipReview() {
     !container
   ) {
 
+    console.error(
+      '#ship-review-content not found.'
+    );
+
     return;
 
   }
@@ -373,555 +297,306 @@ export function renderShipReview() {
     getMeta();
 
 
+  const points =
+    getCheckedReviewPoints();
+
+
   const counts =
     getReviewCounts();
 
 
-  const followUps =
-    getFollowUpPoints();
+  /*
+    ---------------------------------------------------------
+    HEADER
+    ---------------------------------------------------------
+  */
 
-
-  container.innerHTML =
-    `
-
-      <div
-        class="review-header"
-        style="
-          margin-bottom:18px;
-        "
-      >
-
-        <div
-          style="
-            color:var(--vv-squid);
-            font-size:15px;
-            font-weight:800;
-            margin-bottom:6px;
-          "
-        >
-          ${escapeHtml(
-            meta.ship
-          )}
-        </div>
-
-
-        <div
-          style="
-            color:var(--vv-gray);
-            font-size:12px;
-            line-height:1.5;
-          "
-        >
-
-          Visit:
-          ${escapeHtml(
-            meta.dateOn ||
-            ''
-          )}
-
-          ${
-            meta.dateOff
-              ? ` → ${escapeHtml(
-                  meta.dateOff
-                )}`
-              : ''
-          }
-
-          <br>
-
-          Reviewer:
-          ${escapeHtml(
-            getReviewer() ||
-            meta.reviewer ||
-            ''
-          )}
-
-        </div>
-
-      </div>
-
-
-      <div
-        class="review-summary-box"
-        style="
-          display:grid;
-          grid-template-columns:
-            repeat(4,1fr);
-          gap:8px;
-          margin-bottom:20px;
-        "
-      >
-
-        <div
-          style="
-            background:var(--vv-bg);
-            border-top:3px solid var(--vv-red);
-            border-radius:6px;
-            padding:10px;
-          "
-        >
-
-          <div
-            style="
-              font-size:20px;
-              font-weight:800;
-            "
-          >
-            ${counts.checked}
-          </div>
-
-          <div
-            style="
-              color:var(--vv-gray);
-              font-size:9px;
-              font-weight:700;
-            "
-          >
-            REVIEWED
-          </div>
-
-        </div>
-
-
-        <div
-          style="
-            background:var(--vv-bg);
-            border-top:3px solid var(--vv-red);
-            border-radius:6px;
-            padding:10px;
-          "
-        >
-
-          <div
-            style="
-              font-size:20px;
-              font-weight:800;
-            "
-          >
-            ${counts.total}
-          </div>
-
-          <div
-            style="
-              color:var(--vv-gray);
-              font-size:9px;
-              font-weight:700;
-            "
-          >
-            TOTAL
-          </div>
-
-        </div>
-
-
-        <div
-          style="
-            background:var(--vv-bg);
-            border-top:3px solid var(--vv-red);
-            border-radius:6px;
-            padding:10px;
-          "
-        >
-
-          <div
-            style="
-              font-size:20px;
-              font-weight:800;
-            "
-          >
-            ${counts.comments}
-          </div>
-
-          <div
-            style="
-              color:var(--vv-gray);
-              font-size:9px;
-              font-weight:700;
-            "
-          >
-            COMMENTS
-          </div>
-
-        </div>
-
-
-        <div
-          style="
-            background:var(--vv-bg);
-            border-top:3px solid var(--vv-red);
-            border-radius:6px;
-            padding:10px;
-          "
-        >
-
-          <div
-            style="
-              font-size:20px;
-              font-weight:800;
-            "
-          >
-            ${counts.followUps}
-          </div>
-
-          <div
-            style="
-              color:var(--vv-gray);
-              font-size:9px;
-              font-weight:700;
-            "
-          >
-            FOLLOW-UPS
-          </div>
-
-        </div>
-
-      </div>
-
-
-      <div
-        style="
-          color:var(--vv-squid);
-          font-size:16px;
-          font-weight:800;
-          margin-bottom:12px;
-        "
-      >
-        Points to Follow Up
-      </div>
-
-
-      ${
-        followUps.length
-          ? followUps
-              .map(
-                point =>
-                  renderFollowUpPoint(
-                    point
-                  )
-              )
-              .join('')
-          : `
-              <div
-                style="
-                  padding:18px;
-                  background:var(--vv-bg);
-                  border-radius:8px;
-                  color:var(--vv-gray);
-                  font-size:13px;
-                "
-              >
-                No points were marked
-                Follow-Up Needed from Ship.
-              </div>
-            `
-      }
-
-
-      <div
-        style="
-          margin-top:24px;
-          padding-top:18px;
-          border-top:1px solid var(--vv-line);
-        "
-      >
-
-        <div
-          style="
-            color:var(--vv-squid);
-            font-size:15px;
-            font-weight:800;
-            margin-bottom:8px;
-          "
-        >
-          Reviewer Confirmation
-        </div>
-
-
-        <p
-          style="
-            margin:0;
-            color:var(--vv-gray);
-            font-size:12px;
-            line-height:1.5;
-          "
-        >
-          Review the follow-up points above.
-          Once the report is ready, submit it
-          to move it from Open Reports to
-          Submitted Reports.
-        </p>
-
-      </div>
-
-    `;
-
-}
-
-
-/* =========================================================
-   RENDER FOLLOW-UP POINT
-========================================================= */
-
-function renderFollowUpPoint(
-  point
-) {
-
-  return `
+  let html = `
 
     <div
-      class="review-followup"
       style="
-        margin-bottom:14px;
-        padding:15px;
-        border:1.5px solid var(--vv-line);
-        border-radius:10px;
-        background:#fff;
+        margin-bottom:18px;
       "
     >
 
       <div
         style="
           color:var(--vv-squid);
-          font-size:10px;
+          font-size:17px;
           font-weight:800;
-          letter-spacing:.05em;
           margin-bottom:5px;
         "
       >
-        ${escapeHtml(
-          point.section
-        )}
+
+        SHIP REVIEW
+
       </div>
 
 
       <div
         style="
-          font-size:14px;
-          line-height:1.45;
-          font-weight:600;
-          margin-bottom:9px;
+          color:var(--vv-gray);
+          font-size:12px;
+          line-height:1.6;
         "
       >
+
+        <b>Ship:</b>
+
         ${escapeHtml(
-          point.text
+          meta.ship ||
+          ''
         )}
+
+        <br>
+
+        <b>Visit:</b>
+
+        ${escapeHtml(
+          meta.dateOn ||
+          ''
+        )}
+
+        ${
+          meta.dateOff
+            ? ` → ${escapeHtml(
+                meta.dateOff
+              )}`
+            : ''
+        }
+
+        <br>
+
+        <b>Reviewer:</b>
+
+        ${escapeHtml(
+          getReviewer() ||
+          meta.reviewer ||
+          ''
+        )}
+
+      </div>
+
+    </div>
+
+
+    <div
+      style="
+        display:grid;
+        grid-template-columns:
+          repeat(3,1fr);
+        gap:8px;
+        margin-bottom:20px;
+      "
+    >
+
+      ${renderStat(
+        counts.checked,
+        'CHECKED'
+      )}
+
+      ${renderStat(
+        counts.comments,
+        'COMMENTS'
+      )}
+
+      ${renderStat(
+        counts.followUps,
+        'FOLLOW-UPS'
+      )}
+
+    </div>
+
+  `;
+
+
+  /*
+    ---------------------------------------------------------
+    NO CHECKED POINTS
+    ---------------------------------------------------------
+  */
+
+  if (
+    points.length === 0
+  ) {
+
+    html += `
+
+      <div
+        style="
+          padding:18px;
+          background:var(--vv-bg);
+          border-radius:8px;
+          color:var(--vv-gray);
+          text-align:center;
+          font-size:13px;
+          line-height:1.5;
+        "
+      >
+
+        No checklist points have been checked yet.
+
+        <br><br>
+
+        Return to the checklist and mark the points
+        you have reviewed.
+
+      </div>
+
+    `;
+
+
+    container.innerHTML =
+      html;
+
+
+    renderCompleteReview();
+
+
+    return;
+
+  }
+
+
+  /*
+    ---------------------------------------------------------
+    INTRODUCTION
+    ---------------------------------------------------------
+  */
+
+  html += `
+
+    <div
+      style="
+        margin-bottom:13px;
+        color:var(--vv-gray);
+        font-size:12px;
+        line-height:1.5;
+      "
+    >
+
+      The following points were reviewed.
+      Please check the findings and follow-up requirements
+      before submitting the report.
+
+    </div>
+
+  `;
+
+
+  /*
+    ---------------------------------------------------------
+    DEPARTMENT GROUPS
+    ---------------------------------------------------------
+  */
+
+  const groups =
+    groupByDepartment(
+      points
+    );
+
+
+  groups.forEach(
+    group => {
+
+      html += `
+
+        <div
+          style="
+            margin-top:18px;
+            margin-bottom:10px;
+            padding-bottom:7px;
+            border-bottom:2px solid var(--vv-red);
+            color:var(--vv-squid);
+            font-size:15px;
+            font-weight:800;
+          "
+        >
+
+          ${escapeHtml(
+            group.section
+          )}
+
+        </div>
+
+      `;
+
+
+      group.points.forEach(
+        point => {
+
+          html +=
+            renderReviewPoint(
+              point
+            );
+
+        }
+      );
+
+    }
+  );
+
+
+  container.innerHTML =
+    html;
+
+
+  /*
+    Complete review area.
+  */
+
+  renderCompleteReview();
+
+}
+
+
+/* =========================================================
+   STAT BOX
+========================================================= */
+
+function renderStat(
+  value,
+  label
+) {
+
+  return `
+
+    <div
+      style="
+        padding:10px;
+        background:var(--vv-bg);
+        border-top:3px solid var(--vv-red);
+        border-radius:6px;
+      "
+    >
+
+      <div
+        style="
+          font-size:20px;
+          font-weight:800;
+        "
+      >
+
+        ${escapeHtml(
+          value
+        )}
+
       </div>
 
 
       <div
         style="
-          display:inline-block;
-          padding:4px 8px;
-          border-radius:15px;
-          background:#fff0f0;
-          color:var(--vv-red);
+          color:var(--vv-gray);
           font-size:9px;
           font-weight:800;
-          margin-bottom:10px;
         "
       >
-        FOLLOW-UP NEEDED FROM SHIP
+
+        ${escapeHtml(
+          label
+        )}
+
       </div>
-
-
-      ${
-        point.comments.length
-          ? `
-
-            <div
-              style="
-                margin-top:7px;
-              "
-            >
-
-              <div
-                style="
-                  color:var(--vv-squid);
-                  font-size:10px;
-                  font-weight:800;
-                  margin-bottom:5px;
-                "
-              >
-                REVIEWER COMMENTS
-              </div>
-
-
-              ${
-                point.comments
-                  .map(
-                    comment => `
-
-                      <div
-                        style="
-                          padding:7px 9px;
-                          background:var(--vv-bg);
-                          border-radius:6px;
-                          font-size:12px;
-                          line-height:1.4;
-                          margin-bottom:5px;
-                        "
-                      >
-
-                        <strong>
-                          ${escapeHtml(
-                            comment.name ||
-                            'Reviewer'
-                          )}:
-                        </strong>
-
-                        ${escapeHtml(
-                          comment.text ||
-                          ''
-                        )}
-
-                      </div>
-
-                    `
-                  )
-                  .join('')
-              }
-
-            </div>
-
-          `
-          : ''
-      }
-
-
-      ${
-        point.photos.length
-          ? `
-
-            <div
-              style="
-                margin-top:10px;
-              "
-            >
-
-              <div
-                style="
-                  color:var(--vv-squid);
-                  font-size:10px;
-                  font-weight:800;
-                  margin-bottom:6px;
-                "
-              >
-                ATTACHED PHOTOS
-              </div>
-
-
-              <div
-                style="
-                  display:flex;
-                  flex-wrap:wrap;
-                  gap:8px;
-                "
-              >
-
-                ${
-                  point.photos
-                    .map(
-                      photo => `
-
-                        <div
-                          style="
-                            width:100px;
-                            height:100px;
-                            overflow:hidden;
-                            border:1px solid var(--vv-line);
-                            border-radius:7px;
-                          "
-                        >
-
-                          <img
-                            src="${photo}"
-                            alt="Reviewer photo"
-                            style="
-                              width:100%;
-                              height:100%;
-                              object-fit:cover;
-                            "
-                          >
-
-                        </div>
-
-                      `
-                    )
-                    .join('')
-                }
-
-              </div>
-
-            </div>
-
-          `
-          : ''
-      }
-
-
-      ${
-        point.shipComments.length
-          ? `
-
-            <div
-              style="
-                margin-top:12px;
-              "
-            >
-
-              <div
-                style="
-                  color:var(--status-green);
-                  font-size:10px;
-                  font-weight:800;
-                  margin-bottom:5px;
-                "
-              >
-                EXISTING SHIP COMMENTS
-              </div>
-
-
-              ${
-                point.shipComments
-                  .map(
-                    comment => `
-
-                      <div
-                        style="
-                          padding:7px 9px;
-                          background:var(--status-green-bg);
-                          border-left:3px solid var(--status-green);
-                          border-radius:6px;
-                          font-size:12px;
-                          line-height:1.4;
-                          margin-bottom:5px;
-                        "
-                      >
-
-                        <strong>
-                          ${escapeHtml(
-                            comment.name ||
-                            'Ship'
-                          )}:
-                        </strong>
-
-                        ${escapeHtml(
-                          comment.text ||
-                          ''
-                        )}
-
-                      </div>
-
-                    `
-                  )
-                  .join('')
-              }
-
-            </div>
-
-          `
-          : ''
-      }
 
     </div>
 
@@ -931,7 +606,454 @@ function renderFollowUpPoint(
 
 
 /* =========================================================
-   RENDER ALL POINTS FOR REVIEW
+   GROUP BY DEPARTMENT
+========================================================= */
+
+function groupByDepartment(
+  points
+) {
+
+  const groups =
+    [];
+
+
+  points.forEach(
+    point => {
+
+      let group =
+        groups.find(
+          item =>
+            item.section ===
+            point.section
+        );
+
+
+      if (
+        !group
+      ) {
+
+        group = {
+
+          section:
+            point.section,
+
+          points: []
+
+        };
+
+
+        groups.push(
+          group
+        );
+
+      }
+
+
+      group.points.push(
+        point
+      );
+
+    }
+  );
+
+
+  return groups;
+
+}
+
+
+/* =========================================================
+   REVIEW POINT
+========================================================= */
+
+function renderReviewPoint(
+  point
+) {
+
+  const followUpComplete =
+    point.followUpNeeded &&
+    point.shipComments.length > 0;
+
+
+  let html = `
+
+    <div
+      style="
+        margin-bottom:13px;
+        padding:14px;
+        background:#fff;
+        border:1px solid var(--vv-line);
+        border-left:4px solid var(--vv-squid);
+        border-radius:8px;
+      "
+    >
+
+      <!-- POINT -->
+
+      <div
+        style="
+          display:flex;
+          align-items:flex-start;
+          gap:9px;
+        "
+      >
+
+        <div
+          style="
+            width:22px;
+            height:22px;
+            flex:0 0 22px;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            background:var(--vv-red);
+            color:#fff;
+            border-radius:50%;
+            font-size:12px;
+            font-weight:800;
+          "
+        >
+
+          ✓
+
+        </div>
+
+
+        <div
+          style="
+            flex:1;
+            color:var(--vv-body);
+            font-size:13.5px;
+            line-height:1.5;
+            font-weight:600;
+          "
+        >
+
+          ${escapeHtml(
+            point.text
+          )}
+
+        </div>
+
+      </div>
+
+  `;
+
+
+  /*
+    FOLLOW-UP
+  */
+
+  if (
+    point.followUpNeeded
+  ) {
+
+    html += `
+
+      <div
+        style="
+          margin-top:9px;
+        "
+      >
+
+        <span
+          class="status ${
+            followUpComplete
+              ? 'green'
+              : 'blue'
+          }"
+        >
+
+          ${
+            followUpComplete
+              ? 'SHIP FOLLOW-UP COMPLETED'
+              : 'FOLLOW-UP NEEDED FROM SHIP'
+          }
+
+        </span>
+
+      </div>
+
+    `;
+
+  }
+
+
+  /*
+    REVIEWER COMMENTS
+  */
+
+  if (
+    point.comments.length
+  ) {
+
+    html += `
+
+      <div
+        style="
+          margin-top:10px;
+        "
+      >
+
+        <div
+          style="
+            color:var(--vv-squid);
+            font-size:9px;
+            font-weight:800;
+            letter-spacing:.04em;
+            margin-bottom:5px;
+          "
+        >
+
+          REVIEWER COMMENTS
+
+        </div>
+
+
+        ${
+          point.comments
+            .map(
+              comment => `
+
+                <div
+                  class="comment"
+                >
+
+                  <strong>
+
+                    ${escapeHtml(
+                      comment.name ||
+                      'Reviewer'
+                    )}:
+
+                  </strong>
+
+
+                  ${escapeHtml(
+                    comment.text ||
+                    ''
+                  )}
+
+                </div>
+
+              `
+            )
+            .join('')
+        }
+
+      </div>
+
+    `;
+
+  } else {
+
+    html += `
+
+      <div
+        style="
+          margin-top:9px;
+          color:var(--vv-gray);
+          font-size:10px;
+        "
+      >
+
+        No reviewer comment added.
+
+      </div>
+
+    `;
+
+  }
+
+
+  /*
+    PHOTOS
+  */
+
+  if (
+    point.photos.length
+  ) {
+
+    html += `
+
+      <div
+        style="
+          margin-top:10px;
+        "
+      >
+
+        <div
+          style="
+            color:var(--vv-squid);
+            font-size:9px;
+            font-weight:800;
+            letter-spacing:.04em;
+            margin-bottom:6px;
+          "
+        >
+
+          ATTACHED PHOTOS
+
+        </div>
+
+
+        <div
+          style="
+            display:flex;
+            flex-wrap:wrap;
+            gap:8px;
+          "
+        >
+
+          ${
+            point.photos
+              .map(
+                (
+                  photo,
+                  index
+                ) => `
+
+                  <div
+                    style="
+                      width:105px;
+                      height:105px;
+                      overflow:hidden;
+                      border:1px solid var(--vv-line);
+                      border-radius:7px;
+                      background:#fff;
+                    "
+                  >
+
+                    <img
+                      src="${photo}"
+                      alt="Reviewer photo ${index + 1}"
+                      style="
+                        width:100%;
+                        height:100%;
+                        object-fit:cover;
+                      "
+                    >
+
+                  </div>
+
+                `
+              )
+              .join('')
+          }
+
+        </div>
+
+      </div>
+
+    `;
+
+  }
+
+
+  /*
+    SHIP RESPONSE
+  */
+
+  if (
+    point.followUpNeeded
+  ) {
+
+    html += `
+
+      <div
+        style="
+          margin-top:11px;
+        "
+      >
+
+        <div
+          style="
+            color:var(--status-green);
+            font-size:9px;
+            font-weight:800;
+            letter-spacing:.04em;
+            margin-bottom:5px;
+          "
+        >
+
+          SHIP COMMENTS / RESPONSES
+
+        </div>
+
+
+        ${
+          point.shipComments.length
+
+            ? point.shipComments
+                .map(
+                  comment => `
+
+                    <div
+                      class="ship-response-display"
+                    >
+
+                      <strong>
+
+                        ${escapeHtml(
+                          comment.name ||
+                          'Ship'
+                        )}:
+
+                      </strong>
+
+
+                      ${escapeHtml(
+                        comment.text ||
+                        ''
+                      )}
+
+                    </div>
+
+                  `
+                )
+                .join('')
+
+            : `
+
+                <div
+                  style="
+                    padding:8px 10px;
+                    background:#fff8f8;
+                    border-left:3px solid var(--vv-red);
+                    border-radius:6px;
+                    color:var(--vv-red);
+                    font-size:11px;
+                  "
+                >
+
+                  No ship response yet.
+
+                </div>
+
+              `
+        }
+
+      </div>
+
+    `;
+
+  }
+
+
+  html += `
+
+    </div>
+
+  `;
+
+
+  return html;
+
+}
+
+
+/* =========================================================
+   COMPLETE REVIEW
 ========================================================= */
 
 export function renderCompleteReview() {
@@ -952,229 +1074,180 @@ export function renderCompleteReview() {
 
 
   const points =
-    getAllReportPoints();
+    getCheckedReviewPoints();
 
 
-  container.innerHTML =
-    points
-      .map(
-        point => `
+  /*
+    The previous version showed ALL points here.
+    That was the problem.
 
-          <div
-            style="
-              padding:13px 0;
-              border-top:1px solid var(--vv-line);
-            "
-          >
+    Now only checked points are shown.
+  */
 
-            <div
-              style="
-                color:var(--vv-squid);
-                font-size:10px;
-                font-weight:800;
-              "
-            >
-              ${escapeHtml(
-                point.section
-              )}
-            </div>
+  if (
+    points.length === 0
+  ) {
+
+    container.innerHTML =
+      '';
+
+    return;
+
+  }
 
 
-            <div
-              style="
-                margin-top:3px;
-                font-size:13px;
-                line-height:1.45;
-              "
-            >
-              ${escapeHtml(
-                point.text
-              )}
-            </div>
+  container.innerHTML = `
+
+    <div
+      style="
+        margin-top:20px;
+        padding-top:16px;
+        border-top:1px solid var(--vv-line);
+      "
+    >
+
+      <div
+        style="
+          color:var(--vv-squid);
+          font-size:14px;
+          font-weight:800;
+          margin-bottom:10px;
+        "
+      >
+
+        REVIEWED POINTS
+
+      </div>
 
 
-            <div
-              style="
-                margin-top:5px;
-                color:${
-                  point.checked
-                    ? '#555'
-                    : 'var(--vv-red)'
-                };
-                font-size:10px;
-                font-weight:700;
-              "
-            >
-              ${
-                point.checked
-                  ? 'CHECKED'
-                  : 'NOT CHECKED'
-              }
+      <div
+        style="
+          color:var(--vv-gray);
+          font-size:11px;
+          line-height:1.45;
+          margin-bottom:10px;
+        "
+      >
 
-              ${
-                point.followUpNeeded
-                  ? ' • FOLLOW-UP'
-                  : ''
-              }
+        Only checklist points marked as reviewed
+        are included in this report.
 
-            </div>
+      </div>
 
 
-            ${
-              point.comments.length
-                ? `
+      ${
+        points
+          .map(
+            point =>
+              renderCompactPoint(
+                point
+              )
+          )
+          .join('')
+      }
 
-                  <div
-                    style="
-                      margin-top:6px;
-                      color:var(--vv-gray);
-                      font-size:11.5px;
-                    "
-                  >
+    </div>
 
-                    ${
-                      point.comments
-                        .map(
-                          comment =>
-                            `
-
-                              <div
-                                style="
-                                  margin-bottom:3px;
-                                "
-                              >
-
-                                <strong>
-                                  ${escapeHtml(
-                                    comment.name ||
-                                    'Reviewer'
-                                  )}:
-                                </strong>
-
-                                ${escapeHtml(
-                                  comment.text
-                                )}
-
-                              </div>
-
-                            `
-                        )
-                        .join('')
-                    }
-
-                  </div>
-
-                `
-                : ''
-            }
-
-
-            ${
-              point.photos.length
-                ? `
-
-                  <div
-                    style="
-                      display:flex;
-                      gap:6px;
-                      flex-wrap:wrap;
-                      margin-top:7px;
-                    "
-                  >
-
-                    ${
-                      point.photos
-                        .map(
-                          photo =>
-                            `
-
-                              <img
-                                src="${photo}"
-                                style="
-                                  width:70px;
-                                  height:70px;
-                                  object-fit:cover;
-                                  border-radius:6px;
-                                  border:1px solid var(--vv-line);
-                                "
-                                alt="Reviewer photo"
-                              >
-
-                            `
-                        )
-                        .join('')
-                    }
-
-                  </div>
-
-                `
-                : ''
-            }
-
-
-            ${
-              point.shipComments.length
-                ? `
-
-                  <div
-                    style="
-                      margin-top:7px;
-                      padding:7px 9px;
-                      background:var(--status-green-bg);
-                      border-left:3px solid var(--status-green);
-                      border-radius:6px;
-                      color:#285536;
-                      font-size:11.5px;
-                    "
-                  >
-
-                    ${
-                      point.shipComments
-                        .map(
-                          comment =>
-                            `
-
-                              <div
-                                style="
-                                  margin-bottom:3px;
-                                "
-                              >
-
-                                <strong>
-                                  ${escapeHtml(
-                                    comment.name ||
-                                    'Ship'
-                                  )}:
-                                </strong>
-
-                                ${escapeHtml(
-                                  comment.text
-                                )}
-
-                              </div>
-
-                            `
-                        )
-                        .join('')
-                    }
-
-                  </div>
-
-                `
-                : ''
-            }
-
-          </div>
-
-        `
-      )
-      .join('');
+  `;
 
 }
 
 
 /* =========================================================
-   SAVE BEFORE SHIP REVIEW
+   COMPACT REVIEW POINT
+========================================================= */
+
+function renderCompactPoint(
+  point
+) {
+
+  const completed =
+    point.followUpNeeded &&
+    point.shipComments.length > 0;
+
+
+  return `
+
+    <div
+      style="
+        margin-bottom:10px;
+        padding:10px;
+        background:var(--vv-bg);
+        border-radius:7px;
+      "
+    >
+
+      <div
+        style="
+          color:var(--vv-squid);
+          font-size:9px;
+          font-weight:800;
+        "
+      >
+
+        ${escapeHtml(
+          point.section
+        )}
+
+      </div>
+
+
+      <div
+        style="
+          margin-top:3px;
+          font-size:12px;
+          line-height:1.4;
+        "
+      >
+
+        ${escapeHtml(
+          point.text
+        )}
+
+      </div>
+
+
+      ${
+        point.followUpNeeded
+          ? `
+
+            <div
+              style="
+                margin-top:5px;
+              "
+            >
+
+              <span
+                class="status ${
+                  completed
+                    ? 'green'
+                    : 'blue'
+                }"
+              >
+
+                ${
+                  completed
+                    ? 'FOLLOW-UP COMPLETED'
+                    : 'FOLLOW-UP NEEDED'
+                }
+
+              </span>
+
+            </div>
+
+          `
+          : ''
+      }
+
+    </div>
+
+  `;
+
+}
+
+
+/* =========================================================
+   SAVE BEFORE REVIEW
 ========================================================= */
 
 export async function saveBeforeReview(){
@@ -1201,27 +1274,23 @@ export async function saveBeforeReview(){
   }
 
 
-  const result =
-    await saveOpenReport({
+  return saveOpenReport({
 
-      reportId,
+    reportId,
 
-      meta:
-        getMeta(),
+    meta:
+      getMeta(),
 
-      state:
-        getState()
+    state:
+      getState()
 
-    });
-
-
-  return result;
+  });
 
 }
 
 
 /* =========================================================
-   PREPARE REVIEW
+   PREPARE SHIP REVIEW
 ========================================================= */
 
 export async function prepareShipReview(){
@@ -1234,6 +1303,15 @@ export async function prepareShipReview(){
     !saved.success
   ) {
 
+    alert(
+      'The report could not be saved before Ship Review.\n\n' +
+      (
+        saved.error?.message ||
+        'Unknown error'
+      )
+    );
+
+
     return false;
 
   }
@@ -1241,7 +1319,6 @@ export async function prepareShipReview(){
 
   renderShipReview();
 
-  renderCompleteReview();
 
   return true;
 
@@ -1262,9 +1339,10 @@ export async function submitCurrentReport(){
     !reportId
   ) {
 
-    showSubmitError(
-      'No report is currently open.'
+    alert(
+      'No active report was found.'
     );
+
 
     return false;
 
@@ -1279,10 +1357,6 @@ export async function submitCurrentReport(){
     getState();
 
 
-  /*
-    Final save as submitted.
-  */
-
   const result =
     await submitReport({
 
@@ -1296,12 +1370,16 @@ export async function submitCurrentReport(){
 
 
   if (
+    !result ||
     !result.success
   ) {
 
-    showSubmitError(
-      result.error?.message ||
-      'The report could not be submitted.'
+    alert(
+      'The report could not be submitted.\n\n' +
+      (
+        result?.error?.message ||
+        'Unknown error'
+      )
     );
 
 
@@ -1311,7 +1389,7 @@ export async function submitCurrentReport(){
 
 
   /*
-    Update local state.
+    Mark local state as submitted.
   */
 
   setReportStatus(
@@ -1320,14 +1398,14 @@ export async function submitCurrentReport(){
 
 
   /*
-    Notify main application.
+    Notify main.js.
   */
 
   if (
-    onSubmitted
+    callbacks.submitted
   ) {
 
-    await onSubmitted(
+    await callbacks.submitted(
       result.data
     );
 
@@ -1340,69 +1418,48 @@ export async function submitCurrentReport(){
 
 
 /* =========================================================
-   SUBMIT ERROR
-========================================================= */
-
-function showSubmitError(
-  message
-){
-
-  alert(
-    `Could not submit report.\n\n${message}`
-  );
-
-}
-
-
-/* =========================================================
    SUBMIT CONFIRMATION
 ========================================================= */
 
 export function askSubmitConfirmation(){
 
-  return confirm(
+  return window.confirm(
     'Submit this Ship Visit Report?\n\n' +
-    'After submission, the report will move from Open Reports to Submitted Reports.'
+    'The report will move from Open Reports to Submitted Reports.'
   );
 
 }
 
 
 /* =========================================================
-   REVIEWER SIGN-OFF
+   REVIEW SUMMARY
 ========================================================= */
 
 export function getReviewSummary(){
-
-  const counts =
-    getReviewCounts();
-
 
   const meta =
     getMeta();
 
 
-  const followUps =
-    getFollowUpPoints();
+  const counts =
+    getReviewCounts();
 
 
   return {
 
     ship:
-      meta.ship,
+      meta.ship || '',
 
     dateOn:
-      meta.dateOn,
+      meta.dateOn || '',
 
     dateOff:
-      meta.dateOff,
+      meta.dateOff || '',
 
     reviewer:
       getReviewer() ||
-      meta.reviewer,
-
-    total:
-      counts.total,
+      meta.reviewer ||
+      '',
 
     checked:
       counts.checked,
@@ -1414,16 +1471,7 @@ export function getReviewSummary(){
       counts.photos,
 
     followUps:
-      followUps.length,
-
-    readyToSubmit:
-      Boolean(
-        meta.ship &&
-        (
-          getReviewer() ||
-          meta.reviewer
-        )
-      )
+      counts.followUps
 
   };
 
@@ -1440,9 +1488,9 @@ export default {
 
   renderCompleteReview,
 
-  getFollowUpPoints,
+  getCheckedReviewPoints,
 
-  getAllReportPoints,
+  getReviewFollowUps,
 
   prepareShipReview,
 
