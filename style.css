@@ -1,17 +1,29 @@
 /* ============================================================
    VIRGIN VOYAGES
    SHIP VISIT REPORT
-   MOBILE + DESKTOP
+   style.css
+   ============================================================ */
+
+
+/* ============================================================
+   VARIABLES
 ============================================================ */
 
 :root {
+
   --vv-squid:#3C1053;
   --vv-squid-dark:#2A073C;
+  --vv-squid-light:#5A2175;
+
   --vv-red:#E10A0A;
   --vv-red-dark:#CC0000;
+
+  --vv-near-black:#1B1B1B;
   --vv-body:#333333;
   --vv-gray:#8A8A8A;
+
   --vv-white:#FFFFFF;
+
   --vv-line:#E7E1EA;
   --vv-bg:#F8F6F9;
 
@@ -23,6 +35,7 @@
 
   --status-red:#CC0000;
   --status-red-bg:#FFF1F1;
+
 }
 
 
@@ -33,25 +46,39 @@
 *,
 *::before,
 *::after {
+
   box-sizing:border-box;
+
 }
 
 
 html,
 body {
+
   margin:0;
   padding:0;
+
   width:100%;
   min-height:100%;
+
   overflow-x:hidden;
+
 }
 
 
 body {
+
   background:var(--vv-bg);
+
   color:var(--vv-body);
-  font-family:Arial,Calibri,sans-serif;
+
+  font-family:
+    Arial,
+    Calibri,
+    sans-serif;
+
   font-size:14px;
+
 }
 
 
@@ -59,23 +86,32 @@ button,
 input,
 textarea,
 select {
+
   font:inherit;
+
 }
 
 
 button {
+
   cursor:pointer;
+
 }
 
 
 img {
+
   display:block;
+
   max-width:100%;
+
 }
 
 
 .hidden {
+
   display:none !important;
+
 }
 
 
@@ -84,8 +120,11 @@ img {
 ============================================================ */
 
 #app {
+
   width:100%;
+
   min-height:100vh;
+
 }
 
 
@@ -94,12 +133,18 @@ img {
 ============================================================ */
 
 .band {
+
   position:relative;
+
   width:100%;
+
   max-width:1200px;
+
   margin:0 auto;
-  padding:24px 18px;
-  color:var(--vv-white);
+
+  padding:25px 18px;
+
+  color:#FFFFFF;
 
   background-color:var(--vv-squid);
 
@@ -109,65 +154,104 @@ img {
       rgba(255,255,255,.055) 0,
       rgba(255,255,255,.055) 2px,
       transparent 2px,
-      transparent 52px
+      transparent 55px
     );
+
 }
 
 
 .band.compact {
+
   padding-top:16px;
+
   padding-bottom:18px;
+
 }
 
 
 .band h1 {
+
   margin:5px 0 5px;
+
   color:#FFFFFF;
+
   font-size:25px;
+
   line-height:1.08;
+
   font-weight:800;
+
 }
 
 
 .band .sub {
+
   margin:0;
-  color:rgba(255,255,255,.92);
+
+  color:
+    rgba(255,255,255,.92);
+
   font-size:12px;
+
   line-height:1.45;
+
 }
 
 
 .eyebrow {
-  color:rgba(255,255,255,.92);
+
+  color:
+    rgba(255,255,255,.92);
+
   font-size:11px;
+
   line-height:1.2;
+
   font-weight:800;
+
   letter-spacing:.07em;
+
+  text-transform:uppercase;
+
 }
 
 
 /* ============================================================
-   BACK BUTTON
+   HEADER BACK
 ============================================================ */
 
 .header-back {
+
   display:inline-flex;
+
   align-items:center;
   justify-content:center;
+
   min-height:40px;
+
   margin-bottom:9px;
+
   padding:8px 15px;
+
   border:0;
+
   border-radius:7px;
+
   background:var(--vv-red);
+
   color:#FFFFFF;
+
   font-size:12px;
+
   font-weight:800;
+
 }
 
 
-.header-back:active {
-  transform:scale(.98);
+.header-back:hover {
+
+  background:var(--vv-red-dark);
+
 }
 
 
@@ -176,47 +260,77 @@ img {
 ============================================================ */
 
 .home {
+
   width:100%;
+
   max-width:1200px;
+
   margin:0 auto;
+
   padding:18px 12px 35px;
+
 }
 
 
 .home-grid {
+
   display:grid;
+
   grid-template-columns:1fr;
+
   gap:10px;
+
 }
 
 
 .home-card {
+
   display:block;
+
   width:100%;
+
   min-height:125px;
+
   padding:21px;
+
   text-align:left;
+
   border:1px solid var(--vv-line);
+
   border-radius:12px;
+
   background:#FFFFFF;
+
   color:var(--vv-body);
+
 }
 
 
 .home-card h2 {
+
   margin:0 0 9px;
+
   color:var(--vv-squid);
+
   font-size:17px;
+
   line-height:1.2;
+
   font-weight:800;
+
 }
 
 
 .home-card p {
+
   margin:0;
+
   color:var(--vv-gray);
+
   font-size:12px;
+
   line-height:1.5;
+
 }
 
 
@@ -225,14 +339,23 @@ img {
 ============================================================ */
 
 .admin-button {
+
   min-height:40px;
+
   padding:8px 16px;
+
   border:1px solid var(--vv-squid);
+
   border-radius:7px;
+
   background:#FFFFFF;
+
   color:var(--vv-squid);
+
   font-size:10px;
+
   font-weight:800;
+
 }
 
 
@@ -242,10 +365,15 @@ img {
 
 .page-pad,
 .summary {
+
   width:100%;
+
   max-width:1200px;
+
   margin:0 auto;
+
   padding:17px 12px 90px;
+
 }
 
 
@@ -254,69 +382,109 @@ img {
 ============================================================ */
 
 .meta {
+
   width:100%;
+
   max-width:1200px;
+
   margin:0 auto;
+
   padding:11px 12px;
+
   border-bottom:1px solid var(--vv-line);
+
   background:#FFFFFF;
+
   color:var(--vv-gray);
+
   font-size:11px;
+
 }
 
 
 .meta strong {
+
   color:var(--vv-squid);
+
 }
 
 
 /* ============================================================
-   FIELDS
+   FORM FIELDS
 ============================================================ */
 
 .field {
+
   margin-bottom:15px;
+
 }
 
 
 .field label {
+
   display:block;
+
   margin-bottom:6px;
+
   color:var(--vv-squid);
+
   font-size:10px;
+
   font-weight:800;
+
   letter-spacing:.05em;
+
   text-transform:uppercase;
+
 }
 
 
 .field input,
 .field textarea,
 .field select {
+
   display:block;
+
   width:100%;
+
   min-height:44px;
+
   padding:10px 12px;
+
   border:1px solid var(--vv-line);
+
   border-radius:8px;
+
   background:#FFFFFF;
+
   color:var(--vv-body);
+
   outline:none;
+
   font-size:14px;
+
 }
 
 
 .field textarea {
+
   min-height:105px;
+
   resize:vertical;
+
 }
 
 
 .field input:focus,
 .field textarea:focus,
 .field select:focus {
+
   border-color:var(--vv-squid);
-  box-shadow:0 0 0 2px rgba(60,16,83,.08);
+
+  box-shadow:
+    0 0 0 2px
+    rgba(60,16,83,.08);
+
 }
 
 
@@ -325,86 +493,144 @@ img {
 ============================================================ */
 
 .reviewer-row {
+
   display:flex;
+
   flex-direction:column;
+
   align-items:stretch;
+
   gap:6px;
+
   margin-top:10px;
+
 }
 
 
 .reviewer-row label {
-  color:rgba(255,255,255,.85);
+
+  color:
+    rgba(255,255,255,.85);
+
   font-size:9px;
+
   font-weight:800;
+
 }
 
 
 .reviewer-row input {
+
   width:100%;
+
   min-height:40px;
+
   padding:8px 10px;
-  border:1px solid rgba(255,255,255,.28);
+
+  border:1px solid
+    rgba(255,255,255,.28);
+
   border-radius:6px;
-  outline:none;
-  background:rgba(255,255,255,.10);
+
+  background:
+    rgba(255,255,255,.10);
+
   color:#FFFFFF;
+
+  outline:none;
+
   font-size:12px;
+
 }
 
 
 .reviewer-row input::placeholder {
-  color:rgba(255,255,255,.65);
+
+  color:
+    rgba(255,255,255,.65);
+
 }
 
 
 /* ============================================================
-   BUTTONS
+   PRIMARY / SECONDARY BUTTON
 ============================================================ */
 
 .btn-primary,
 .btn-secondary {
+
   display:flex;
+
   align-items:center;
+
   justify-content:center;
+
   width:100%;
+
   min-height:46px;
+
   padding:10px 14px;
+
   border-radius:8px;
+
   font-size:13px;
+
   font-weight:800;
+
   text-align:center;
+
 }
 
 
 .btn-primary {
+
   border:1px solid var(--vv-red);
+
   background:var(--vv-red);
+
   color:#FFFFFF;
+
+}
+
+
+.btn-primary:hover {
+
+  background:var(--vv-red-dark);
+
 }
 
 
 .btn-secondary {
+
   border:1px solid var(--vv-squid);
+
   background:#FFFFFF;
+
   color:var(--vv-squid);
+
 }
 
 
-.btn-primary:active,
-.btn-secondary:active {
-  transform:scale(.99);
+.btn-secondary:hover {
+
+  background:
+    rgba(60,16,83,.04);
+
 }
 
 
 /* ============================================================
-   TWO BUTTON AREAS
+   TWO BUTTONS
 ============================================================ */
 
 .grid2 {
+
   display:grid;
+
   grid-template-columns:1fr;
+
   gap:8px;
+
 }
 
 
@@ -413,12 +639,19 @@ img {
 ============================================================ */
 
 .footer {
+
   width:100%;
+
   max-width:1200px;
+
   margin:0 auto;
+
   padding:12px 12px 18px;
+
   background:#FFFFFF;
+
   border-top:1px solid var(--vv-line);
+
 }
 
 
@@ -427,129 +660,713 @@ img {
 ============================================================ */
 
 .progress-wrap {
+
   width:100%;
+
   max-width:1200px;
+
   margin:0 auto;
+
   padding:12px;
+
   background:#FFFFFF;
+
   border-bottom:1px solid var(--vv-line);
+
 }
 
 
 .progress-bar {
+
   width:100%;
+
   height:7px;
+
   overflow:hidden;
+
   border-radius:999px;
+
   background:#ECE8EF;
+
 }
 
 
 .progress-fill {
+
   width:0%;
+
   height:100%;
+
   border-radius:999px;
+
   background:var(--vv-red);
+
+  transition:width .2s ease;
+
 }
 
 
 .progress-label {
+
   margin-top:6px;
+
   color:var(--vv-gray);
+
   font-size:10px;
+
 }
 
 
 /* ============================================================
    CHECKLIST
+   THESE MATCH THE ACTUAL checklist.js CLASSES
 ============================================================ */
 
+
+/* Main section */
+
 .section {
+
   width:100%;
+
   max-width:1200px;
+
   margin:0 auto;
+
   background:#FFFFFF;
+
 }
 
 
-.section-header {
+/* Section header */
+
+.section-head {
+
   display:flex;
+
   align-items:center;
+
   justify-content:space-between;
-  min-height:52px;
-  padding:13px 12px;
-  border-bottom:1px solid var(--vv-line);
-  color:var(--vv-squid);
-  font-size:15px;
-  font-weight:800;
-}
 
-
-.check-item {
   width:100%;
-  padding:13px 12px;
+
+  min-height:54px;
+
+  padding:14px 12px;
+
   border-bottom:1px solid var(--vv-line);
+
   background:#FFFFFF;
+
+  cursor:pointer;
+
+  user-select:none;
+
 }
 
 
-.check-row {
+.section-head h2 {
+
+  margin:0;
+
+  color:var(--vv-squid);
+
+  font-size:15px;
+
+  line-height:1.2;
+
+  font-weight:800;
+
+}
+
+
+.section-right {
+
   display:flex;
-  align-items:flex-start;
-  gap:9px;
-}
 
-
-.check-circle {
-  width:27px;
-  height:27px;
-  flex:0 0 27px;
-  border:2px solid #999999;
-  border-radius:50%;
-  background:#FFFFFF;
-}
-
-
-.check-circle.checked {
-  display:flex;
   align-items:center;
-  justify-content:center;
-  border-color:var(--vv-red);
-  background:var(--vv-red);
-  color:#FFFFFF;
+
+  gap:9px;
+
 }
 
 
-.check-text {
-  flex:1;
-  min-width:0;
-  padding-top:3px;
-  color:var(--vv-body);
-  font-size:14px;
+.section-count {
+
+  color:var(--vv-gray);
+
+  font-size:10px;
+
+  font-weight:600;
+
+}
+
+
+.chevron {
+
+  width:10px;
+
+  height:10px;
+
+  border-right:2px solid var(--vv-squid);
+
+  border-bottom:2px solid var(--vv-squid);
+
+  transform:
+    rotate(45deg);
+
+  transition:
+    transform .15s ease;
+
+}
+
+
+.section.open
+.chevron {
+
+  transform:
+    rotate(225deg);
+
+}
+
+
+/* Section body */
+
+.section-body {
+
+  display:none;
+
+  width:100%;
+
+}
+
+
+.section.open
+.section-body {
+
+  display:block;
+
+}
+
+
+/* Section note */
+
+.section-note {
+
+  padding:10px 12px;
+
+  border-bottom:1px solid var(--vv-line);
+
+  background:var(--vv-bg);
+
+  color:var(--vv-gray);
+
+  font-size:10px;
+
   line-height:1.45;
+
 }
 
 
 /* ============================================================
-   COMMENT / PHOTO BUTTONS
+   CHECKLIST ITEM
+
+   One horizontal line:
+   circle | point text | Comment | Photo
 ============================================================ */
 
-.comment-button,
-.photo-button {
-  min-height:38px;
-  padding:7px 10px;
-  border:1px solid var(--vv-line);
-  border-radius:7px;
+.item {
+
+  width:100%;
+
+  margin:0;
+
+  padding:0;
+
   background:#FFFFFF;
-  color:var(--vv-squid);
-  font-size:10px;
-  font-weight:800;
+
+  border-bottom:1px solid var(--vv-line);
+
 }
 
 
-.comment-button:active,
-.photo-button:active {
-  transform:scale(.97);
+/* Main point line */
+
+.item-row {
+
+  display:grid;
+
+  grid-template-columns:
+    28px
+    minmax(0,1fr)
+    auto;
+
+  align-items:center;
+
+  gap:9px;
+
+  width:100%;
+
+  min-height:58px;
+
+  padding:10px 12px;
+
+}
+
+
+/* ============================================================
+   CHECK CIRCLE
+
+   Actual class from checklist.js:
+   .check-btn
+============================================================ */
+
+.check-btn {
+
+  position:relative;
+
+  width:27px;
+
+  height:27px;
+
+  min-width:27px;
+
+  min-height:27px;
+
+  padding:0;
+
+  border:2px solid #999999;
+
+  border-radius:50%;
+
+  background:#FFFFFF;
+
+  appearance:none;
+
+  -webkit-appearance:none;
+
+  outline:none;
+
+}
+
+
+.check-btn:hover {
+
+  border-color:var(--vv-red);
+
+}
+
+
+.check-btn.checked {
+
+  border-color:var(--vv-red);
+
+  background:var(--vv-red);
+
+}
+
+
+.check-btn.checked::after {
+
+  content:'✓';
+
+  position:absolute;
+
+  top:50%;
+
+  left:50%;
+
+  transform:
+    translate(-50%,-53%);
+
+  color:#FFFFFF;
+
+  font-size:14px;
+
+  line-height:1;
+
+  font-weight:800;
+
+}
+
+
+/* ============================================================
+   POINT TEXT
+============================================================ */
+
+.item-text {
+
+  min-width:0;
+
+  color:var(--vv-body);
+
+  font-size:13px;
+
+  line-height:1.4;
+
+  font-weight:500;
+
+  overflow-wrap:anywhere;
+
+}
+
+
+/* ============================================================
+   COMMENT / PHOTO ACTIONS
+
+   Actual checklist.js:
+   .item-actions
+   .action
+   .note-button
+   .photo-button
+============================================================ */
+
+.item-actions {
+
+  display:flex;
+
+  align-items:center;
+
+  gap:5px;
+
+}
+
+
+.item-actions .action {
+
+  display:inline-flex;
+
+  align-items:center;
+
+  justify-content:center;
+
+  min-width:54px;
+
+  min-height:34px;
+
+  padding:6px 8px;
+
+  border:1px solid var(--vv-line);
+
+  border-radius:6px;
+
+  background:#FFFFFF;
+
+  color:var(--vv-squid);
+
+  font-size:9px;
+
+  line-height:1;
+
+  font-weight:800;
+
+}
+
+
+.item-actions .action:hover {
+
+  border-color:var(--vv-squid);
+
+  background:
+    rgba(60,16,83,.04);
+
+}
+
+
+.item-actions .note-button.active {
+
+  background:var(--vv-squid);
+
+  border-color:var(--vv-squid);
+
+  color:#FFFFFF;
+
+}
+
+
+/* ============================================================
+   ITEM EXTRA DETAIL AREA
+============================================================ */
+
+.extra {
+
+  width:100%;
+
+  padding:0 12px 13px 48px;
+
+  background:#FFFFFF;
+
+}
+
+
+/* ============================================================
+   COMMENTS
+============================================================ */
+
+.comments-list {
+
+  width:100%;
+
+}
+
+
+.comments-list .comment {
+
+  margin-top:7px;
+
+}
+
+
+.comment {
+
+  padding:8px 9px;
+
+  border-left:3px solid var(--vv-squid);
+
+  border-radius:5px;
+
+  background:#F8F5FA;
+
+  color:var(--vv-body);
+
+  font-size:10px;
+
+  line-height:1.45;
+
+}
+
+
+.comment b {
+
+  color:var(--vv-squid);
+
+}
+
+
+/* Comment input row */
+
+.comment-row {
+
+  display:flex;
+
+  align-items:stretch;
+
+  gap:7px;
+
+  margin-top:8px;
+
+}
+
+
+.comment-row textarea {
+
+  flex:1;
+
+  min-width:0;
+
+  min-height:65px;
+
+  padding:8px 9px;
+
+  border:1px solid var(--vv-line);
+
+  border-radius:6px;
+
+  background:#FFFFFF;
+
+  color:var(--vv-body);
+
+  outline:none;
+
+  font-size:11px;
+
+  line-height:1.4;
+
+  resize:vertical;
+
+}
+
+
+.comment-row textarea:focus {
+
+  border-color:var(--vv-squid);
+
+}
+
+
+.add-comment {
+
+  width:55px;
+
+  min-height:38px;
+
+  align-self:flex-end;
+
+  padding:6px;
+
+  border:1px solid var(--vv-squid);
+
+  border-radius:6px;
+
+  background:var(--vv-squid);
+
+  color:#FFFFFF;
+
+  font-size:9px;
+
+  font-weight:800;
+
+}
+
+
+/* ============================================================
+   PHOTOS
+============================================================ */
+
+.photos {
+
+  display:flex;
+
+  flex-wrap:wrap;
+
+  gap:7px;
+
+  margin-top:9px;
+
+}
+
+
+.photo {
+
+  position:relative;
+
+  width:78px;
+
+  height:78px;
+
+  overflow:hidden;
+
+  border:1px solid var(--vv-line);
+
+  border-radius:7px;
+
+  background:#F4F2F5;
+
+}
+
+
+.photo img {
+
+  width:100%;
+
+  height:100%;
+
+  object-fit:cover;
+
+}
+
+
+.photo-remove {
+
+  position:absolute;
+
+  top:3px;
+
+  right:3px;
+
+  display:flex;
+
+  align-items:center;
+
+  justify-content:center;
+
+  width:22px;
+
+  height:22px;
+
+  padding:0;
+
+  border:0;
+
+  border-radius:50%;
+
+  background:
+    rgba(204,0,0,.90);
+
+  color:#FFFFFF;
+
+  font-size:16px;
+
+  line-height:1;
+
+}
+
+
+/* ============================================================
+   FOLLOW UP
+============================================================ */
+
+.followup-row {
+
+  display:flex;
+
+  align-items:center;
+
+  gap:8px;
+
+  margin-top:10px;
+
+  padding:8px 10px;
+
+  border-radius:6px;
+
+  background:var(--vv-blue-bg);
+
+}
+
+
+.followup-check {
+
+  width:20px;
+
+  height:20px;
+
+  flex:0 0 20px;
+
+  accent-color:var(--vv-red);
+
+}
+
+
+.followup-row label {
+
+  color:var(--status-blue);
+
+  font-size:10px;
+
+  line-height:1.3;
+
+  font-weight:800;
+
+}
+
+
+.followup-row
+label.followup-complete {
+
+  color:var(--status-green);
+
+}
+
+
+/* ============================================================
+   SHIP COMMENTS ON CHECKLIST
+============================================================ */
+
+.ship-comments {
+
+  width:100%;
+
 }
 
 
@@ -558,58 +1375,82 @@ img {
 ============================================================ */
 
 .status {
+
   display:inline-block;
+
   padding:5px 8px;
+
   border-radius:999px;
+
   font-size:8px;
+
   line-height:1;
+
   font-weight:800;
+
   letter-spacing:.03em;
+
 }
 
 
 .status.red {
+
   color:var(--status-red);
+
   background:var(--status-red-bg);
+
 }
 
 
 .status.blue {
+
   color:var(--status-blue);
+
   background:var(--status-blue-bg);
+
 }
 
 
 .status.green {
+
   color:var(--status-green);
+
   background:var(--status-green-bg);
+
 }
 
 
 /* ============================================================
-   REPORT LIST
+   REPORT LISTS
 ============================================================ */
 
 .reports {
+
   width:100%;
+
   max-width:1200px;
+
   margin:0 auto;
+
   padding:13px 10px 85px;
+
 }
 
-
-/*
-  MOBILE:
-  one report per row.
-*/
 
 #openList,
 #reportList,
 #responseList {
+
   width:100%;
+
   display:grid;
+
   grid-template-columns:1fr;
+
   gap:9px;
+
+  align-items:start;
+
 }
 
 
@@ -618,50 +1459,80 @@ img {
 ============================================================ */
 
 .report-card {
+
   width:100%;
+
   min-width:0;
+
   padding:13px;
+
   margin:0;
+
   border:1px solid var(--vv-line);
+
   border-radius:9px;
+
   background:#FFFFFF;
+
 }
 
 
 .report-card.red {
-  border-color:rgba(225,10,10,.30);
+
+  border-color:
+    rgba(225,10,10,.30);
+
 }
 
 
 .report-card.blue {
-  border-color:rgba(36,99,184,.30);
+
+  border-color:
+    rgba(36,99,184,.30);
+
 }
 
 
 .report-card.green {
-  border-color:rgba(0,138,82,.30);
+
+  border-color:
+    rgba(0,138,82,.30);
+
 }
 
 
 .report-card h3 {
+
   margin:0 0 8px;
+
   color:var(--vv-squid);
+
   font-size:15px;
+
   line-height:1.2;
+
   font-weight:800;
+
   overflow-wrap:anywhere;
+
 }
 
 
 .report-card .report-meta {
+
   color:var(--vv-gray);
+
   font-size:9.5px;
+
   line-height:1.55;
+
 }
 
 
 .report-card .report-meta b {
+
   color:var(--vv-squid);
+
 }
 
 
@@ -670,30 +1541,49 @@ img {
 ============================================================ */
 
 .report-actions {
+
   display:flex;
+
   flex-direction:column;
+
   width:100%;
+
   gap:6px;
+
   margin-top:9px;
+
 }
 
 
 .report-actions button {
+
   width:100%;
+
   min-height:38px;
+
   padding:7px 9px;
+
   border:1px solid var(--vv-squid);
+
   border-radius:6px;
+
   background:#FFFFFF;
+
   color:var(--vv-squid);
+
   font-size:9px;
+
   font-weight:800;
+
 }
 
 
 .report-actions button.open {
+
   background:var(--vv-squid);
+
   color:#FFFFFF;
+
 }
 
 
@@ -702,35 +1592,56 @@ img {
 ============================================================ */
 
 .submitted-review-button {
+
   display:flex !important;
+
   align-items:center !important;
+
   justify-content:center !important;
+
   width:100% !important;
+
   min-height:40px !important;
+
   padding:8px 10px !important;
+
   border:1px solid var(--vv-squid) !important;
+
   border-radius:7px !important;
+
   background:var(--vv-squid) !important;
+
   color:#FFFFFF !important;
+
   font-size:10px !important;
+
   font-weight:800 !important;
+
 }
 
 
 /* ============================================================
-   BACK TO HOME
+   BACK HOME
 ============================================================ */
 
 #openHomeBtn,
 #reportsHomeBtn,
 #responsesHomeBtn {
+
   display:flex;
+
   align-items:center;
+
   justify-content:center;
+
   width:100%;
+
   max-width:420px;
+
   min-height:44px;
+
   margin:18px auto 0;
+
 }
 
 
@@ -741,51 +1652,45 @@ img {
 #openList .empty,
 #reportList .empty,
 #responseList .empty {
-  grid-column:1;
+
+  grid-column:1 / -1;
+
   width:100%;
+
 }
 
 
 .empty {
+
   width:100%;
+
   padding:22px 13px;
+
   border:1px dashed var(--vv-line);
+
   border-radius:8px;
+
   background:#FFFFFF;
+
   color:var(--vv-gray);
+
   font-size:12px;
+
   line-height:1.5;
+
   text-align:center;
+
 }
 
 
 /* ============================================================
-   SUMMARY POINT
+   SUMMARY
 ============================================================ */
 
 .summary .report-card {
+
   margin-bottom:11px;
-}
 
-
-/* ============================================================
-   COMMENT
-============================================================ */
-
-.comment {
-  margin-top:5px;
-  padding:8px 9px;
-  border-left:3px solid var(--vv-squid);
-  border-radius:5px;
-  background:#F8F5FA;
-  color:var(--vv-body);
-  font-size:11px;
-  line-height:1.5;
-}
-
-
-.comment strong {
-  color:var(--vv-squid);
 }
 
 
@@ -794,108 +1699,190 @@ img {
 ============================================================ */
 
 .response-label {
+
   margin-bottom:5px;
+
   color:var(--vv-squid);
+
   font-size:9px;
+
   line-height:1.2;
+
   font-weight:800;
+
   letter-spacing:.04em;
+
 }
 
 
 .response-point {
+
   margin-top:11px;
+
   padding:11px 0;
+
   border-top:1px solid var(--vv-line);
+
 }
 
 
 .response-point:first-child {
+
   border-top:0;
+
 }
 
 
 .response-section {
+
   color:var(--vv-squid);
+
   font-size:9px;
+
   line-height:1.2;
+
   font-weight:800;
+
   text-transform:uppercase;
+
   letter-spacing:.04em;
+
 }
 
 
 .response-text {
+
   margin-top:4px;
+
   margin-bottom:8px;
+
   color:var(--vv-body);
+
   font-size:14px;
+
   line-height:1.45;
+
   font-weight:600;
+
 }
 
 
 /* ============================================================
-   PHOTOS
+   RESPONSE PHOTOS
 ============================================================ */
 
 .response-photos {
+
   display:flex;
+
   flex-wrap:wrap;
+
   gap:8px;
+
 }
 
 
 .response-photo {
+
   width:88px;
+
   height:88px;
+
   overflow:hidden;
+
   border:1px solid var(--vv-line);
+
   border-radius:7px;
+
   background:#F4F2F5;
+
 }
 
 
 .response-photo img {
+
   width:100%;
+
   height:100%;
+
   object-fit:cover;
+
 }
 
 
 /* ============================================================
-   SHIP RESPONSE
+   SHIP RESPONSE DISPLAY
 ============================================================ */
 
 .ship-response-display {
+
   margin-top:6px;
+
   padding:8px 9px;
-  border-left:3px solid var(--status-green);
+
+  border-left:3px solid
+    var(--status-green);
+
   border-radius:5px;
-  background:var(--status-green-bg);
+
+  background:
+    var(--status-green-bg);
+
   color:var(--vv-body);
+
   font-size:11px;
+
   line-height:1.5;
+
 }
 
 
 .ship-response-display strong {
+
   color:var(--status-green);
+
 }
 
 
+/* ============================================================
+   SHIP RESPONSE INPUT
+============================================================ */
+
 .ship-response-input {
+
   width:100%;
+
   min-height:105px;
+
   padding:10px 11px;
+
   border:1px solid var(--vv-line);
+
   border-radius:7px;
+
   background:#FFFFFF;
+
   color:var(--vv-body);
+
   font-size:13px;
+
   line-height:1.45;
+
   resize:vertical;
+
   outline:none;
+
+}
+
+
+.ship-response-input:focus {
+
+  border-color:var(--vv-squid);
+
+  box-shadow:
+    0 0 0 2px
+    rgba(60,16,83,.08);
+
 }
 
 
@@ -904,34 +1891,55 @@ img {
 ============================================================ */
 
 #stats {
+
   display:grid;
-  grid-template-columns:repeat(2,minmax(0,1fr));
+
+  grid-template-columns:
+    repeat(2,minmax(0,1fr));
+
   gap:8px;
+
   margin-bottom:15px;
+
 }
 
 
 .stat {
+
   padding:10px;
+
   border:1px solid var(--vv-line);
+
   border-radius:7px;
+
   background:#FFFFFF;
+
   text-align:center;
+
 }
 
 
 .stat-number {
+
   color:var(--vv-squid);
+
   font-size:17px;
+
   font-weight:800;
+
 }
 
 
 .stat-label {
+
   margin-top:3px;
+
   color:var(--vv-gray);
+
   font-size:7px;
+
   font-weight:800;
+
 }
 
 
@@ -942,145 +1950,631 @@ img {
 @media (min-width:621px) {
 
   .band {
+
     padding:34px 42px;
+
   }
 
 
   .band.compact {
+
     padding-top:22px;
+
     padding-bottom:22px;
+
   }
 
 
   .band h1 {
+
     font-size:30px;
+
   }
 
 
   .band .sub {
+
     font-size:14px;
+
   }
 
 
   .home {
+
     padding:36px 34px;
+
   }
 
 
   .home-grid {
+
     grid-template-columns:
       repeat(2,minmax(0,1fr));
+
     gap:18px;
+
   }
 
 
   .page-pad,
   .summary {
+
     padding:
       24px 34px 100px;
+
   }
 
 
   .meta {
+
     padding:
       13px 34px;
+
   }
 
 
   .reviewer-row {
+
     flex-direction:row;
+
     align-items:center;
+
   }
 
 
   .reviewer-row input {
+
     width:220px;
+
   }
 
 
   .grid2 {
+
     grid-template-columns:
       repeat(2,minmax(0,1fr));
+
   }
 
 
   .footer,
   .progress-wrap {
+
     padding-left:34px;
+
     padding-right:34px;
+
   }
 
 
-  .section-header,
-  .check-item {
+  .section-head {
+
     padding-left:34px;
+
     padding-right:34px;
+
   }
 
 
-  .reports {
-    padding:
-      20px 24px 90px;
+  .item-row {
+
+    padding-left:34px;
+
+    padding-right:34px;
+
+  }
+
+
+  .extra {
+
+    padding-left:70px;
+
+    padding-right:34px;
+
   }
 
 
   /*
-    Desktop:
-    3 reports across.
+    REPORTS:
+    3 across on desktop.
   */
 
   #openList,
   #reportList,
   #responseList {
+
     grid-template-columns:
       repeat(3,minmax(0,1fr));
+
     gap:14px;
+
   }
 
 
   .report-actions {
+
     flex-direction:row;
+
   }
 
 
   .report-actions button {
+
     flex:1;
+
   }
 
 
   .response-photo {
+
     width:105px;
+
     height:105px;
+
   }
 
 
   #stats {
+
     grid-template-columns:
       repeat(4,minmax(0,1fr));
+
   }
 
 }
 
 
 /* ============================================================
-   LARGE DESKTOP
+   TABLET
 ============================================================ */
 
-@media (min-width:1100px) {
+@media (min-width:621px)
+and
+(max-width:950px) {
+
+  .home {
+
+    padding:
+      25px 22px;
+
+  }
+
+
+  .page-pad,
+  .summary,
+  .footer,
+  .progress-wrap {
+
+    padding-left:22px;
+
+    padding-right:22px;
+
+  }
+
+
+  .meta {
+
+    padding-left:22px;
+
+    padding-right:22px;
+
+  }
+
+
+  .section-head {
+
+    padding-left:22px;
+
+    padding-right:22px;
+
+  }
+
+
+  .item-row {
+
+    padding-left:22px;
+
+    padding-right:22px;
+
+  }
+
+
+  .extra {
+
+    padding-left:58px;
+
+    padding-right:22px;
+
+  }
+
+
+  /*
+    Tablet:
+    2 reports across.
+  */
+
+  #openList,
+  #reportList,
+  #responseList {
+
+    grid-template-columns:
+      repeat(2,minmax(0,1fr));
+
+    gap:10px;
+
+  }
+
+}
+
+
+/* ============================================================
+   MOBILE
+============================================================ */
+
+@media (max-width:620px) {
+
+  /*
+    Compact checklist rows.
+    Keep everything on one horizontal line.
+  */
+
+  .item-row {
+
+    grid-template-columns:
+      27px
+      minmax(0,1fr)
+      auto;
+
+    gap:7px;
+
+    min-height:56px;
+
+    padding:
+      9px 10px;
+
+  }
+
+
+  .check-btn {
+
+    width:27px;
+
+    height:27px;
+
+    min-width:27px;
+
+    min-height:27px;
+
+  }
+
+
+  .check-btn.checked::after {
+
+    font-size:13px;
+
+  }
+
+
+  .item-text {
+
+    font-size:13px;
+
+    line-height:1.35;
+
+  }
+
+
+  .item-actions {
+
+    gap:4px;
+
+  }
+
+
+  .item-actions .action {
+
+    min-width:45px;
+
+    min-height:32px;
+
+    padding:5px 6px;
+
+    font-size:8px;
+
+  }
+
+
+  /*
+    Detail information appears
+    underneath the checklist line.
+  */
+
+  .extra {
+
+    padding:
+      0 10px 12px 44px;
+
+  }
+
+
+  .comment-row {
+
+    flex-direction:column;
+
+  }
+
+
+  .comment-row textarea {
+
+    width:100%;
+
+  }
+
+
+  .add-comment {
+
+    width:100%;
+
+    min-height:38px;
+
+  }
+
+
+  .followup-row {
+
+    padding:8px;
+
+  }
+
+
+  .followup-row label {
+
+    font-size:9px;
+
+  }
+
+
+  /*
+    Mobile reports:
+    one report per row.
+  */
+
+  #openList,
+  #reportList,
+  #responseList {
+
+    grid-template-columns:1fr;
+
+    gap:9px;
+
+  }
+
+
+  .reports {
+
+    padding:
+      12px 10px 80px;
+
+  }
+
+
+  .report-card {
+
+    padding:12px;
+
+  }
+
+
+  .report-card h3 {
+
+    font-size:14px;
+
+  }
+
+
+  .report-card .report-meta {
+
+    font-size:9px;
+
+  }
+
+
+  /*
+    Mobile home.
+  */
+
+  .home {
+
+    padding:
+      18px 12px 35px;
+
+  }
+
+
+  .home-grid {
+
+    grid-template-columns:1fr;
+
+    gap:10px;
+
+  }
+
 
   .home-card {
-    min-height:170px;
-    padding:28px;
+
+    min-height:125px;
+
+    padding:20px;
+
   }
 
 
   .home-card h2 {
-    font-size:19px;
+
+    font-size:16px;
+
   }
 
 
   .home-card p {
-    font-size:14px;
+
+    font-size:12px;
+
+  }
+
+
+  /*
+    Mobile header.
+  */
+
+  .band {
+
+    padding:
+      23px 18px;
+
+  }
+
+
+  .band.compact {
+
+    padding:
+      16px 18px 18px;
+
+  }
+
+
+  .band h1 {
+
+    font-size:24px;
+
+  }
+
+
+  .band .sub {
+
+    font-size:12px;
+
+  }
+
+
+  /*
+    Mobile page areas.
+  */
+
+  .page-pad,
+  .summary,
+  .footer,
+  .progress-wrap {
+
+    padding-left:12px;
+
+    padding-right:12px;
+
+  }
+
+
+  .meta {
+
+    padding-left:12px;
+
+    padding-right:12px;
+
+  }
+
+
+  /*
+    Mobile footer buttons.
+  */
+
+  .grid2 {
+
+    grid-template-columns:1fr;
+
+  }
+
+
+  /*
+    Mobile response images.
+  */
+
+  .response-photo {
+
+    width:90px;
+
+    height:90px;
+
+  }
+
+}
+
+
+/* ============================================================
+   VERY SMALL PHONES
+============================================================ */
+
+@media (max-width:390px) {
+
+  .item-row {
+
+    grid-template-columns:
+      25px
+      minmax(0,1fr)
+      auto;
+
+    gap:5px;
+
+    padding:
+      8px;
+
+  }
+
+
+  .check-btn {
+
+    width:25px;
+
+    height:25px;
+
+    min-width:25px;
+
+    min-height:25px;
+
+  }
+
+
+  .item-text {
+
+    font-size:12px;
+
+  }
+
+
+  .item-actions .action {
+
+    min-width:40px;
+
+    min-height:30px;
+
+    padding:4px 5px;
+
+    font-size:7px;
+
+  }
+
+
+  .extra {
+
+    padding-left:38px;
+
+    padding-right:8px;
+
+  }
+
+
+  .band h1 {
+
+    font-size:21px;
+
   }
 
 }
@@ -1093,7 +2587,9 @@ img {
 @media print {
 
   body {
+
     background:#FFFFFF;
+
   }
 
 
@@ -1102,26 +2598,39 @@ img {
   #open,
   #submitted,
   #responses {
+
     display:none !important;
+
   }
 
 
   .band {
+
     max-width:none;
-    background:var(--vv-squid) !important;
+
+    background:
+      var(--vv-squid) !important;
+
     print-color-adjust:exact;
+
     -webkit-print-color-adjust:exact;
+
   }
 
 
   .summary {
+
     max-width:none;
+
     padding:15px;
+
   }
 
 
   .report-card {
+
     break-inside:avoid;
+
   }
 
 }
