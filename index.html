@@ -13,6 +13,10 @@
 
 <style>
 
+/* =========================================================
+   VIRGIN VOYAGES COLORS
+========================================================= */
+
 :root{
   --vv-squid:#3C1053;
   --vv-squid-stripe:#461D5C;
@@ -25,18 +29,22 @@
   --vv-line:#E7E2EA;
   --vv-bg:#FAF9FB;
 
-  --green:#198754;
-  --green-light:#EDF9F0;
+  --status-red:#E10A0A;
+  --status-red-bg:#FFF1F1;
 
-  --blue:#2B5DA8;
-  --blue-light:#EEF4FF;
+  --status-blue:#2B5DA8;
+  --status-blue-bg:#EEF4FF;
+
+  --status-green:#198754;
+  --status-green-bg:#EDF9F0;
 }
 
 *{
   box-sizing:border-box;
 }
 
-html,body{
+html,
+body{
   margin:0;
   padding:0;
 }
@@ -53,14 +61,18 @@ button{
   cursor:pointer;
 }
 
+button:disabled{
+  opacity:.55;
+  cursor:not-allowed;
+}
+
 input,
-textarea,
-button{
-  outline:none;
+textarea{
+  box-sizing:border-box;
 }
 
 .hidden{
-  display:none !important;
+  display:none!important;
 }
 
 .app{
@@ -71,13 +83,13 @@ button{
   box-shadow:0 0 40px rgba(0,0,0,.04);
 }
 
+
 /* =========================================================
    HEADER
 ========================================================= */
 
 .band{
   background-color:var(--vv-squid);
-
   background-image:
     repeating-linear-gradient(
       45deg,
@@ -86,7 +98,6 @@ button{
       var(--vv-squid-stripe) 40px,
       var(--vv-squid-stripe) 80px
     );
-
   color:#fff;
   padding:28px 24px 22px;
 }
@@ -100,7 +111,7 @@ button{
   font-size:11px;
   letter-spacing:.12em;
   font-weight:700;
-  opacity:.85;
+  opacity:.86;
 }
 
 .band h1{
@@ -117,8 +128,10 @@ button{
 .band .sub{
   margin:0;
   font-size:13px;
+  line-height:1.4;
   opacity:.82;
 }
+
 
 /* =========================================================
    HOME
@@ -130,7 +143,7 @@ button{
 
 .home-grid{
   display:grid;
-  grid-template-columns:repeat(2,1fr);
+  grid-template-columns:1fr 1fr;
   gap:14px;
 }
 
@@ -159,23 +172,28 @@ button{
 
 .home-card h2{
   margin:0 0 10px;
+
   color:var(--vv-squid);
+
   font-size:16px;
   line-height:1.25;
 }
 
 .home-card p{
   margin:0;
+
   color:var(--vv-gray);
+
   font-size:12.5px;
   line-height:1.5;
 }
 
+
 /* =========================================================
-   FORM
+   FORMS
 ========================================================= */
 
-.pad{
+.page-pad{
   padding:24px;
 }
 
@@ -185,6 +203,7 @@ button{
 
 .field label{
   display:block;
+
   margin-bottom:6px;
 
   color:var(--vv-squid);
@@ -213,11 +232,13 @@ button{
 
 .field input:focus,
 .field textarea:focus{
+  outline:none;
   border-color:var(--vv-red);
 }
 
 .btn-primary{
   width:100%;
+
   padding:14px 18px;
 
   background:var(--vv-red);
@@ -228,7 +249,6 @@ button{
 
   font-size:15px;
   font-weight:700;
-  letter-spacing:.02em;
 }
 
 .btn-primary:hover{
@@ -237,6 +257,7 @@ button{
 
 .btn-secondary{
   width:100%;
+
   padding:13px 18px;
 
   background:#fff;
@@ -253,26 +274,29 @@ button{
   background:#faf7fc;
 }
 
+
 /* =========================================================
    META
 ========================================================= */
 
 .meta{
   margin:14px 20px;
+
   padding:12px 14px;
 
   background:var(--vv-bg);
+
   border-radius:9px;
 
-  color:var(--vv-body);
-
   font-size:12px;
+
   line-height:1.5;
 }
 
 .meta strong{
   color:var(--vv-squid);
 }
+
 
 /* =========================================================
    REVIEWER
@@ -282,13 +306,16 @@ button{
   display:flex;
   align-items:center;
   gap:8px;
+
   margin-top:10px;
 }
 
 .reviewer-row label{
-  color:rgba(255,255,255,.78);
+  color:rgba(255,255,255,.8);
+
   font-size:10px;
   font-weight:700;
+
   white-space:nowrap;
 }
 
@@ -298,9 +325,9 @@ button{
 
   padding:6px 8px;
 
-  background:rgba(255,255,255,.13);
+  background:rgba(255,255,255,.12);
 
-  border:1px solid rgba(255,255,255,.45);
+  border:1px solid rgba(255,255,255,.4);
   border-radius:6px;
 
   color:#fff;
@@ -308,9 +335,11 @@ button{
   font-size:12px;
 }
 
-.reviewer-row input::placeholder{
-  color:rgba(255,255,255,.7);
+.reviewer-row input:focus{
+  outline:none;
+  border-color:#fff;
 }
+
 
 /* =========================================================
    PROGRESS
@@ -323,9 +352,11 @@ button{
 .progress-bar{
   width:100%;
   height:6px;
+
   overflow:hidden;
 
   background:var(--vv-line);
+
   border-radius:4px;
 }
 
@@ -334,6 +365,7 @@ button{
   height:100%;
 
   background:var(--vv-red);
+
   border-radius:4px;
 
   transition:width .2s ease;
@@ -347,6 +379,7 @@ button{
   font-size:11px;
   font-weight:600;
 }
+
 
 /* =========================================================
    CHECKLIST SECTIONS
@@ -385,6 +418,7 @@ button{
 
 .section-count{
   color:var(--vv-gray);
+
   font-size:12px;
   font-weight:600;
 }
@@ -397,6 +431,7 @@ button{
   border-bottom:2px solid var(--vv-squid);
 
   transform:rotate(45deg);
+
   transition:.2s;
 }
 
@@ -406,6 +441,7 @@ button{
 
 .section-body{
   display:none;
+
   padding:0 20px 16px;
 }
 
@@ -415,9 +451,11 @@ button{
 
 .section-note{
   margin-bottom:10px;
+
   padding:9px 10px;
 
   background:var(--vv-bg);
+
   border-radius:7px;
 
   color:var(--vv-gray);
@@ -426,12 +464,14 @@ button{
   line-height:1.45;
 }
 
+
 /* =========================================================
    CHECKLIST ITEM
 ========================================================= */
 
 .item{
   padding:13px 0;
+
   border-top:1px solid var(--vv-line);
 }
 
@@ -452,13 +492,12 @@ button{
   height:24px;
 
   margin-top:1px;
-
   padding:0;
+
+  background:#fff;
 
   border:2px solid var(--vv-gray);
   border-radius:50%;
-
-  background:#fff;
 
   position:relative;
 }
@@ -498,6 +537,7 @@ button{
 .item-actions{
   display:flex;
   gap:5px;
+
   flex:0 0 auto;
 }
 
@@ -515,10 +555,6 @@ button{
   font-weight:700;
 }
 
-.action:hover{
-  border-color:var(--vv-squid);
-}
-
 .action.active{
   background:var(--vv-squid);
   color:#fff;
@@ -529,15 +565,18 @@ button{
   margin:10px 0 0 33px;
 }
 
+
 /* =========================================================
    COMMENTS
 ========================================================= */
 
 .comment{
   margin-bottom:6px;
+
   padding:8px 10px;
 
   background:var(--vv-bg);
+
   border-radius:7px;
 
   font-size:12px;
@@ -569,10 +608,6 @@ button{
   font-size:13px;
 }
 
-.comment-row textarea:focus{
-  border-color:var(--vv-red);
-}
-
 .add-comment{
   height:44px;
 
@@ -587,14 +622,16 @@ button{
   font-weight:700;
 }
 
+
 /* =========================================================
    PHOTOS
 ========================================================= */
 
 .photos{
   display:flex;
-  gap:7px;
   flex-wrap:wrap;
+  gap:7px;
+
   margin-top:8px;
 }
 
@@ -608,15 +645,18 @@ button{
 
   border:1px solid var(--vv-line);
   border-radius:7px;
+
+  background:#fff;
 }
 
 .photo img{
   width:100%;
   height:100%;
+
   object-fit:cover;
 }
 
-.photo button{
+.photo-remove{
   position:absolute;
 
   top:2px;
@@ -636,6 +676,7 @@ button{
   font-size:12px;
   line-height:18px;
 }
+
 
 /* =========================================================
    FOLLOW UP
@@ -665,14 +706,18 @@ button{
   cursor:pointer;
 }
 
+.followup-complete{
+  color:var(--status-green)!important;
+}
+
 .ship-response-display{
   margin-top:8px;
 
   padding:8px 10px;
 
-  background:var(--green-light);
+  background:var(--status-green-bg);
 
-  border-left:3px solid var(--green);
+  border-left:3px solid var(--status-green);
 
   border-radius:6px;
 
@@ -682,6 +727,7 @@ button{
   line-height:1.45;
 }
 
+
 /* =========================================================
    FOOTER
 ========================================================= */
@@ -689,6 +735,7 @@ button{
 .footer{
   position:sticky;
   bottom:0;
+
   z-index:20;
 
   padding:14px 20px;
@@ -702,16 +749,19 @@ button{
 
 .grid2{
   display:grid;
+
   grid-template-columns:1fr 1fr;
+
   gap:9px;
 }
+
 
 /* =========================================================
    SUMMARY
 ========================================================= */
 
 .summary{
-  padding:22px 24px 120px;
+  padding:22px 24px 125px;
 }
 
 .stats{
@@ -727,6 +777,7 @@ button{
   background:var(--vv-bg);
 
   border-top:3px solid var(--vv-red);
+
   border-radius:6px;
 }
 
@@ -771,13 +822,35 @@ button{
   resize:vertical;
 }
 
-.summary textarea:focus{
-  border-color:var(--vv-red);
-}
-
 .summary-section{
   margin-top:18px;
 }
+
+.summary-photos{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+
+  margin-top:8px;
+}
+
+.summary-photo{
+  width:100px;
+  height:100px;
+
+  overflow:hidden;
+
+  border:1px solid var(--vv-line);
+  border-radius:8px;
+}
+
+.summary-photo img{
+  width:100%;
+  height:100%;
+
+  object-fit:cover;
+}
+
 
 /* =========================================================
    REPORT CARDS
@@ -793,28 +866,29 @@ button{
   padding:15px;
 
   border:1.5px solid var(--vv-line);
+
   border-radius:10px;
 
   background:#fff;
 }
 
 .report-card.red{
-  border-color:#e2a4a4;
+  border-color:#e3aaaa;
   background:#fffafa;
 }
 
 .report-card.blue{
-  border-color:#b9cbea;
+  border-color:#b7c9e9;
   background:#fbfdff;
 }
 
 .report-card.green{
-  border-color:#afd2b9;
+  border-color:#b2d5bc;
   background:#fbfffc;
 }
 
 .report-card h3{
-  margin:0 0 6px;
+  margin:0 0 7px;
 
   color:var(--vv-squid);
 
@@ -843,27 +917,28 @@ button{
 }
 
 .status.red{
-  background:#fff0f0;
-  color:var(--vv-red);
+  background:var(--status-red-bg);
+  color:var(--status-red);
 }
 
 .status.blue{
-  background:var(--blue-light);
-  color:var(--blue);
+  background:var(--status-blue-bg);
+  color:var(--status-blue);
 }
 
 .status.green{
-  background:var(--green-light);
-  color:var(--green);
+  background:var(--status-green-bg);
+  color:var(--status-green);
 }
 
 .report-actions{
   display:grid;
+
   grid-template-columns:1fr 1fr 1fr;
 
   gap:8px;
 
-  margin-top:11px;
+  margin-top:12px;
 }
 
 .report-actions button{
@@ -878,10 +953,6 @@ button{
 
   font-size:10px;
   font-weight:700;
-}
-
-.report-actions button:hover{
-  background:#faf7fc;
 }
 
 .report-actions button.open{
@@ -899,14 +970,13 @@ button{
   font-size:13px;
 }
 
+
 /* =========================================================
-   RESPONSE REPORT
+   SHIP RESPONSE
 ========================================================= */
 
 .response-point{
-  margin-top:10px;
-
-  padding:11px 0;
+  padding:12px 0;
 
   border-top:1px solid var(--vv-line);
 }
@@ -922,22 +992,94 @@ button{
 
   font-size:10px;
   font-weight:800;
+
   letter-spacing:.04em;
 }
 
 .response-text{
-  font-size:13px;
+  font-size:13.5px;
   line-height:1.45;
 }
 
 .response-comment{
-  margin-top:6px;
+  margin-top:7px;
 
   color:var(--vv-gray);
 
   font-size:11.5px;
+
   line-height:1.45;
 }
+
+.response-photos{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+
+  margin-top:8px;
+}
+
+.response-photo{
+  width:110px;
+  height:110px;
+
+  overflow:hidden;
+
+  border:1px solid var(--vv-line);
+  border-radius:8px;
+
+  background:#fff;
+}
+
+.response-photo img{
+  width:100%;
+  height:100%;
+
+  object-fit:cover;
+}
+
+.response-label{
+  margin-top:9px;
+
+  color:var(--vv-squid);
+
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:.04em;
+}
+
+
+/* =========================================================
+   TOAST
+========================================================= */
+
+.toast{
+  position:fixed;
+
+  left:50%;
+  bottom:90px;
+
+  transform:translateX(-50%);
+
+  z-index:99999;
+
+  max-width:90%;
+
+  padding:10px 15px;
+
+  border-radius:8px;
+
+  background:var(--vv-near-black);
+
+  color:#fff;
+
+  box-shadow:0 4px 14px rgba(0,0,0,.25);
+
+  font-size:12px;
+
+  pointer-events:none;
+}
+
 
 /* =========================================================
    PRINT
@@ -960,7 +1102,8 @@ button{
   .meta,
   .action,
   .check-btn,
-  .followup-row{
+  .followup-row,
+  .toast{
     display:none!important;
   }
 
@@ -982,6 +1125,7 @@ button{
   }
 
 }
+
 
 /* =========================================================
    MOBILE
@@ -1006,6 +1150,7 @@ button{
   }
 
 }
+
 </style>
 </head>
 
@@ -1013,6 +1158,7 @@ button{
 <body>
 
 <div class="app">
+
 
 <!-- =====================================================
      HOME
@@ -1040,6 +1186,7 @@ button{
   <div class="home">
 
     <div class="home-grid">
+
 
       <button
         type="button"
@@ -1086,7 +1233,7 @@ button{
         </h2>
 
         <p>
-          Review submitted ship visit reports.
+          Review submitted reports and follow-up status.
         </p>
 
       </button>
@@ -1103,10 +1250,11 @@ button{
         </h2>
 
         <p>
-          Review checklist points requiring follow-up from the ship.
+          Respond to checklist points marked for ship follow-up.
         </p>
 
       </button>
+
 
     </div>
 
@@ -1141,7 +1289,8 @@ button{
   </div>
 
 
-  <div class="pad">
+  <div class="page-pad">
+
 
     <div class="field">
 
@@ -1150,8 +1299,8 @@ button{
       </label>
 
       <input
-        id="ship"
         type="text"
+        id="ship"
         placeholder="e.g. Valiant Lady"
       >
 
@@ -1165,8 +1314,8 @@ button{
       </label>
 
       <input
-        id="dateOn"
         type="date"
+        id="dateOn"
       >
 
     </div>
@@ -1179,8 +1328,8 @@ button{
       </label>
 
       <input
-        id="dateOff"
         type="date"
+        id="dateOff"
       >
 
     </div>
@@ -1193,8 +1342,8 @@ button{
       </label>
 
       <input
-        id="reviewer"
         type="text"
+        id="reviewer"
         placeholder="Your name"
       >
 
@@ -1221,6 +1370,7 @@ button{
       Back to Home
     </button>
 
+
   </div>
 
 </section>
@@ -1240,6 +1390,7 @@ button{
     <div class="eyebrow">
       — <span id="hdrShip"></span>
     </div>
+
 
     <h1>
       Ship Visit Report
@@ -1328,9 +1479,11 @@ button{
       — REPORT SUMMARY
     </div>
 
+
     <h1 id="sumTitle">
       Visit Summary
     </h1>
+
 
     <p
       class="sub"
@@ -1341,6 +1494,7 @@ button{
 
 
   <div class="summary">
+
 
     <div
       class="stats"
@@ -1363,10 +1517,12 @@ button{
       id="sumSections"
     ></div>
 
+
   </div>
 
 
   <div class="footer no-print">
+
 
     <div class="grid2">
 
@@ -1414,6 +1570,7 @@ button{
 
     </div>
 
+
   </div>
 
 </section>
@@ -1434,12 +1591,14 @@ button{
       — OPEN REPORT
     </div>
 
+
     <h1>
       Open Reports
     </h1>
 
+
     <p class="sub">
-      Reports that have been started but not submitted.
+      Reports started but not submitted.
     </p>
 
   </div>
@@ -1478,9 +1637,11 @@ button{
       — SUBMITTED REPORTS
     </div>
 
+
     <h1>
       Report Archive
     </h1>
+
 
     <p class="sub">
       Submitted reports available for review.
@@ -1522,9 +1683,11 @@ button{
       — SHIP RESPONSE REPORT
     </div>
 
+
     <h1>
-      Ship Responses
+      Ship Response Report
     </h1>
+
 
     <p class="sub">
       Respond to points marked Follow-Up Needed from Ship.
@@ -1550,6 +1713,7 @@ button{
 
 </section>
 
+
 </div>
 
 
@@ -1567,35 +1731,65 @@ const SECTIONS = [
     title:'CULINARY',
 
     items:[
+
       'All recipe tablets in place in the venues',
+
       'All recipes followed / food quality in the venues',
+
       'Tasting spoons available in the kitchens',
+
       'All equipment in place and in working order',
+
       'Missing item lists updated and communicated with Procurement',
+
       'Food cost discussions',
+
       'Walk-in freezers not being overloaded',
+
       'Proper explanation of the Treat Yourself program',
+
       'Matrix for The Galley followed up',
+
       'Galley walk-up manning in place / SOP being followed',
+
       'Review EXC, EXSC, CDC and SC positions',
+
       'Overtime discussion for the ship',
+
       'Review promotion / step-up file and follow-up',
+
       'Conducted a crew round table',
+
       'Appreciation of the Culinary crew',
+
       'Uniforms for the Culinary crew',
+
       'Shoe wear for the Culinary crew',
+
       'Galley fire safety training in place for all culinary crew',
+
       'Monthly training file checking and regularity of trainings',
+
       'Attendance of trainings',
+
       'Overall food cost budget met',
+
       'Galley equipment budget met',
+
       'Budget meeting conducted',
+
       'Cost reduction feedback',
+
       'All galley equipment in proper condition',
+
       'Meeting conducted with the Hotel Service Engineer',
+
       'Attend the maintenance meeting while on board',
+
       'Review AIMS report, outstanding maintenance follow-up'
+
     ]
+
   },
 
 
@@ -1608,18 +1802,31 @@ const SECTIONS = [
       'The supplied checklist did not contain a dedicated Bar section, so shared FOH and operational controls are used here.',
 
     items:[
+
       'All set ups FOH followed as per the latest SOP',
+
       'All equipment in place and in working order',
+
       'Missing item lists updated and communicated with Procurement',
+
       'Review all Hours of Operation',
+
       'Conducted a crew round table',
+
       'Morning meetings in place',
+
       'Meetings held with F&B Director / team',
+
       'All SOPs followed as per VMS',
+
       'Review previous reports reviewed / repeat findings',
+
       'Budget meeting conducted',
+
       'Cost reduction feedback'
+
     ]
+
   },
 
 
@@ -1629,24 +1836,43 @@ const SECTIONS = [
     title:'RESTAURANT',
 
     items:[
+
       'All set ups FOH followed as per the latest SOP',
+
       'Checking the Sailor flow of the restaurants',
+
       'Review all Hours of Operation',
+
       'Checking the quality of Ship Eats',
+
       'Quality of the Treat Yourself dishes',
+
       'Waiter knowledge and waiter meeting / tasting',
+
       'All recipe tablets in place in the venues',
+
       'All recipes followed / food quality in the venues',
+
       'Variety of the menu',
+
       'Proper cooking methods used for the crew',
+
       'Cleanliness in The Kitchen Table area',
+
       'Labels in The Kitchen Table followed up',
+
       'Production meeting in place',
+
       'Meeting with General Manager',
+
       'Meeting with F&B Director',
+
       'Meeting with Senior Executive Chef',
+
       'Closing meeting discussing / inspection'
+
     ]
+
   },
 
 
@@ -1656,22 +1882,39 @@ const SECTIONS = [
     title:'PROCUREMENT',
 
     items:[
+
       'Future orders',
+
       'All items stored properly',
+
       'All ERP templates followed',
+
       'Fruit and Vegetables rooms, FIFO in place',
+
       'All Fruit and Vegetables boxes maintained',
+
       'Deck 2 galley equipment inventory done as per SOP',
+
       'Proper storing of flagged items (caviar)',
+
       'Expiry, none and slow list moving followed up',
+
       'Conduct a Spot Check',
+
       'Meat ordering sheet and proper charging in place',
+
       'Butcher amounts for venues / Kitchen Table followed up',
+
       'Chargeables charging properly followed up',
+
       'Chargeable tracker filled in correct',
+
       'Proper storage of fresh fish and seafood',
+
       'Missing item lists updated and communicated with Procurement'
+
     ]
+
   },
 
 
@@ -1681,26 +1924,40 @@ const SECTIONS = [
     title:'SANITATION',
 
     items:[
+
       'Shellfish logs in place',
+
       'Cooling logs in place',
+
       'Updated and approved time control plans',
+
       '3 bucket system in place with sanitation checking',
+
       'Inspections done properly',
+
       'Conducted inspections within the inspection grid',
+
       'Findings from the inspections properly followed up on',
+
       'Fridge Thermometers in place',
+
       'Food Thermometers in place and used',
+
       'All SOPs followed as per VMS',
+
       'Proper storage and cleanliness in the Butcher shop and walk-in rooms',
+
       'Bandsaw in good condition and all safety parts in place'
+
     ]
+
   }
 
 ];
 
 
 /* =========================================================
-   SUPABASE CONNECTION
+   SUPABASE
 ========================================================= */
 
 const SUPABASE_URL =
@@ -1730,10 +1987,8 @@ try{
         SUPABASE_KEY
       );
 
-
     supabaseReady =
       true;
-
 
     console.log(
       'Supabase connected'
@@ -1819,7 +2074,7 @@ function createEmptyState(){
 
 
 /* =========================================================
-   HELPERS
+   UTILITY
 ========================================================= */
 
 function escapeHtml(
@@ -1830,14 +2085,71 @@ function escapeHtml(
     value ?? ''
   ).replace(
     /[&<>"']/g,
-    c => ({
+    character => ({
       '&':'&amp;',
       '<':'&lt;',
       '>':'&gt;',
       '"':'&quot;',
       "'":'&#39;'
-    }[c])
+    }[character])
   );
+
+}
+
+
+function showToast(
+  message
+){
+
+  let toast =
+    document.getElementById(
+      'app-toast'
+    );
+
+
+  if(!toast){
+
+    toast =
+      document.createElement(
+        'div'
+      );
+
+    toast.id =
+      'app-toast';
+
+    toast.className =
+      'toast';
+
+    document.body.appendChild(
+      toast
+    );
+
+  }
+
+
+  toast.textContent =
+    message;
+
+
+  toast.style.display =
+    'block';
+
+
+  clearTimeout(
+    toast._timer
+  );
+
+
+  toast._timer =
+    setTimeout(
+      () => {
+
+        toast.style.display =
+          'none';
+
+      },
+      3500
+    );
 
 }
 
@@ -1845,13 +2157,20 @@ function escapeHtml(
 function getTotals(){
 
   let total = 0;
+
   let checked = 0;
+
   let photos = 0;
+
+  let followUps = 0;
+
+  let followUpsComplete = 0;
 
 
   Object.values(
     state
-  ).forEach(
+  )
+  .forEach(
     item => {
 
       total++;
@@ -1872,76 +2191,20 @@ function getTotals(){
           []
         ).length;
 
-    }
-  );
-
-
-  return {
-    total,
-    checked,
-    photos
-  };
-
-}
-
-
-function hasFollowUps(
-  report
-){
-
-  const reportState =
-    report.report_data?.state ||
-    {};
-
-
-  return Object.values(
-    reportState
-  ).some(
-    item =>
-      item &&
-      item.followUpNeeded
-  );
-
-}
-
-
-function allFollowUpsComplete(
-  report
-){
-
-  const reportState =
-    report.report_data?.state ||
-    {};
-
-
-  let hasFollowUp =
-    false;
-
-  let complete =
-    true;
-
-
-  Object.values(
-    reportState
-  ).forEach(
-    item => {
 
       if(
-        item &&
         item.followUpNeeded
       ){
 
-        hasFollowUp =
-          true;
+        followUps++;
 
 
         if(
-          !item.shipResponse ||
-          !item.shipResponse.trim()
+          item.shipResponse &&
+          item.shipResponse.trim()
         ){
 
-          complete =
-            false;
+          followUpsComplete++;
 
         }
 
@@ -1951,67 +2214,19 @@ function allFollowUpsComplete(
   );
 
 
-  return hasFollowUp &&
-         complete;
+  return {
 
-}
+    total,
 
+    checked,
 
-function reportColor(
-  report
-){
+    photos,
 
-  if(
-    report.status ===
-    'open'
-  ){
+    followUps,
 
-    return 'red';
+    followUpsComplete
 
-  }
-
-
-  if(
-    allFollowUpsComplete(
-      report
-    )
-  ){
-
-    return 'green';
-
-  }
-
-
-  return 'blue';
-
-}
-
-
-function reportStatusText(
-  report
-){
-
-  const color =
-    reportColor(
-      report
-    );
-
-
-  if(color === 'red'){
-
-    return 'OPEN / ONGOING';
-
-  }
-
-
-  if(color === 'green'){
-
-    return 'SHIP RESPONSE COMPLETE';
-
-  }
-
-
-  return 'JUST SUBMITTED';
+  };
 
 }
 
@@ -2021,10 +2236,11 @@ function reportStatusText(
 ========================================================= */
 
 function showScreen(
-  name
+  screen
 ){
 
-  const screenIds = [
+  const screens = [
+
     'home',
     'setup',
     'checklist',
@@ -2032,10 +2248,11 @@ function showScreen(
     'open',
     'submitted',
     'responses'
+
   ];
 
 
-  screenIds.forEach(
+  screens.forEach(
     id => {
 
       const element =
@@ -2048,7 +2265,7 @@ function showScreen(
 
         element.classList.toggle(
           'hidden',
-          id !== name
+          id !== screen
         );
 
       }
@@ -2066,7 +2283,7 @@ function showScreen(
 
 
 /* =========================================================
-   SUPABASE SAVE
+   SAVE REPORT TO SUPABASE
 ========================================================= */
 
 async function saveReport(
@@ -2077,8 +2294,8 @@ async function saveReport(
     !supabaseReady
   ){
 
-    alert(
-      'Supabase is not connected. Check the Supabase URL and publishable key.'
+    showToast(
+      'Supabase is not connected.'
     );
 
     return false;
@@ -2092,41 +2309,44 @@ async function saveReport(
       new Date().toISOString();
 
 
+    const reportData = {
+
+      meta:{
+        ...meta
+      },
+
+      state:
+        JSON.parse(
+          JSON.stringify(
+            state
+          )
+        )
+
+    };
+
+
     const payload = {
 
       ship:
-        meta.ship,
+        meta.ship || '',
 
       date_on:
-        meta.dateOn ||
-        null,
+        meta.dateOn || null,
 
       date_off:
-        meta.dateOff ||
-        null,
+        meta.dateOff || null,
 
       reviewer:
         meta.reviewer ||
         currentReviewer ||
         'Reviewer',
 
-      status,
+      status:
 
-      report_data:{
+        status,
 
-        meta:{
-          ...meta
-        },
-
-        state:
-
-          JSON.parse(
-            JSON.stringify(
-              state
-            )
-          )
-
-      },
+      report_data:
+        reportData,
 
       updated_at:
         now
@@ -2148,6 +2368,11 @@ async function saveReport(
     let result;
 
 
+    /*
+      Existing report:
+      update same record.
+    */
+
     if(
       reportId
     ){
@@ -2168,6 +2393,11 @@ async function saveReport(
           .single();
 
     }else{
+
+      /*
+        New report:
+        create new record.
+      */
 
       result =
         await sb
@@ -2201,13 +2431,13 @@ async function saveReport(
   }catch(error){
 
     console.error(
-      'Save report failed:',
+      'Supabase save failed:',
       error
     );
 
 
-    alert(
-      'The report could not be saved to Supabase.\n\n' +
+    showToast(
+      'Could not save report: ' +
       (
         error.message ||
         'Unknown error'
@@ -2278,12 +2508,8 @@ async function loadReports(
     );
 
 
-    alert(
-      'Could not load reports from Supabase.\n\n' +
-      (
-        error.message ||
-        'Unknown error'
-      )
+    showToast(
+      'Could not load reports from Supabase.'
     );
 
 
@@ -2295,7 +2521,117 @@ async function loadReports(
 
 
 /* =========================================================
-   RENDER HEADER
+   LOAD A REPORT INTO STATE
+========================================================= */
+
+function loadReportIntoState(
+  report
+){
+
+  reportId =
+    report.id;
+
+
+  const savedMeta =
+    report.report_data?.meta ||
+    {};
+
+
+  meta = {
+
+    ship:
+      report.ship ||
+      savedMeta.ship ||
+      '',
+
+    dateOn:
+      report.date_on ||
+      savedMeta.dateOn ||
+      '',
+
+    dateOff:
+      report.date_off ||
+      savedMeta.dateOff ||
+      '',
+
+    reviewer:
+      report.reviewer ||
+      savedMeta.reviewer ||
+      'Reviewer'
+
+  };
+
+
+  currentReviewer =
+    meta.reviewer;
+
+
+  state =
+    createEmptyState();
+
+
+  const savedState =
+    report.report_data?.state ||
+    {};
+
+
+  Object.keys(
+    savedState
+  )
+  .forEach(
+    key => {
+
+      if(
+        state[key]
+      ){
+
+        state[key] = {
+
+          ...state[key],
+
+          ...savedState[key],
+
+          comments:
+            Array.isArray(
+              savedState[key]
+                .comments
+            )
+              ? savedState[key]
+                .comments
+              : [],
+
+          photos:
+            Array.isArray(
+              savedState[key]
+                .photos
+            )
+              ? savedState[key]
+                .photos
+              : [],
+
+          followUpNeeded:
+            Boolean(
+              savedState[key]
+                .followUpNeeded
+            ),
+
+          shipResponse:
+            savedState[key]
+              .shipResponse ||
+            ''
+
+        };
+
+      }
+
+    }
+  );
+
+}
+
+
+/* =========================================================
+   HEADER
 ========================================================= */
 
 function updateHeader(){
@@ -2347,13 +2683,13 @@ function renderChecklist(){
   SECTIONS.forEach(
     (section,sectionIndex) => {
 
-      const sectionElement =
+      const sectionEl =
         document.createElement(
           'div'
         );
 
 
-      sectionElement.className =
+      sectionEl.className =
         'section' +
         (
           sectionIndex === 0
@@ -2362,7 +2698,7 @@ function renderChecklist(){
         );
 
 
-      sectionElement.innerHTML = `
+      sectionEl.innerHTML = `
 
         <div class="section-head">
 
@@ -2371,6 +2707,7 @@ function renderChecklist(){
               section.title
             )}
           </h2>
+
 
           <div class="section-right">
 
@@ -2394,18 +2731,18 @@ function renderChecklist(){
 
 
       wrap.appendChild(
-        sectionElement
+        sectionEl
       );
 
 
-      sectionElement
+      sectionEl
         .querySelector(
           '.section-head'
         )
         .onclick =
         () => {
 
-          sectionElement
+          sectionEl
             .classList
             .toggle(
               'open'
@@ -2415,7 +2752,7 @@ function renderChecklist(){
 
 
       const body =
-        sectionElement
+        sectionEl
           .querySelector(
             '.section-body'
           );
@@ -2550,12 +2887,13 @@ function renderChecklist(){
                 <input
                   type="checkbox"
                   class="followup-check"
-                  id="followup-check-${key}"
+                  id="followup-${key}"
                   data-key="${key}"
                 >
 
                 <label
-                  for="followup-check-${key}"
+                  id="followup-label-${key}"
+                  for="followup-${key}"
                 >
                   Follow-Up Needed from Ship
                 </label>
@@ -2606,6 +2944,10 @@ function renderChecklist(){
 
 function bindChecklistEvents(){
 
+  /*
+    CHECK BUTTON
+  */
+
   document
     .querySelectorAll(
       '.check-btn'
@@ -2637,6 +2979,10 @@ function bindChecklistEvents(){
     );
 
 
+  /*
+    COMMENT BUTTON
+  */
+
   document
     .querySelectorAll(
       '.note'
@@ -2653,7 +2999,8 @@ function bindChecklistEvents(){
 
           const extra =
             document.getElementById(
-              'extra-' + key
+              'extra-' +
+              key
             );
 
 
@@ -2671,6 +3018,10 @@ function bindChecklistEvents(){
       }
     );
 
+
+  /*
+    PHOTO BUTTON
+  */
 
   document
     .querySelectorAll(
@@ -2695,6 +3046,10 @@ function bindChecklistEvents(){
     );
 
 
+  /*
+    PHOTO INPUT
+  */
+
   document
     .querySelectorAll(
       'input[type="file"]'
@@ -2715,6 +3070,10 @@ function bindChecklistEvents(){
       }
     );
 
+
+  /*
+    COMMENT ADD
+  */
 
   document
     .querySelectorAll(
@@ -2785,6 +3144,10 @@ function bindChecklistEvents(){
     );
 
 
+  /*
+    FOLLOW-UP CHECKBOX
+  */
+
   document
     .querySelectorAll(
       '.followup-check'
@@ -2831,13 +3194,14 @@ function bindChecklistEvents(){
 
 
 /* =========================================================
-   REFRESH
+   REFRESH CHECKLIST
 ========================================================= */
 
 function refreshChecklist(){
 
   let total =
     0;
+
 
   let checked =
     0;
@@ -2871,39 +3235,30 @@ function refreshChecklist(){
           ){
 
             checked++;
+
             sectionChecked++;
 
           }
 
 
-          const checkButton =
+          const button =
             document.querySelector(
               `.check-btn[data-key="${key}"]`
             );
 
 
           if(
-            checkButton
+            button
           ){
 
-            checkButton
-              .classList
-              .toggle(
-                'checked',
+            button.classList.toggle(
+              'checked',
+              Boolean(
                 item.checked
-              );
+              )
+            );
 
           }
-
-
-          renderComments(
-            key
-          );
-
-
-          renderPhotos(
-            key
-          );
 
 
           const followup =
@@ -2924,6 +3279,39 @@ function refreshChecklist(){
           }
 
 
+          const followupLabel =
+            document.getElementById(
+              'followup-label-' +
+              key
+            );
+
+
+          if(
+            followupLabel
+          ){
+
+            followupLabel.classList.toggle(
+              'followup-complete',
+              Boolean(
+                item.followUpNeeded &&
+                item.shipResponse &&
+                item.shipResponse.trim()
+              )
+            );
+
+          }
+
+
+          renderComments(
+            key
+          );
+
+
+          renderPhotos(
+            key
+          );
+
+
           const response =
             document.getElementById(
               'ship-response-' +
@@ -2935,18 +3323,29 @@ function refreshChecklist(){
             response
           ){
 
-            response.innerHTML =
-              item.shipResponse
-                ? `
-                    <strong>
-                      Ship response:
-                    </strong>
+            if(
+              item.shipResponse &&
+              item.shipResponse.trim()
+            ){
 
-                    ${escapeHtml(
-                      item.shipResponse
-                    )}
-                  `
-                : '';
+              response.innerHTML = `
+
+                <strong>
+                  Ship response:
+                </strong>
+
+                ${escapeHtml(
+                  item.shipResponse
+                )}
+
+              `;
+
+            }else{
+
+              response.innerHTML =
+                '';
+
+            }
 
           }
 
@@ -2994,7 +3393,7 @@ function refreshChecklist(){
   );
 
 
-  const percent =
+  const percentage =
     total
       ? Math.round(
           checked /
@@ -3007,7 +3406,7 @@ function refreshChecklist(){
   document.getElementById(
     'fill'
   ).style.width =
-    percent + '%';
+    percentage + '%';
 
 
   document.getElementById(
@@ -3042,12 +3441,13 @@ function renderComments(
   }
 
 
+  const comments =
+    state[key]
+      .comments || [];
+
+
   wrap.innerHTML =
-    (
-      state[key]
-        .comments ||
-      []
-    )
+    comments
       .map(
         comment => `
 
@@ -3074,7 +3474,7 @@ function renderComments(
 
 
 /* =========================================================
-   PHOTO
+   PHOTOS
 ========================================================= */
 
 function addPhoto(
@@ -3100,7 +3500,7 @@ function addPhoto(
 
 
   reader.onload =
-  eventResult => {
+  loadEvent => {
 
     const image =
       new Image();
@@ -3156,17 +3556,17 @@ function addPhoto(
       );
 
 
-      const dataUrl =
+      const photo =
         canvas.toDataURL(
           'image/jpeg',
-          0.78
+          .78
         );
 
 
       state[key]
         .photos
         .push(
-          dataUrl
+          photo
         );
 
 
@@ -3194,7 +3594,7 @@ function addPhoto(
 
 
     image.src =
-      eventResult.target.result;
+      loadEvent.target.result;
 
   };
 
@@ -3240,7 +3640,7 @@ function renderPhotos(
     []
   )
     .forEach(
-      (src,index) => {
+      (photo,index) => {
 
         const element =
           document.createElement(
@@ -3252,27 +3652,39 @@ function renderPhotos(
           'photo';
 
 
-        element.innerHTML = `
-
-          <img
-            src="${src}"
-            alt="Checklist photo"
-          >
-
-          <button
-            type="button"
-          >
-            ×
-          </button>
-
-        `;
+        const image =
+          document.createElement(
+            'img'
+          );
 
 
-        element
-          .querySelector(
+        image.src =
+          photo;
+
+
+        image.alt =
+          'Checklist photo';
+
+
+        const remove =
+          document.createElement(
             'button'
-          )
-          .onclick =
+          );
+
+
+        remove.type =
+          'button';
+
+
+        remove.className =
+          'photo-remove';
+
+
+        remove.textContent =
+          '×';
+
+
+        remove.onclick =
           async () => {
 
             state[key]
@@ -3295,6 +3707,16 @@ function renderPhotos(
           };
 
 
+        element.appendChild(
+          image
+        );
+
+
+        element.appendChild(
+          remove
+        );
+
+
         wrap.appendChild(
           element
         );
@@ -3306,8 +3728,47 @@ function renderPhotos(
 
 
 /* =========================================================
-   START REPORT
+   CREATE REPORT
 ========================================================= */
+
+document
+  .getElementById(
+    'createReport'
+  )
+  .onclick =
+  () => {
+
+    document.getElementById(
+      'dateOn'
+    ).value =
+      new Date()
+        .toISOString()
+        .slice(
+          0,
+          10
+        );
+
+
+    showScreen(
+      'setup'
+    );
+
+  };
+
+
+document
+  .getElementById(
+    'setupHome'
+  )
+  .onclick =
+  () => {
+
+    showScreen(
+      'home'
+    );
+
+  };
+
 
 document
   .getElementById(
@@ -3392,11 +3853,14 @@ document
 
     renderChecklist();
 
-
     showScreen(
       'checklist'
     );
 
+
+    /*
+      CREATE THE OPEN REPORT IMMEDIATELY.
+    */
 
     const saved =
       await saveReport(
@@ -3412,36 +3876,44 @@ document
         'setup'
       );
 
+    }else{
+
+      showToast(
+        'Report saved as Open Report.'
+      );
+
     }
 
   };
 
 
 /* =========================================================
-   REVIEWER UPDATE
+   REVIEWER
 ========================================================= */
 
 document
   .getElementById(
     'hdrReviewer'
   )
-  .onchange =
-  async event => {
+  .addEventListener(
+    'change',
+    async event => {
 
-    currentReviewer =
-      event.target.value.trim() ||
-      'Reviewer';
-
-
-    meta.reviewer =
-      currentReviewer;
+      currentReviewer =
+        event.target.value.trim() ||
+        'Reviewer';
 
 
-    await saveReport(
-      'open'
-    );
+      meta.reviewer =
+        currentReviewer;
 
-  };
+
+      await saveReport(
+        'open'
+      );
+
+    }
+  );
 
 
 /* =========================================================
@@ -3466,7 +3938,7 @@ document
 
 function buildSummary(){
 
-  const totalsData =
+  const t =
     getTotals();
 
 
@@ -3477,7 +3949,7 @@ function buildSummary(){
     <div class="stat">
 
       <div class="stat-number">
-        ${totalsData.checked}/${totalsData.total}
+        ${t.checked}/${t.total}
       </div>
 
       <div class="stat-label">
@@ -3490,11 +3962,24 @@ function buildSummary(){
     <div class="stat">
 
       <div class="stat-number">
-        ${totalsData.photos}
+        ${t.photos}
       </div>
 
       <div class="stat-label">
         Photos
+      </div>
+
+    </div>
+
+
+    <div class="stat">
+
+      <div class="stat-number">
+        ${t.followUps}
+      </div>
+
+      <div class="stat-label">
+        Follow-Ups
       </div>
 
     </div>
@@ -3532,8 +4017,12 @@ function buildSummary(){
         : ''
     ) +
     `, reviewed by ${meta.reviewer}. ` +
-    `${totalsData.checked} of ${totalsData.total} ` +
-    `review points were confirmed during the visit.`;
+    `${t.checked} of ${t.total} review points were confirmed. ` +
+    `${
+      t.followUps
+        ? `${t.followUps} point(s) require ship follow-up.`
+        : 'No ship follow-up points were assigned.'
+    }`;
 
 
   const wrap =
@@ -3553,8 +4042,11 @@ function buildSummary(){
         0;
 
 
-      let followups =
+      let followUps =
         0;
+
+
+      let photos = [];
 
 
       section.items.forEach(
@@ -3566,8 +4058,12 @@ function buildSummary(){
             index;
 
 
+          const item =
+            state[key];
+
+
           if(
-            state[key].checked
+            item.checked
           ){
 
             checked++;
@@ -3576,28 +4072,52 @@ function buildSummary(){
 
 
           if(
-            state[key].followUpNeeded
+            item.followUpNeeded
           ){
 
-            followups++;
+            followUps++;
 
           }
+
+
+          (
+            item.photos ||
+            []
+          )
+          .forEach(
+            photo => {
+
+              photos.push(
+                photo
+              );
+
+            }
+          );
 
         }
       );
 
 
-      const div =
+      const block =
         document.createElement(
           'div'
         );
 
 
-      div.className =
+      block.className =
         'summary-section';
 
 
-      div.innerHTML = `
+      const summaryText =
+        `${checked} of ${section.items.length} points confirmed.` +
+        (
+          followUps
+            ? ` ${followUps} follow-up point(s) assigned to the ship.`
+            : ''
+        );
+
+
+      block.innerHTML = `
 
         <h2>
           ${escapeHtml(
@@ -3606,22 +4126,57 @@ function buildSummary(){
         </h2>
 
 
-        <textarea rows="4">${
-          escapeHtml(
-            `${checked} of ${section.items.length} points confirmed.` +
-            (
-              followups
-                ? ` ${followups} follow-up point(s) assigned to the ship.`
-                : ''
-            )
-          )
-        }</textarea>
+        <textarea
+          rows="4"
+        >${escapeHtml(
+          summaryText
+        )}</textarea>
+
+
+        ${
+          photos.length
+            ? `
+
+              <div
+                style="
+                  margin-top:9px;
+                  color:var(--vv-squid);
+                  font-size:10px;
+                  font-weight:800;
+                "
+              >
+                ATTACHED PHOTOS
+              </div>
+
+
+              <div class="summary-photos">
+
+                ${photos.map(
+                  photo => `
+
+                    <div class="summary-photo">
+
+                      <img
+                        src="${photo}"
+                        alt="Visit photo"
+                      >
+
+                    </div>
+
+                  `
+                ).join('')}
+
+              </div>
+
+            `
+            : ''
+        }
 
       `;
 
 
       wrap.appendChild(
-        div
+        block
       );
 
     }
@@ -3631,7 +4186,29 @@ function buildSummary(){
 
 
 /* =========================================================
-   SUBMIT REPORT
+   BACK FROM SUMMARY
+========================================================= */
+
+document
+  .getElementById(
+    'backBtn'
+  )
+  .onclick =
+  () => {
+
+    updateHeader();
+
+    renderChecklist();
+
+    showScreen(
+      'checklist'
+    );
+
+  };
+
+
+/* =========================================================
+   SUBMIT
 ========================================================= */
 
 document
@@ -3642,7 +4219,7 @@ document
   async () => {
 
     /*
-      Capture latest reviewer.
+      Save latest reviewer.
     */
 
     currentReviewer =
@@ -3652,6 +4229,7 @@ document
         )
         .value
         .trim() ||
+      currentReviewer ||
       'Reviewer';
 
 
@@ -3660,7 +4238,7 @@ document
 
 
     /*
-      Save as SUBMITTED.
+      Submit the SAME report.
     */
 
     const saved =
@@ -3679,7 +4257,7 @@ document
 
 
     /*
-      Clear current/open report.
+      Reset the active state.
     */
 
     reportId =
@@ -3710,26 +4288,30 @@ document
 
     document.getElementById(
       'ship'
-    ).value = '';
+    ).value =
+      '';
 
 
     document.getElementById(
       'dateOn'
-    ).value = '';
+    ).value =
+      '';
 
 
     document.getElementById(
       'dateOff'
-    ).value = '';
+    ).value =
+      '';
 
 
     document.getElementById(
       'reviewer'
-    ).value = '';
+    ).value =
+      '';
 
 
     /*
-      RETURN TO MAIN PAGE.
+      RETURN TO MAIN HOME SCREEN.
     */
 
     showScreen(
@@ -3740,6 +4322,11 @@ document
     window.scrollTo(
       0,
       0
+    );
+
+
+    showToast(
+      'Report submitted successfully.'
     );
 
   };
@@ -3802,7 +4389,11 @@ async function renderOpenReports(){
   ){
 
     wrap.innerHTML =
-      '<div class="empty">No open reports.</div>';
+      `
+        <div class="empty">
+          No open reports.
+        </div>
+      `;
 
     return;
 
@@ -3814,7 +4405,9 @@ async function renderOpenReports(){
       .map(
         report => `
 
-          <div class="report-card red">
+          <div
+            class="report-card red"
+          >
 
             <h3>
               ${escapeHtml(
@@ -3826,7 +4419,7 @@ async function renderOpenReports(){
 
             <div class="report-meta">
 
-              <b>Date:</b>
+              <b>Visit:</b>
               ${escapeHtml(
                 report.date_on ||
                 ''
@@ -3862,7 +4455,7 @@ async function renderOpenReports(){
               <button
                 type="button"
                 class="open"
-                data-open-id="${report.id}"
+                data-continue="${report.id}"
               >
                 Continue
               </button>
@@ -3870,7 +4463,7 @@ async function renderOpenReports(){
 
               <button
                 type="button"
-                data-delete-id="${report.id}"
+                data-delete="${report.id}"
               >
                 Delete
               </button>
@@ -3886,7 +4479,7 @@ async function renderOpenReports(){
 
   wrap
     .querySelectorAll(
-      '[data-open-id]'
+      '[data-continue]'
     )
     .forEach(
       button => {
@@ -3894,25 +4487,34 @@ async function renderOpenReports(){
         button.onclick =
         async () => {
 
-          const report =
-            reports.find(
-              r =>
-                r.id ===
-                button.dataset.openId
-            );
+          const result =
+            await sb
+              .from(
+                'ship_visit_reports'
+              )
+              .select('*')
+              .eq(
+                'id',
+                button.dataset.continue
+              )
+              .single();
 
 
           if(
-            !report
+            result.error
           ){
+
+            alert(
+              'Could not open report.'
+            );
 
             return;
 
           }
 
 
-          hydrateReport(
-            report
+          loadReportIntoState(
+            result.data
           );
 
 
@@ -3932,7 +4534,7 @@ async function renderOpenReports(){
 
   wrap
     .querySelectorAll(
-      '[data-delete-id]'
+      '[data-delete]'
     )
     .forEach(
       button => {
@@ -3959,7 +4561,7 @@ async function renderOpenReports(){
               .delete()
               .eq(
                 'id',
-                button.dataset.deleteId
+                button.dataset.delete
               );
 
 
@@ -4044,7 +4646,11 @@ async function renderSubmittedReports(){
   ){
 
     wrap.innerHTML =
-      '<div class="empty">No submitted reports.</div>';
+      `
+        <div class="empty">
+          No submitted reports.
+        </div>
+      `;
 
     return;
 
@@ -4057,7 +4663,7 @@ async function renderSubmittedReports(){
         report => {
 
           const color =
-            reportColor(
+            getReportColor(
               report
             );
 
@@ -4078,7 +4684,7 @@ async function renderSubmittedReports(){
 
               <div class="report-meta">
 
-                <b>Date:</b>
+                <b>Visit:</b>
                 ${escapeHtml(
                   report.date_on ||
                   ''
@@ -4105,7 +4711,7 @@ async function renderSubmittedReports(){
                 <span
                   class="status ${color}"
                 >
-                  ${reportStatusText(
+                  ${getReportStatusText(
                     report
                   )}
                 </span>
@@ -4216,24 +4822,136 @@ async function renderSubmittedReports(){
 }
 
 
+function getReportColor(
+  report
+){
+
+  if(
+    report.status ===
+    'open'
+  ){
+
+    return 'red';
+
+  }
+
+
+  if(
+    reportHasCompletedFollowUps(
+      report
+    )
+  ){
+
+    return 'green';
+
+  }
+
+
+  return 'blue';
+
+}
+
+
+function getReportStatusText(
+  report
+){
+
+  const color =
+    getReportColor(
+      report
+    );
+
+
+  if(
+    color ===
+    'red'
+  ){
+
+    return 'OPEN / ONGOING';
+
+  }
+
+
+  if(
+    color ===
+    'green'
+  ){
+
+    return 'SHIP RESPONSE COMPLETE';
+
+  }
+
+
+  return 'JUST SUBMITTED';
+
+}
+
+
+function reportHasCompletedFollowUps(
+  report
+){
+
+  const savedState =
+    report.report_data?.state ||
+    {};
+
+
+  let hasFollowUps =
+    false;
+
+
+  let allComplete =
+    true;
+
+
+  Object.values(
+    savedState
+  )
+  .forEach(
+    item => {
+
+      if(
+        item &&
+        item.followUpNeeded
+      ){
+
+        hasFollowUps =
+          true;
+
+
+        if(
+          !item.shipResponse ||
+          !item.shipResponse.trim()
+        ){
+
+          allComplete =
+            false;
+
+        }
+
+      }
+
+    }
+  );
+
+
+  return (
+    hasFollowUps &&
+    allComplete
+  );
+
+}
+
+
+/* =========================================================
+   OPEN SUBMITTED REPORT
+========================================================= */
+
 async function openSubmittedReport(
   id,
   makePdf = false,
   printReport = false
 ){
-
-  if(
-    !supabaseReady
-  ){
-
-    alert(
-      'Supabase is not connected.'
-    );
-
-    return;
-
-  }
-
 
   const result =
     await sb
@@ -4253,7 +4971,7 @@ async function openSubmittedReport(
   ){
 
     alert(
-      'Report could not be opened.\n\n' +
+      'Could not open report.\n\n' +
       result.error.message
     );
 
@@ -4262,7 +4980,7 @@ async function openSubmittedReport(
   }
 
 
-  hydrateReport(
+  loadReportIntoState(
     result.data
   );
 
@@ -4300,95 +5018,6 @@ async function openSubmittedReport(
     );
 
   }
-
-}
-
-
-/* =========================================================
-   LOAD REPORT INTO APP
-========================================================= */
-
-function hydrateReport(
-  report
-){
-
-  reportId =
-    report.id;
-
-
-  meta = {
-
-    ship:
-      report.ship ||
-      report.report_data?.meta?.ship ||
-      '',
-
-    dateOn:
-      report.date_on ||
-      report.report_data?.meta?.dateOn ||
-      '',
-
-    dateOff:
-      report.date_off ||
-      report.report_data?.meta?.dateOff ||
-      '',
-
-    reviewer:
-      report.reviewer ||
-      report.report_data?.meta?.reviewer ||
-      'Reviewer'
-
-  };
-
-
-  currentReviewer =
-    meta.reviewer;
-
-
-  state =
-    createEmptyState();
-
-
-  const savedState =
-    report.report_data?.state ||
-    {};
-
-
-  Object.keys(
-    savedState
-  ).forEach(
-    key => {
-
-      if(
-        state[key]
-      ){
-
-        state[key] = {
-
-          ...state[key],
-
-          ...savedState[key],
-
-          comments:
-            Array.isArray(
-              savedState[key].comments
-            )
-              ? savedState[key].comments
-              : [],
-
-          photos:
-            Array.isArray(
-              savedState[key].photos
-            )
-              ? savedState[key].photos
-              : []
-
-        };
-
-      }
-
-    }
-  );
 
 }
 
@@ -4445,14 +5074,14 @@ async function renderShipResponses(){
     );
 
 
-  const responseGroups =
+  const groups =
     [];
 
 
   reports.forEach(
     report => {
 
-      const reportState =
+      const savedState =
         report.report_data?.state ||
         {};
 
@@ -4474,7 +5103,7 @@ async function renderShipResponses(){
 
 
               const item =
-                reportState[key];
+                savedState[key];
 
 
               if(
@@ -4491,20 +5120,14 @@ async function renderShipResponses(){
 
                   text,
 
-                  comment:
-                    (
-                      item.comments ||
-                      []
-                    )
-                    .map(
-                      comment =>
-                        `${comment.name}: ${comment.text}`
-                    )
-                    .join(' | '),
+                  comments:
+                    item.comments || [],
+
+                  photos:
+                    item.photos || [],
 
                   response:
-                    item.shipResponse ||
-                    ''
+                    item.shipResponse || ''
 
                 });
 
@@ -4521,7 +5144,7 @@ async function renderShipResponses(){
         points.length
       ){
 
-        responseGroups.push({
+        groups.push({
 
           report,
 
@@ -4536,7 +5159,7 @@ async function renderShipResponses(){
 
 
   if(
-    !responseGroups.length
+    !groups.length
   ){
 
     wrap.innerHTML =
@@ -4552,7 +5175,7 @@ async function renderShipResponses(){
 
 
   wrap.innerHTML =
-    responseGroups
+    groups
       .map(
         group => {
 
@@ -4589,7 +5212,7 @@ async function renderShipResponses(){
 
               <div class="report-meta">
 
-                <b>Date:</b>
+                <b>Visit:</b>
                 ${escapeHtml(
                   group.report.date_on ||
                   ''
@@ -4612,15 +5235,12 @@ async function renderShipResponses(){
                       : 'blue'
                   }"
                 >
-
                   ${
                     complete
                       ? 'SHIP RESPONSE COMPLETE'
                       : 'FOLLOW-UP OPEN'
                   }
-
                   — ${responseCount}/${group.points.length}
-
                 </span>
 
               </div>
@@ -4634,9 +5254,11 @@ async function renderShipResponses(){
                     <div class="response-point">
 
                       <div class="response-section">
+
                         ${escapeHtml(
                           point.section
                         )}
+
                       </div>
 
 
@@ -4650,19 +5272,84 @@ async function renderShipResponses(){
 
 
                       ${
-                        point.comment
+                        point.comments.length
                           ? `
-                            <div class="response-comment">
+
+                            <div
+                              class="response-comment"
+                            >
 
                               <b>
-                                Visit comment:
+                                Visit Comment:
                               </b>
 
-                              ${escapeHtml(
-                                point.comment
-                              )}
+
+                              ${point.comments.map(
+                                comment =>
+                                  `
+
+                                    <div style="margin-top:4px;">
+
+                                      ${escapeHtml(
+                                        comment.name ||
+                                        'Reviewer'
+                                      )}:
+
+                                      ${escapeHtml(
+                                        comment.text
+                                      )}
+
+                                    </div>
+
+                                  `
+                              ).join('')}
 
                             </div>
+
+                          `
+                          : ''
+                      }
+
+
+                      ${
+                        point.photos.length
+                          ? `
+
+                            <div>
+
+                              <div
+                                class="response-label"
+                              >
+                                ATTACHED PHOTOS
+                              </div>
+
+
+                              <div
+                                class="response-photos"
+                              >
+
+                                ${point.photos.map(
+                                  photo =>
+                                    `
+
+                                      <div
+                                        class="response-photo"
+                                      >
+
+                                        <img
+                                          src="${photo}"
+                                          alt="Visit photo"
+                                        >
+
+                                      </div>
+
+                                    `
+                                ).join('')}
+
+                              </div>
+
+                            </div>
+
                           `
                           : ''
                       }
@@ -4671,8 +5358,8 @@ async function renderShipResponses(){
                       <div
                         class="field"
                         style="
-                          margin-top:9px;
-                          margin-bottom:0
+                          margin-top:10px;
+                          margin-bottom:0;
                         "
                       >
 
@@ -4692,6 +5379,29 @@ async function renderShipResponses(){
 
                       </div>
 
+
+                      ${
+                        point.response
+                          ? `
+
+                            <div
+                              class="ship-response-display"
+                            >
+
+                              <strong>
+                                Ship response:
+                              </strong>
+
+                              ${escapeHtml(
+                                point.response
+                              )}
+
+                            </div>
+
+                          `
+                          : ''
+                      }
+
                     </div>
 
                   `
@@ -4700,13 +5410,17 @@ async function renderShipResponses(){
               </div>
 
 
-              <button
-                type="button"
-                class="btn-primary save-response"
-                data-save-response="${group.report.id}"
-              >
-                Save Ship Responses
-              </button>
+              <div style="margin-top:12px;">
+
+                <button
+                  type="button"
+                  class="btn-primary save-response"
+                  data-report="${group.report.id}"
+                >
+                  Save Ship Responses
+                </button>
+
+              </div>
 
             </div>
 
@@ -4716,6 +5430,10 @@ async function renderShipResponses(){
       )
       .join('');
 
+
+  /*
+    SAVE SHIP RESPONSES
+  */
 
   wrap
     .querySelectorAll(
@@ -4727,8 +5445,8 @@ async function renderShipResponses(){
         button.onclick =
         async () => {
 
-          const id =
-            button.dataset.saveResponse;
+          const reportIdToUpdate =
+            button.dataset.report;
 
 
           const result =
@@ -4739,7 +5457,7 @@ async function renderShipResponses(){
               .select('*')
               .eq(
                 'id',
-                id
+                reportIdToUpdate
               )
               .single();
 
@@ -4749,7 +5467,7 @@ async function renderShipResponses(){
           ){
 
             alert(
-              'Could not load the report.'
+              'Could not load report.'
             );
 
             return;
@@ -4772,7 +5490,7 @@ async function renderShipResponses(){
 
           wrap
             .querySelectorAll(
-              `[data-response-report="${id}"]`
+              `[data-response-report="${reportIdToUpdate}"]`
             )
             .forEach(
               textarea => {
@@ -4795,59 +5513,46 @@ async function renderShipResponses(){
             );
 
 
-          let complete =
-            true;
-
-
-          let hasFollowUp =
+          let hasFollowUps =
             false;
 
 
-          SECTIONS.forEach(
-            section => {
-
-              section.items.forEach(
-                (_,index) => {
-
-                  const key =
-                    section.id +
-                    '__' +
-                    index;
+          let allComplete =
+            true;
 
 
-                  const item =
-                    newState[key];
+          Object.values(
+            newState
+          )
+          .forEach(
+            item => {
+
+              if(
+                item &&
+                item.followUpNeeded
+              ){
+
+                hasFollowUps =
+                  true;
 
 
-                  if(
-                    item &&
-                    item.followUpNeeded
-                  ){
+                if(
+                  !item.shipResponse ||
+                  !item.shipResponse.trim()
+                ){
 
-                    hasFollowUp =
-                      true;
-
-
-                    if(
-                      !item.shipResponse ||
-                      !item.shipResponse.trim()
-                    ){
-
-                      complete =
-                        false;
-
-                    }
-
-                  }
+                  allComplete =
+                    false;
 
                 }
-              );
+
+              }
 
             }
           );
 
 
-          const updatedReportData = {
+          const newReportData = {
 
             ...(report.report_data || {}),
 
@@ -4855,8 +5560,8 @@ async function renderShipResponses(){
               newState,
 
             shipResponseStatus:
-              hasFollowUp &&
-              complete
+              hasFollowUps &&
+              allComplete
                 ? 'complete'
                 : 'open',
 
@@ -4866,7 +5571,7 @@ async function renderShipResponses(){
           };
 
 
-          const updateResult =
+          const update =
             await sb
               .from(
                 'ship_visit_reports'
@@ -4874,7 +5579,7 @@ async function renderShipResponses(){
               .update({
 
                 report_data:
-                  updatedReportData,
+                  newReportData,
 
                 updated_at:
                   new Date().toISOString()
@@ -4882,22 +5587,29 @@ async function renderShipResponses(){
               })
               .eq(
                 'id',
-                id
+                reportIdToUpdate
               );
 
 
           if(
-            updateResult.error
+            update.error
           ){
 
             alert(
               'Could not save ship responses.\n\n' +
-              updateResult.error.message
+              update.error.message
             );
 
             return;
 
           }
+
+
+          showToast(
+            allComplete
+              ? 'Ship responses saved. Report is complete.'
+              : 'Ship responses saved.'
+          );
 
 
           await renderShipResponses();
@@ -4908,24 +5620,6 @@ async function renderShipResponses(){
     );
 
 }
-
-
-/* =========================================================
-   BACK BUTTON
-========================================================= */
-
-document
-  .getElementById(
-    'backBtn'
-  )
-  .onclick =
-  () => {
-
-    showScreen(
-      'checklist'
-    );
-
-  };
 
 
 /* =========================================================
@@ -4968,17 +5662,22 @@ function buildPdf(){
 
   const doc =
     new jsPDF({
+
       unit:'pt',
+
       format:'a4'
+
     });
 
 
   const W =
-    doc.internal.pageSize.getWidth();
+    doc.internal.pageSize
+      .getWidth();
 
 
   const H =
-    doc.internal.pageSize.getHeight();
+    doc.internal.pageSize
+      .getHeight();
 
 
   const margin =
@@ -4986,7 +5685,7 @@ function buildPdf(){
 
 
   let y =
-    82;
+    84;
 
 
   const squid =
@@ -5069,7 +5768,7 @@ function buildPdf(){
 
     doc.rect(
       0,
-      H-24,
+      H - 24,
       W,
       24,
       'F'
@@ -5097,14 +5796,14 @@ function buildPdf(){
     doc.text(
       'INTERNAL USE ONLY',
       margin,
-      H-9
+      H - 9
     );
 
 
     doc.text(
       `${meta.ship} • ${meta.dateOn || ''}`,
-      W-margin,
-      H-9,
+      W - margin,
+      H - 9,
       {
         align:'right'
       }
@@ -5133,11 +5832,11 @@ function buildPdf(){
   }
 
 
-  function addText(
+  function wrappedText(
     text,
     size,
     width,
-    x = margin
+    x
   ){
 
     doc.setFont(
@@ -5160,7 +5859,9 @@ function buildPdf(){
 
     const lines =
       doc.splitTextToSize(
-        String(text || ''),
+        String(
+          text || ''
+        ),
         width
       );
 
@@ -5192,11 +5893,6 @@ function buildPdf(){
   header();
 
 
-  doc.setTextColor(
-    ...dark
-  );
-
-
   doc.setFont(
     'helvetica',
     'bold'
@@ -5205,6 +5901,11 @@ function buildPdf(){
 
   doc.setFontSize(
     11
+  );
+
+
+  doc.setTextColor(
+    ...dark
   );
 
 
@@ -5245,16 +5946,11 @@ function buildPdf(){
   );
 
 
-  y += 24;
+  y += 23;
 
 
-  const t =
+  const totalData =
     getTotals();
-
-
-  doc.setTextColor(
-    ...red
-  );
 
 
   doc.setFontSize(
@@ -5262,14 +5958,24 @@ function buildPdf(){
   );
 
 
+  doc.setTextColor(
+    ...red
+  );
+
+
   doc.text(
-    `${t.checked}/${t.total} POINTS CONFIRMED • ${t.photos} PHOTOS`,
+    `${totalData.checked}/${totalData.total} POINTS CONFIRMED • ${totalData.photos} PHOTOS • ${totalData.followUps} FOLLOW-UPS`,
     margin,
     y
   );
 
 
-  y += 22;
+  y += 23;
+
+
+  doc.setTextColor(
+    ...squid
+  );
 
 
   doc.setFont(
@@ -5283,11 +5989,6 @@ function buildPdf(){
   );
 
 
-  doc.setTextColor(
-    ...squid
-  );
-
-
   doc.text(
     'Overall Summary',
     margin,
@@ -5298,13 +5999,13 @@ function buildPdf(){
   y += 16;
 
 
-  addText(
+  wrappedText(
     document.getElementById(
       'overall'
     ).value,
     10,
-    W -
-      margin * 2
+    W - margin * 2,
+    margin
   );
 
 
@@ -5375,7 +6076,7 @@ function buildPdf(){
 
 
           ensureSpace(
-            15
+            14
           );
 
 
@@ -5386,7 +6087,7 @@ function buildPdf(){
 
 
           doc.setFontSize(
-            9.2
+            9
           );
 
 
@@ -5406,12 +6107,10 @@ function buildPdf(){
           );
 
 
-          addText(
+          wrappedText(
             text,
             9,
-            W -
-              margin * 2 -
-              24,
+            W - margin * 2 - 25,
             margin + 21
           );
 
@@ -5419,15 +6118,14 @@ function buildPdf(){
           (
             item.comments ||
             []
-          ).forEach(
+          )
+          .forEach(
             comment => {
 
-              addText(
+              wrappedText(
                 `— ${comment.name}: ${comment.text}`,
                 8.5,
-                W -
-                  margin * 2 -
-                  24,
+                W - margin * 2 - 25,
                 margin + 21
               );
 
@@ -5439,14 +6137,12 @@ function buildPdf(){
             item.followUpNeeded
           ){
 
-            addText(
+            wrappedText(
               item.shipResponse
                 ? `Ship Response: ${item.shipResponse}`
                 : 'FOLLOW-UP NEEDED FROM SHIP',
               8.5,
-              W -
-                margin * 2 -
-                24,
+              W - margin * 2 - 25,
               margin + 21
             );
 
@@ -5456,7 +6152,8 @@ function buildPdf(){
           (
             item.photos ||
             []
-          ).forEach(
+          )
+          .forEach(
             photo => {
 
               ensureSpace(
@@ -5476,12 +6173,13 @@ function buildPdf(){
                 );
 
 
-                y += 153;
+                y +=
+                  153;
 
               }catch(error){
 
                 console.error(
-                  'PDF photo error:',
+                  'PDF image error:',
                   error
                 );
 
@@ -5496,6 +6194,9 @@ function buildPdf(){
         }
       );
 
+
+      y += 8;
+
     }
   );
 
@@ -5508,14 +6209,14 @@ function buildPdf(){
       meta.ship ||
       'Ship'
     )
-      .replace(
-        /\s+/g,
-        '_'
-      )
-      .replace(
-        /[^a-zA-Z0-9_-]/g,
-        ''
-      );
+    .replace(
+      /\s+/g,
+      '_'
+    )
+    .replace(
+      /[^a-zA-Z0-9_-]/g,
+      ''
+    );
 
 
   doc.save(
@@ -5526,49 +6227,25 @@ function buildPdf(){
 
 
 /* =========================================================
-   INITIALIZE
+   PRINT
 ========================================================= */
 
 document
   .getElementById(
-    'createReport'
+    'printBtn'
   )
   .onclick =
   () => {
 
-    document.getElementById(
-      'dateOn'
-    ).value =
-      new Date()
-        .toISOString()
-        .slice(
-          0,
-          10
-        );
-
-
-    showScreen(
-      'setup'
-    );
+    window.print();
 
   };
 
 
-document
-  .getElementById(
-    'setupHome'
-  )
-  .onclick =
-  () => {
+/* =========================================================
+   HOME / SCREEN INITIALIZATION
+========================================================= */
 
-    showScreen(
-      'home'
-    );
-
-  };
-
-
-// Always start on Home.
 showScreen(
   'home'
 );
