@@ -602,7 +602,10 @@
 
     <div class="footer no-print">
 
-  <div class="grid2">
+  <div
+    id="summaryActiveActions"
+    class="grid2"
+  >
 
     <button
       type="button"
@@ -611,6 +614,7 @@
     >
       Back to Report
     </button>
+
 
     <button
       type="button"
@@ -622,8 +626,49 @@
 
   </div>
 
-</div>
 
+  <div
+    id="summarySubmittedActions"
+    class="grid2 hidden"
+  >
+
+    <button
+      type="button"
+      id="summaryBackToSubmittedBtn"
+      class="btn-secondary"
+    >
+      Back to Reports
+    </button>
+
+
+    <button
+      type="button"
+      id="summaryPdfBtn"
+      class="btn-primary"
+    >
+      Save PDF
+    </button>
+
+  </div>
+
+
+  <div
+    id="summarySubmittedPrintRow"
+    class="hidden"
+    style="margin-top:8px;"
+  >
+
+    <button
+      type="button"
+      id="summaryPrintBtn"
+      class="btn-secondary"
+    >
+      Print
+    </button>
+
+  </div>
+
+</div>
   </section>
 
 
