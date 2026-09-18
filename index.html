@@ -10,6 +10,11 @@
     content="width=device-width, initial-scale=1.0"
   >
 
+  <meta
+    name="theme-color"
+    content="#3C1053"
+  >
+
   <title>
     Virgin Voyages — Ship Visit Report
   </title>
@@ -25,7 +30,7 @@
   >
 
   <link
-    href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap"
     rel="stylesheet"
   >
 
@@ -40,8 +45,10 @@
 
 
   <!-- =====================================================
-       SUPABASE LIBRARY
-       IMPORTANT: must load BEFORE main.js
+       SUPABASE
+       
+       IMPORTANT:
+       This must load BEFORE main.js
   ====================================================== -->
 
   <script
@@ -102,9 +109,9 @@
       <div class="home-grid">
 
 
-        <!-- =============================================
+        <!-- =================================================
              CREATE REPORT
-        ============================================== -->
+        ================================================== -->
 
         <button
           type="button"
@@ -124,9 +131,9 @@
         </button>
 
 
-        <!-- =============================================
+        <!-- =================================================
              OPEN REPORTS
-        ============================================== -->
+        ================================================== -->
 
         <button
           type="button"
@@ -146,9 +153,9 @@
         </button>
 
 
-        <!-- =============================================
+        <!-- =================================================
              SUBMITTED REPORTS
-        ============================================== -->
+        ================================================== -->
 
         <button
           type="button"
@@ -162,15 +169,15 @@
 
 
           <p>
-            Review submitted reports, overall findings and follow-up points.
+            Review completed reports, findings and follow-ups.
           </p>
 
         </button>
 
 
-        <!-- =============================================
+        <!-- =================================================
              SHIP RESPONSE REPORT
-        ============================================== -->
+        ================================================== -->
 
         <button
           type="button"
@@ -184,7 +191,7 @@
 
 
           <p>
-            Respond to checklist points marked for ship follow-up.
+            Respond to checklist points requiring ship follow-up.
           </p>
 
         </button>
@@ -192,13 +199,48 @@
 
       </div>
 
+
+      <!-- =================================================
+           ADMIN
+      ================================================== -->
+
+      <div
+        style="
+          margin-top:20px;
+          text-align:right;
+        "
+      >
+
+        <button
+          type="button"
+          id="adminButton"
+          class="admin-button"
+          style="
+            padding:8px 14px;
+            background:#FFFFFF;
+            color:#3C1053;
+            border:1.5px solid #3C1053;
+            border-radius:7px;
+            font-size:10px;
+            font-weight:800;
+            letter-spacing:.03em;
+          "
+        >
+
+          ADMIN
+
+        </button>
+
+      </div>
+
+
     </div>
 
   </section>
 
 
   <!-- =====================================================
-       CREATE REPORT / SETUP
+       CREATE REPORT
   ====================================================== -->
 
   <section
@@ -307,11 +349,13 @@
         id="startBtn"
         class="btn-primary"
       >
+
         Start Report
+
       </button>
 
 
-      <div style="height:10px"></div>
+      <div style="height:9px"></div>
 
 
       <!-- HOME -->
@@ -321,7 +365,9 @@
         id="setupHome"
         class="btn-secondary"
       >
+
         Back to Home
+
       </button>
 
 
@@ -338,6 +384,8 @@
     id="checklist"
     class="hidden"
   >
+
+    <!-- HEADER -->
 
     <div class="band compact">
 
@@ -360,7 +408,9 @@
 
       <div class="reviewer-row">
 
-        <label for="hdrReviewer">
+        <label
+          for="hdrReviewer"
+        >
           REVIEWER
         </label>
 
@@ -378,7 +428,7 @@
     </div>
 
 
-    <!-- VISIT INFO -->
+    <!-- VISIT META -->
 
     <div class="meta">
 
@@ -412,21 +462,25 @@
         id="progress"
         class="progress-label"
       >
+
         0 of 0 points reviewed
+
       </div>
 
     </div>
 
 
-    <!--
-      checklist.js creates:
-
-      CULINARY
-      BAR
-      RESTAURANT
-      PROCUREMENT
-      SANITATION
-    -->
+    <!-- =================================================
+         CHECKLIST SECTIONS
+         
+         Rendered by checklist.js
+         
+         CULINARY
+         BAR
+         RESTAURANT
+         PROCUREMENT
+         SANITATION
+    ================================================== -->
 
     <div
       id="sections"
@@ -443,7 +497,9 @@
         id="summaryBtn"
         class="btn-primary"
       >
+
         Report Summary
+
       </button>
 
 
@@ -455,7 +511,9 @@
         id="shipReviewBtn"
         class="btn-secondary"
       >
+
         Ship Review
+
       </button>
 
 
@@ -475,6 +533,7 @@
 
     <div class="band compact">
 
+
       <div class="eyebrow">
         — SHIP REVIEW
       </div>
@@ -486,8 +545,9 @@
 
 
       <p class="sub">
-        Review the findings before submitting the report.
+        Review the findings and follow-up points before submission.
       </p>
+
 
     </div>
 
@@ -495,9 +555,7 @@
     <div class="page-pad">
 
 
-      <!-- =============================================
-           FOLLOW-UP FINDINGS
-      ============================================== -->
+      <!-- FOLLOW-UP POINTS -->
 
       <div
         id="ship-review-content"
@@ -507,9 +565,7 @@
       <div style="height:20px"></div>
 
 
-      <!-- =============================================
-           COMPLETE REPORT REVIEW
-      ============================================== -->
+      <!-- COMPLETE REVIEW -->
 
       <div
         id="ship-review-all"
@@ -530,7 +586,9 @@
           id="reviewBackBtn"
           class="btn-secondary"
         >
+
           Back to Checklist
+
         </button>
 
 
@@ -539,7 +597,9 @@
           id="reviewSubmitBtn"
           class="btn-primary"
         >
+
           Submit Report
+
         </button>
 
 
@@ -576,8 +636,8 @@
 
 
       <p
-        id="sumMeta"
         class="sub"
+        id="sumMeta"
       ></p>
 
 
@@ -587,29 +647,32 @@
     <div class="summary">
 
 
-      <!--
-        reports.js renders the complete
-        submitted report here.
-
-        Each checklist point can include:
-        - status
-        - reviewer comments
-        - reviewer photos
-        - follow-up status
-        - ship comments
-      -->
+      <!-- =================================================
+           VISIBLE REPORT CONTENT
+           
+           For a submitted report this shows:
+           
+           ONLY CHECKED POINTS
+           Reviewer comments
+           Photos
+           Follow-up flag
+           Ship responses
+      ================================================== -->
 
       <div
         id="report-overall-content"
       ></div>
 
 
-      <!--
-        Hidden fields used by the
-        PDF module for open reports.
-      -->
+      <!-- =================================================
+           HIDDEN SUPPORT FIELDS
+           
+           Used by the PDF module and open report summary.
+      ================================================== -->
 
-      <div class="hidden">
+      <div
+        class="hidden"
+      >
 
         <div
           id="stats"
@@ -632,6 +695,8 @@
     </div>
 
 
+    <!-- SUMMARY FOOTER -->
+
     <div class="footer no-print">
 
 
@@ -643,7 +708,9 @@
           id="summaryShipReviewBtn"
           class="btn-secondary"
         >
+
           Ship Review
+
         </button>
 
 
@@ -652,7 +719,9 @@
           id="pdfBtn"
           class="btn-secondary"
         >
+
           Save PDF
+
         </button>
 
 
@@ -670,7 +739,9 @@
           id="printBtn"
           class="btn-secondary"
         >
+
           Print
+
         </button>
 
 
@@ -679,7 +750,9 @@
           id="summaryHomeBtn"
           class="btn-secondary"
         >
+
           Back to Home
+
         </button>
 
 
@@ -714,7 +787,7 @@
 
 
       <p class="sub">
-        Review findings requiring a ship response.
+        Review findings requiring ship response.
       </p>
 
 
@@ -723,11 +796,6 @@
 
     <div class="summary">
 
-
-      <!--
-        reports.js renders only:
-        followUpNeeded === true
-      -->
 
       <div
         id="report-followups-content"
@@ -748,7 +816,9 @@
           id="followupsHomeBtn"
           class="btn-secondary"
         >
+
           Back to Home
+
         </button>
 
 
@@ -757,7 +827,9 @@
           id="followupPdfBtn"
           class="btn-primary"
         >
+
           Save Follow-Up PDF
+
         </button>
 
 
@@ -772,7 +844,9 @@
         id="followupPrintBtn"
         class="btn-secondary"
       >
+
         Print Follow-Up Report
+
       </button>
 
 
@@ -814,6 +888,10 @@
     <div class="reports">
 
 
+      <!--
+        reports.js loads open reports here.
+      -->
+
       <div
         id="openList"
       ></div>
@@ -824,7 +902,9 @@
         id="openHomeBtn"
         class="btn-secondary"
       >
+
         Back to Home
+
       </button>
 
 
@@ -866,6 +946,10 @@
     <div class="reports">
 
 
+      <!--
+        reports.js loads submitted reports here.
+      -->
+
       <div
         id="reportList"
       ></div>
@@ -876,7 +960,9 @@
         id="reportsHomeBtn"
         class="btn-secondary"
       >
+
         Back to Home
+
       </button>
 
 
@@ -918,6 +1004,11 @@
     <div class="reports">
 
 
+      <!--
+        main.js creates the ship-response
+        report cards here.
+      -->
+
       <div
         id="responseList"
       ></div>
@@ -928,7 +1019,9 @@
         id="responsesHomeBtn"
         class="btn-secondary"
       >
+
         Back to Home
+
       </button>
 
 
@@ -941,9 +1034,13 @@
 
 
 <!-- =======================================================
-     MAIN APPLICATION MODULE
-
-     This must be AFTER the Supabase CDN script above.
+     MAIN APPLICATION
+     
+     Must be loaded AFTER:
+     - jsPDF
+     - Supabase
+     
+     because main.js imports the application modules.
 ======================================================== -->
 
 <script
@@ -958,7 +1055,8 @@
 
 <script>
 
-window.showToast = function(message){
+window.showToast =
+function(message){
 
   let toast =
     document.getElementById(
@@ -966,7 +1064,9 @@ window.showToast = function(message){
     );
 
 
-  if(!toast){
+  if(
+    !toast
+  ){
 
     toast =
       document.createElement(
@@ -989,7 +1089,7 @@ window.showToast = function(message){
       border-radius:8px;
       background:#1B1B1B;
       color:#FFFFFF;
-      font-family:Arial,sans-serif;
+      font-family:Arial,Calibri,sans-serif;
       font-size:12px;
       line-height:1.4;
       box-shadow:0 4px 14px rgba(0,0,0,.25);
@@ -1035,7 +1135,7 @@ window.showToast = function(message){
 
 
 /* =====================================================
-   GLOBAL ERROR DISPLAY
+   GLOBAL ERROR LOGGING
 ===================================================== */
 
 window.addEventListener(
