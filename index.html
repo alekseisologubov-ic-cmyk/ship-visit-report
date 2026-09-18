@@ -36,7 +36,7 @@
 
 
   <!-- =====================================================
-       PDF LIBRARY
+       PDF
   ====================================================== -->
 
   <script
@@ -46,7 +46,6 @@
 
   <!-- =====================================================
        SUPABASE
-       MUST LOAD BEFORE main.js
   ====================================================== -->
 
   <script
@@ -68,6 +67,7 @@
 
 <body>
 
+
 <div
   id="app"
   class="app"
@@ -86,9 +86,11 @@
         — VIRGIN VOYAGES
       </div>
 
+
       <h1>
         Ship Visit Report
       </h1>
+
 
       <p class="sub">
         Create, review and manage ship visit reports.
@@ -101,8 +103,6 @@
 
       <div class="home-grid">
 
-
-        <!-- CREATE REPORT -->
 
         <button
           type="button"
@@ -121,8 +121,6 @@
         </button>
 
 
-        <!-- OPEN REPORTS -->
-
         <button
           type="button"
           id="openReport"
@@ -140,8 +138,6 @@
         </button>
 
 
-        <!-- SUBMITTED REPORTS -->
-
         <button
           type="button"
           id="submittedReports"
@@ -158,8 +154,6 @@
 
         </button>
 
-
-        <!-- SHIP RESPONSE -->
 
         <button
           type="button"
@@ -212,7 +206,6 @@
 
       </div>
 
-
     </div>
 
   </section>
@@ -229,13 +222,24 @@
 
     <div class="band compact">
 
+      <button
+        type="button"
+        class="header-back"
+        id="setupHeaderBack"
+      >
+        ← Back
+      </button>
+
+
       <div class="eyebrow">
         — CREATE REPORT
       </div>
 
+
       <h1>
         Ship Visit Details
       </h1>
+
 
       <p class="sub">
         Enter the visit information.
@@ -251,6 +255,7 @@
         <label for="ship">
           SHIP
         </label>
+
 
         <input
           id="ship"
@@ -268,6 +273,7 @@
           DATE ON
         </label>
 
+
         <input
           id="dateOn"
           type="date"
@@ -282,6 +288,7 @@
           DATE OFF
         </label>
 
+
         <input
           id="dateOff"
           type="date"
@@ -295,6 +302,7 @@
         <label for="reviewer">
           REVIEWER
         </label>
+
 
         <input
           id="reviewer"
@@ -342,11 +350,22 @@
 
     <div class="band compact">
 
+      <button
+        type="button"
+        class="header-back"
+        id="checklistHeaderBack"
+      >
+        ← Back
+      </button>
+
+
       <div class="eyebrow">
 
         —
 
-        <span id="hdrShip"></span>
+        <span
+          id="hdrShip"
+        ></span>
 
       </div>
 
@@ -361,6 +380,7 @@
         <label for="hdrReviewer">
           REVIEWER
         </label>
+
 
         <input
           id="hdrReviewer"
@@ -380,7 +400,10 @@
         Visit:
       </strong>
 
-      <span id="visitMeta"></span>
+
+      <span
+        id="visitMeta"
+      ></span>
 
     </div>
 
@@ -407,16 +430,6 @@
     </div>
 
 
-    <!--
-      checklist.js renders:
-
-      CULINARY
-      BAR
-      RESTAURANT
-      PROCUREMENT
-      SANITATION
-    -->
-
     <div id="sections"></div>
 
 
@@ -435,12 +448,12 @@
 
 
       <button
-  type="button"
-  id="shipReviewBtn"
-  class="btn-secondary"
->
-  Send to Ship Review
-</button>
+        type="button"
+        id="shipReviewBtn"
+        class="btn-secondary"
+      >
+        Send to Ship Review
+      </button>
 
     </div>
 
@@ -457,6 +470,15 @@
   >
 
     <div class="band compact">
+
+      <button
+        type="button"
+        class="header-back"
+        id="reviewHeaderBack"
+      >
+        ← Back
+      </button>
+
 
       <div class="eyebrow">
         — SHIP REVIEW
@@ -531,6 +553,15 @@
 
     <div class="band compact">
 
+      <button
+        type="button"
+        class="header-back"
+        id="summaryHeaderBack"
+      >
+        ← Back
+      </button>
+
+
       <div class="eyebrow">
         — REPORT OVERALL
       </div>
@@ -556,7 +587,7 @@
       ></div>
 
 
-      <!-- Hidden support fields -->
+      <!-- Hidden PDF support -->
 
       <div class="hidden">
 
@@ -575,10 +606,6 @@
 
     </div>
 
-
-    <!-- =================================================
-         ONLY TWO OPTIONS
-    ================================================== -->
 
     <div class="footer no-print">
 
@@ -609,7 +636,7 @@
 
 
   <!-- =====================================================
-       POINTS TO FOLLOW UP
+       FOLLOW UPS
   ====================================================== -->
 
   <section
@@ -618,6 +645,15 @@
   >
 
     <div class="band compact">
+
+      <button
+        type="button"
+        class="header-back"
+        id="followupsHeaderBack"
+      >
+        ← Back
+      </button>
+
 
       <div class="eyebrow">
         — POINTS TO FOLLOW UP
@@ -630,7 +666,7 @@
 
 
       <p class="sub">
-        Review findings requiring a ship response.
+        Review findings requiring ship response.
       </p>
 
     </div>
@@ -696,6 +732,15 @@
 
     <div class="band compact">
 
+      <button
+        type="button"
+        class="header-back"
+        id="openHeaderBack"
+      >
+        ← Back
+      </button>
+
+
       <div class="eyebrow">
         — OPEN REPORTS
       </div>
@@ -715,7 +760,9 @@
 
     <div class="reports">
 
-      <div id="openList"></div>
+      <div
+        id="openList"
+      ></div>
 
 
       <button
@@ -742,6 +789,15 @@
 
     <div class="band compact">
 
+      <button
+        type="button"
+        class="header-back"
+        id="submittedHeaderBack"
+      >
+        ← Back
+      </button>
+
+
       <div class="eyebrow">
         — SUBMITTED REPORTS
       </div>
@@ -761,7 +817,9 @@
 
     <div class="reports">
 
-      <div id="reportList"></div>
+      <div
+        id="reportList"
+      ></div>
 
 
       <button
@@ -788,6 +846,15 @@
 
     <div class="band compact">
 
+      <button
+        type="button"
+        class="header-back"
+        id="responsesHeaderBack"
+      >
+        ← Back
+      </button>
+
+
       <div class="eyebrow">
         — SHIP RESPONSE REPORT
       </div>
@@ -807,7 +874,9 @@
 
     <div class="reports">
 
-      <div id="responseList"></div>
+      <div
+        id="responseList"
+      ></div>
 
 
       <button
@@ -827,7 +896,7 @@
 
 
 <!-- =======================================================
-     APPLICATION
+     MAIN APPLICATION
 ======================================================== -->
 
 <script
@@ -842,7 +911,8 @@
 
 <script>
 
-window.showToast = function(message){
+window.showToast =
+function(message){
 
   let toast =
     document.getElementById(
@@ -850,7 +920,9 @@ window.showToast = function(message){
     );
 
 
-  if(!toast){
+  if(
+    !toast
+  ){
 
     toast =
       document.createElement(
