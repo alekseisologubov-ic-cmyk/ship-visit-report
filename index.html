@@ -20,10 +20,6 @@
   </title>
 
 
-  <!-- =====================================================
-       FONT
-  ====================================================== -->
-
   <link
     rel="preconnect"
     href="https://fonts.googleapis.com"
@@ -35,28 +31,21 @@
   >
 
 
-  <!-- =====================================================
-       PDF
-  ====================================================== -->
+  <!-- PDF -->
 
   <script
     src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"
   ></script>
 
 
-  <!-- =====================================================
-       SUPABASE
-       MUST LOAD BEFORE main.js
-  ====================================================== -->
+  <!-- SUPABASE -->
 
   <script
     src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"
   ></script>
 
 
-  <!-- =====================================================
-       CSS
-  ====================================================== -->
+  <!-- CSS -->
 
   <link
     rel="stylesheet"
@@ -67,6 +56,7 @@
 
 
 <body>
+
 
 <div
   id="app"
@@ -86,11 +76,9 @@
         — VIRGIN VOYAGES
       </div>
 
-
       <h1>
         Ship Visit Report
       </h1>
-
 
       <p class="sub">
         Create, review and manage ship visit reports.
@@ -103,7 +91,6 @@
 
       <div class="home-grid">
 
-        <!-- CREATE -->
 
         <button
           type="button"
@@ -122,8 +109,6 @@
         </button>
 
 
-        <!-- OPEN -->
-
         <button
           type="button"
           id="openReport"
@@ -135,13 +120,11 @@
           </h2>
 
           <p>
-            Continue reports that are still in progress.
+            Continue reports that have been started but not submitted.
           </p>
 
         </button>
 
-
-        <!-- SUBMITTED -->
 
         <button
           type="button"
@@ -154,13 +137,11 @@
           </h2>
 
           <p>
-            Review completed ship visit reports.
+            Review completed reports, findings and follow-up points.
           </p>
 
         </button>
 
-
-        <!-- SHIP RESPONSE -->
 
         <button
           type="button"
@@ -178,10 +159,9 @@
 
         </button>
 
+
       </div>
 
-
-      <!-- ADMIN -->
 
       <div
         style="
@@ -195,7 +175,9 @@
           id="adminButton"
           class="admin-button"
         >
+
           ADMIN
+
         </button>
 
       </div>
@@ -206,7 +188,7 @@
 
 
   <!-- =====================================================
-       SETUP
+       CREATE REPORT
   ====================================================== -->
 
   <section
@@ -244,16 +226,19 @@
 
     <div class="page-pad">
 
+
       <div class="field">
 
         <label for="ship">
           SHIP
         </label>
 
+
         <input
           id="ship"
           type="text"
           placeholder="e.g. Brilliant Lady"
+          autocomplete="off"
         >
 
       </div>
@@ -264,6 +249,7 @@
         <label for="dateOn">
           DATE ON
         </label>
+
 
         <input
           id="dateOn"
@@ -279,6 +265,7 @@
           DATE OFF
         </label>
 
+
         <input
           id="dateOff"
           type="date"
@@ -293,10 +280,12 @@
           REVIEWER
         </label>
 
+
         <input
           id="reviewer"
           type="text"
           placeholder="Reviewer name"
+          autocomplete="off"
         >
 
       </div>
@@ -307,7 +296,9 @@
         id="startBtn"
         class="btn-primary"
       >
+
         Start Report
+
       </button>
 
 
@@ -319,7 +310,9 @@
         id="setupHome"
         class="btn-secondary"
       >
+
         Back to Home
+
       </button>
 
     </div>
@@ -343,13 +336,16 @@
         id="checklistHeaderBack"
         class="header-back"
       >
+
         ← Back
+
       </button>
 
 
       <div class="eyebrow">
 
         —
+
         <span id="hdrShip"></span>
 
       </div>
@@ -371,6 +367,7 @@
           id="hdrReviewer"
           type="text"
           placeholder="Reviewer"
+          autocomplete="off"
         >
 
       </div>
@@ -405,7 +402,9 @@
         id="progress"
         class="progress-label"
       >
+
         0 of 0 points reviewed
+
       </div>
 
     </div>
@@ -416,12 +415,15 @@
 
     <div class="footer no-print">
 
+
       <button
         type="button"
         id="summaryBtn"
         class="btn-primary"
       >
+
         Report Summary
+
       </button>
 
 
@@ -433,8 +435,11 @@
         id="shipReviewBtn"
         class="btn-secondary"
       >
+
         Send to Ship Review
+
       </button>
+
 
     </div>
 
@@ -457,7 +462,9 @@
         id="reviewHeaderBack"
         class="header-back"
       >
+
         ← Back
+
       </button>
 
 
@@ -480,13 +487,17 @@
 
     <div class="page-pad">
 
-      <div id="ship-review-content"></div>
+      <div
+        id="ship-review-content"
+      ></div>
 
 
       <div style="height:15px"></div>
 
 
-      <div id="ship-review-all"></div>
+      <div
+        id="ship-review-all"
+      ></div>
 
     </div>
 
@@ -495,12 +506,15 @@
 
       <div class="grid2">
 
+
         <button
           type="button"
           id="reviewBackBtn"
           class="btn-secondary"
         >
+
           Back to Checklist
+
         </button>
 
 
@@ -509,8 +523,11 @@
           id="reviewSubmitBtn"
           class="btn-primary"
         >
+
           Send to Ship
+
         </button>
+
 
       </div>
 
@@ -535,7 +552,9 @@
         id="summaryHeaderBack"
         class="header-back"
       >
+
         ← Back
+
       </button>
 
 
@@ -585,12 +604,15 @@
 
       <div class="grid2">
 
+
         <button
           type="button"
           id="summaryBackToReportBtn"
           class="btn-secondary"
         >
+
           Back to Report
+
         </button>
 
 
@@ -599,8 +621,11 @@
           id="summarySubmitBtn"
           class="btn-primary"
         >
+
           Send to Ship
+
         </button>
+
 
       </div>
 
@@ -610,7 +635,7 @@
 
 
   <!-- =====================================================
-       FOLLOW UPS
+       FOLLOW UP
   ====================================================== -->
 
   <section
@@ -625,7 +650,9 @@
         id="followupsHeaderBack"
         class="header-back"
       >
+
         ← Back
+
       </button>
 
 
@@ -657,26 +684,15 @@
 
     <div class="footer no-print">
 
-      <div class="grid2">
+      <button
+        type="button"
+        id="followupPdfBtn"
+        class="btn-primary"
+      >
 
-        <button
-          type="button"
-          id="followupsHomeBtn"
-          class="btn-secondary"
-        >
-          Back to Home
-        </button>
+        Save Follow-Up PDF
 
-
-        <button
-          type="button"
-          id="followupPdfBtn"
-          class="btn-primary"
-        >
-          Save Follow-Up PDF
-        </button>
-
-      </div>
+      </button>
 
 
       <div style="height:8px"></div>
@@ -687,7 +703,9 @@
         id="followupPrintBtn"
         class="btn-secondary"
       >
+
         Print Follow-Up Report
+
       </button>
 
     </div>
@@ -711,7 +729,9 @@
         id="openHeaderBack"
         class="header-back"
       >
+
         ← Back
+
       </button>
 
 
@@ -742,7 +762,9 @@
         id="openHomeBtn"
         class="btn-secondary"
       >
+
         Back to Home
+
       </button>
 
     </div>
@@ -766,7 +788,9 @@
         id="submittedHeaderBack"
         class="header-back"
       >
+
         ← Back
+
       </button>
 
 
@@ -797,7 +821,9 @@
         id="reportsHomeBtn"
         class="btn-secondary"
       >
+
         Back to Home
+
       </button>
 
     </div>
@@ -806,7 +832,7 @@
 
 
   <!-- =====================================================
-       SHIP RESPONSE
+       SHIP RESPONSE REPORT
   ====================================================== -->
 
   <section
@@ -821,7 +847,9 @@
         id="responsesHeaderBack"
         class="header-back"
       >
+
         ← Back
+
       </button>
 
 
@@ -836,7 +864,7 @@
 
 
       <p class="sub">
-        Complete responses for reports sent to the ship.
+        Complete the responses for reports sent to the ship.
       </p>
 
     </div>
@@ -852,7 +880,9 @@
         id="responsesHomeBtn"
         class="btn-secondary"
       >
+
         Back to Home
+
       </button>
 
     </div>
@@ -864,7 +894,7 @@
 
 
 <!-- =======================================================
-     MAIN APP
+     MAIN JS
 ======================================================== -->
 
 <script
