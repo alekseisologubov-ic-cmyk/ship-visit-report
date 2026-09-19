@@ -5,32 +5,49 @@
   main.js
   ============================================================
 
-  STABLE CONTROLLER
+  STABLE APPLICATION CONTROLLER
 
-  Important:
-  Secondary modules are loaded lazily so one broken module
-  cannot freeze the entire application.
-
-  Flow:
+  FLOW
 
     HOME
       |
       +-- CREATE REPORT
+      |      |
+      |      +-- DEPARTMENT HOME
+      |             |
+      |             +-- DEPARTMENT CHECKLIST
+      |             |
+      |             +-- REPORT SUMMARY
+      |             |
+      |             +-- SHIP REVIEW
       |
       +-- OPEN REPORTS
+      |      |
+      |      +-- OPEN REPORT
       |
-      +-- REPORT CHECKLIST
-      |
-      +-- SHIP REVIEW
-      |
-      +-- SHIP RESPONSE
+      +-- SHIP RESPONSE REPORT
+      |      |
+      |      +-- SHIP RESPONSE
+      |             |
+      |             +-- SUBMITTED
       |
       +-- SUBMITTED REPORTS
+             |
+             +-- REVIEW REPORT
+                    |
+                    +-- SAVE PDF
+
+
+  IMPORTANT
+
+  - No undefined updateChecklistHeader() calls.
+  - Checklist header is called through checklist module.
+  - Secondary modules are loaded only when needed.
 */
 
 
 /* ============================================================
-   CORE IMPORTS ONLY
+   CORE IMPORTS
 ============================================================ */
 
 import {
@@ -75,183 +92,19 @@ let pdfModule = null;
 
 
 /* ============================================================
-   LOAD CHECKLIST MODULE
+   NAVIGATION STATE
 ============================================================ */
 
-async function getChecklistModule(){
+let checklistReturnScreen =
+  'setup';
 
-  if(
-    checklistModule
-  ){
 
-    return checklistModule;
+let summaryReturnScreen =
+  'checklist';
 
-  }
 
-
-  try{
-
-    checklistModule =
-      await import(
-        './checklist.js'
-      );
-
-
-    return checklistModule;
-
-  }catch(error){
-
-    console.error(
-      'Could not load checklist.js:',
-      error
-    );
-
-
-    showError(
-      'Checklist module could not be loaded.'
-    );
-
-
-    return null;
-
-  }
-
-}
-
-
-/* ============================================================
-   LOAD REVIEW MODULE
-============================================================ */
-
-async function getReviewModule(){
-
-  if(
-    reviewModule
-  ){
-
-    return reviewModule;
-
-  }
-
-
-  try{
-
-    reviewModule =
-      await import(
-        './review.js'
-      );
-
-
-    return reviewModule;
-
-  }catch(error){
-
-    console.error(
-      'Could not load review.js:',
-      error
-    );
-
-
-    showError(
-      'Ship Review module could not be loaded.'
-    );
-
-
-    return null;
-
-  }
-
-}
-
-
-/* ============================================================
-   LOAD REPORTS MODULE
-============================================================ */
-
-async function getReportsModule(){
-
-  if(
-    reportsModule
-  ){
-
-    return reportsModule;
-
-  }
-
-
-  try{
-
-    reportsModule =
-      await import(
-        './reports.js'
-      );
-
-
-    return reportsModule;
-
-  }catch(error){
-
-    console.error(
-      'Could not load reports.js:',
-      error
-    );
-
-
-    showError(
-      'Reports module could not be loaded.'
-    );
-
-
-    return null;
-
-  }
-
-}
-
-
-/* ============================================================
-   LOAD PDF MODULE
-============================================================ */
-
-async function getPDFModule(){
-
-  if(
-    pdfModule
-  ){
-
-    return pdfModule;
-
-  }
-
-
-  try{
-
-    pdfModule =
-      await import(
-        './pdf.js'
-      );
-
-
-    return pdfModule;
-
-  }catch(error){
-
-    console.error(
-      'Could not load pdf.js:',
-      error
-    );
-
-
-    showError(
-      'PDF module could not be loaded.'
-    );
-
-
-    return null;
-
-  }
-
-}
+let currentSubmittedReport =
+  null;
 
 
 /* ============================================================
@@ -270,23 +123,7 @@ let adminMode =
 
 
 /* ============================================================
-   NAVIGATION
-============================================================ */
-
-let checklistReturnScreen =
-  'setup';
-
-
-let summaryReturnScreen =
-  'checklist';
-
-
-let currentSubmittedReport =
-  null;
-
-
-/* ============================================================
-   SCREEN LIST
+   SCREEN IDS
 ============================================================ */
 
 const SCREENS = [
@@ -325,7 +162,7 @@ function(){
 
 
 /* ============================================================
-   START APPLICATION
+   START APP
 ============================================================ */
 
 document.addEventListener(
@@ -338,7 +175,7 @@ document.addEventListener(
    INITIALIZE
 ============================================================ */
 
-async function initializeApp(){
+function initializeApp(){
 
   console.log(
     'Ship Visit Report starting...'
@@ -351,49 +188,37 @@ async function initializeApp(){
 
   restoreAdminMode();
 
-
   bindAdminButton();
-
 
   setupDefaultDate();
 
-
   bindHomeButtons();
-
 
   bindCreateReport();
 
-
   bindChecklistButtons();
-
 
   bindReviewButtons();
 
-
   bindSummaryButtons();
-
 
   bindFollowUpButtons();
 
-
   bindPDFButtons();
-
 
   bindHeaderBackButtons();
 
+  /*
+    IMPORTANT:
+    We do NOT load review.js, reports.js,
+    checklist.js or pdf.js here.
 
-  bindGlobalReportActions();
+    They are loaded only when used.
+  */
 
 
   updateAdminButton();
 
-
-  /*
-    HOME IS SHOWN FIRST.
-
-    No secondary module needs to be loaded
-    just to display the home screen.
-  */
 
   showScreen(
     'home'
@@ -402,6 +227,2907 @@ async function initializeApp(){
 
   console.log(
     'Ship Visit Report ready.'
+  );
+
+}
+
+
+/* ============================================================
+   SAFE MODULE LOADERS
+============================================================ */
+
+async function getChecklistModule(){
+
+  if(
+    checklistModule
+  ){
+
+    return checklistModule;
+
+  }
+
+
+  try{
+
+    checklistModule =
+      await import(
+        './checklist.js'
+      );
+
+
+    return checklistModule;
+
+  }catch(error){
+
+    console.error(
+      'Checklist module error:',
+      error
+    );
+
+
+    showError(
+      'Checklist module could not be loaded.',
+      error
+    );
+
+
+    return null;
+
+  }
+
+}
+
+
+async function getReviewModule(){
+
+  if(
+    reviewModule
+  ){
+
+    return reviewModule;
+
+  }
+
+
+  try{
+
+    reviewModule =
+      await import(
+        './review.js'
+      );
+
+
+    configureReviewCallbacks(
+      reviewModule
+    );
+
+
+    return reviewModule;
+
+  }catch(error){
+
+    console.error(
+      'Review module error:',
+      error
+    );
+
+
+    showError(
+      'Ship Review module could not be loaded.',
+      error
+    );
+
+
+    return null;
+
+  }
+
+}
+
+
+async function getReportsModule(){
+
+  if(
+    reportsModule
+  ){
+
+    return reportsModule;
+
+  }
+
+
+  try{
+
+    reportsModule =
+      await import(
+        './reports.js'
+      );
+
+
+    configureReportsCallbacks(
+      reportsModule
+    );
+
+
+    return reportsModule;
+
+  }catch(error){
+
+    console.error(
+      'Reports module error:',
+      error
+    );
+
+
+    showError(
+      'Reports module could not be loaded.',
+      error
+    );
+
+
+    return null;
+
+  }
+
+}
+
+
+async function getPDFModule(){
+
+  if(
+    pdfModule
+  ){
+
+    return pdfModule;
+
+  }
+
+
+  try{
+
+    pdfModule =
+      await import(
+        './pdf.js'
+      );
+
+
+    return pdfModule;
+
+  }catch(error){
+
+    console.error(
+      'PDF module error:',
+      error
+    );
+
+
+    showError(
+      'PDF module could not be loaded.',
+      error
+    );
+
+
+    return null;
+
+  }
+
+}
+
+
+/* ============================================================
+   SCREEN NAVIGATION
+============================================================ */
+
+export function showScreen(
+  screen
+){
+
+  if(
+    !SCREENS.includes(
+      screen
+    )
+  ){
+
+    screen =
+      'home';
+
+  }
+
+
+  SCREENS.forEach(
+    id => {
+
+      const element =
+        document.getElementById(
+          id
+        );
+
+
+      if(
+        !element
+      ){
+
+        return;
+
+      }
+
+
+      if(
+        id === screen
+      ){
+
+        element.classList.remove(
+          'hidden'
+        );
+
+
+        element.style.display =
+          '';
+
+      }else{
+
+        element.classList.add(
+          'hidden'
+        );
+
+
+        element.style.display =
+          'none';
+
+      }
+
+    }
+  );
+
+
+  window.scrollTo(
+    0,
+    0
+  );
+
+}
+
+
+/* ============================================================
+   SAFE CLICK BINDING
+============================================================ */
+
+function bindClick(
+  id,
+  handler
+){
+
+  const element =
+    document.getElementById(
+      id
+    );
+
+
+  if(
+    !element
+  ){
+
+    return;
+
+  }
+
+
+  element.addEventListener(
+    'click',
+    handler
+  );
+
+}
+
+
+/* ============================================================
+   HOME BUTTONS
+============================================================ */
+
+function bindHomeButtons(){
+
+  bindClick(
+    'createReport',
+    function(){
+
+      clearSetupFields();
+
+      setupDefaultDate();
+
+      checklistReturnScreen =
+        'setup';
+
+      summaryReturnScreen =
+        'checklist';
+
+      currentSubmittedReport =
+        null;
+
+      showScreen(
+        'setup'
+      );
+
+    }
+  );
+
+
+  bindClick(
+    'openReport',
+    async function(){
+
+      showScreen(
+        'open'
+      );
+
+
+      await loadOpenReportsScreen();
+
+    }
+  );
+
+
+  bindClick(
+    'submittedReports',
+    async function(){
+
+      showScreen(
+        'submitted'
+      );
+
+
+      await loadSubmittedReportsScreen();
+
+    }
+  );
+
+
+  bindClick(
+    'shipResponseReport',
+    async function(){
+
+      showScreen(
+        'responses'
+      );
+
+
+      await loadShipResponseScreen();
+
+    }
+  );
+
+
+  bindClick(
+    'setupHome',
+    function(){
+
+      showScreen(
+        'home'
+      );
+
+    }
+  );
+
+
+  bindClick(
+    'openHomeBtn',
+    function(){
+
+      showScreen(
+        'home'
+      );
+
+    }
+  );
+
+
+  bindClick(
+    'reportsHomeBtn',
+    function(){
+
+      showScreen(
+        'home'
+      );
+
+    }
+  );
+
+
+  bindClick(
+    'responsesHomeBtn',
+    function(){
+
+      showScreen(
+        'home'
+      );
+
+    }
+  );
+
+
+  bindClick(
+    'followupsHomeBtn',
+    function(){
+
+      showScreen(
+        'home'
+      );
+
+    }
+  );
+
+}
+
+
+/* ============================================================
+   CREATE REPORT
+============================================================ */
+
+function bindCreateReport(){
+
+  bindClick(
+    'startBtn',
+    handleStartReport
+  );
+
+}
+
+
+/* ============================================================
+   CLEAR SETUP
+============================================================ */
+
+function clearSetupFields(){
+
+  [
+    'ship',
+    'dateOn',
+    'dateOff',
+    'reviewer'
+
+  ].forEach(
+    id => {
+
+      const input =
+        document.getElementById(
+          id
+        );
+
+
+      if(
+        input
+      ){
+
+        input.value =
+          '';
+
+      }
+
+    }
+  );
+
+}
+
+
+/* ============================================================
+   DEFAULT DATE
+============================================================ */
+
+function setupDefaultDate(){
+
+  const input =
+    document.getElementById(
+      'dateOn'
+    );
+
+
+  if(
+    input &&
+    !input.value
+  ){
+
+    input.value =
+      new Date()
+        .toISOString()
+        .slice(
+          0,
+          10
+        );
+
+  }
+
+}
+
+
+/* ============================================================
+   CREATE REPORT HANDLER
+============================================================ */
+
+async function handleStartReport(){
+
+  const ship =
+    document
+      .getElementById(
+        'ship'
+      )
+      ?.value
+      .trim();
+
+
+  const dateOn =
+    document
+      .getElementById(
+        'dateOn'
+      )
+      ?.value ||
+    '';
+
+
+  const dateOff =
+    document
+      .getElementById(
+        'dateOff'
+      )
+      ?.value ||
+    '';
+
+
+  const reviewer =
+    document
+      .getElementById(
+        'reviewer'
+      )
+      ?.value
+      .trim();
+
+
+  if(
+    !ship
+  ){
+
+    alert(
+      'Please enter the ship.'
+    );
+
+
+    return;
+
+  }
+
+
+  if(
+    !reviewer
+  ){
+
+    alert(
+      'Please enter the reviewer.'
+    );
+
+
+    return;
+
+  }
+
+
+  try{
+
+    /*
+      Start the in-memory report first.
+    */
+
+    startNewReport({
+
+      ship,
+
+      dateOn,
+
+      dateOff,
+
+      reviewer
+
+    });
+
+
+    /*
+      CRITICAL:
+      Create the database record BEFORE showing
+      the checklist.
+
+      This prevents a fake report screen from
+      appearing when Supabase creation fails.
+    */
+
+    const result =
+      await saveOpenReport({
+
+        reportId:null,
+
+        meta:
+          getMeta(),
+
+        state:
+          getState()
+
+      });
+
+
+    if(
+      !result ||
+      !result.success ||
+      !result.data
+    ){
+
+      throw (
+        result?.error ||
+        new Error(
+          'Could not create the report.'
+        )
+      );
+
+    }
+
+
+    /*
+      Store the database ID.
+    */
+
+    setReportId(
+      result.data.id
+    );
+
+
+    /*
+      Load checklist module only now.
+    */
+
+    const checklist =
+      await getChecklistModule();
+
+
+    if(
+      !checklist
+    ){
+
+      return;
+
+    }
+
+
+    /*
+      IMPORTANT:
+      updateChecklistHeader belongs to checklist.js,
+      therefore call it through the module.
+    */
+
+    if(
+      typeof checklist.updateChecklistHeader ===
+      'function'
+    ){
+
+      checklist.updateChecklistHeader();
+
+    }
+
+
+    checklist.renderChecklist();
+
+
+    checklistReturnScreen =
+      'setup';
+
+
+    summaryReturnScreen =
+      'checklist';
+
+
+    showScreen(
+      'checklist'
+    );
+
+
+    showToast(
+      'OPEN REPORT CREATED'
+    );
+
+  }catch(error){
+
+    console.error(
+      'Create report:',
+      error
+    );
+
+
+    showError(
+      'Could not create the report.',
+      error
+    );
+
+  }
+
+}
+
+
+/* ============================================================
+   CHECKLIST
+============================================================ */
+
+function bindChecklistButtons(){
+
+  bindClick(
+    'summaryBtn',
+    async function(){
+
+      const saved =
+        await saveCurrentReport();
+
+
+      if(
+        !saved
+      ){
+
+        alert(
+          'Could not save the report.'
+        );
+
+
+        return;
+
+      }
+
+
+      summaryReturnScreen =
+        'checklist';
+
+
+      await showActiveSummary();
+
+    }
+  );
+
+
+  bindClick(
+    'shipReviewBtn',
+    async function(){
+
+      await openShipReview();
+
+    }
+  );
+
+
+  const reviewer =
+    document.getElementById(
+      'hdrReviewer'
+    );
+
+
+  if(
+    reviewer
+  ){
+
+    reviewer.addEventListener(
+      'change',
+      async function(
+        event
+      ){
+
+        setReviewer(
+          event.target.value
+        );
+
+
+        await saveCurrentReport();
+
+      }
+    );
+
+  }
+
+}
+
+
+/* ============================================================
+   SAVE CURRENT REPORT
+============================================================ */
+
+async function saveCurrentReport(){
+
+  const reportId =
+    getReportId();
+
+
+  if(
+    !reportId
+  ){
+
+    return false;
+
+  }
+
+
+  try{
+
+    const result =
+      await saveOpenReport({
+
+        reportId,
+
+        meta:
+          getMeta(),
+
+        state:
+          getState()
+
+      });
+
+
+    if(
+      !result ||
+      !result.success
+    ){
+
+      console.error(
+        'Save report failed:',
+        result?.error
+      );
+
+
+      return false;
+
+    }
+
+
+    return true;
+
+  }catch(error){
+
+    console.error(
+      'Save current report:',
+      error
+    );
+
+
+    return false;
+
+  }
+
+}
+
+
+/* ============================================================
+   SHOW ACTIVE SUMMARY
+============================================================ */
+
+async function showActiveSummary(){
+
+  const reports =
+    await getReportsModule();
+
+
+  if(
+    reports &&
+    typeof reports.renderReportOverall ===
+    'function'
+  ){
+
+    /*
+      Build a report object from the current state.
+      reports.js uses report_data.state.
+    */
+
+    const report = {
+
+      id:
+        getReportId(),
+
+      ship:
+        getMeta().ship,
+
+      date_on:
+        getMeta().dateOn,
+
+      date_off:
+        getMeta().dateOff,
+
+      reviewer:
+        getMeta().reviewer,
+
+      status:
+        'open',
+
+      report_data:{
+
+        meta:
+          getMeta(),
+
+        state:
+          getState()
+
+      }
+
+    };
+
+
+    reports.renderReportOverall(
+      report
+    );
+
+  }
+
+
+  setSummaryMode(
+    false
+  );
+
+
+  showScreen(
+    'summary'
+  );
+
+}
+
+
+/* ============================================================
+   SHIP REVIEW
+============================================================ */
+
+async function openShipReview(){
+
+  const saved =
+    await saveCurrentReport();
+
+
+  if(
+    !saved
+  ){
+
+    alert(
+      'Could not save the report.'
+    );
+
+
+    return;
+
+  }
+
+
+  const review =
+    await getReviewModule();
+
+
+  if(
+    !review
+  ){
+
+    return;
+
+  }
+
+
+  const success =
+    await review.prepareShipReview();
+
+
+  if(
+    !success
+  ){
+
+    return;
+
+  }
+
+
+  showScreen(
+    'review'
+  );
+
+}
+
+
+/* ============================================================
+   REVIEW BUTTONS
+============================================================ */
+
+function bindReviewButtons(){
+
+  bindClick(
+    'reviewBackBtn',
+    async function(){
+
+      await returnToChecklist();
+
+    }
+  );
+
+
+  bindClick(
+    'reviewSubmitBtn',
+    async function(){
+
+      const review =
+        await getReviewModule();
+
+
+      if(
+        !review
+      ){
+
+        return;
+
+      }
+
+
+      await review.sendCurrentReportToShip();
+
+    }
+  );
+
+}
+
+
+/* ============================================================
+   REVIEW CALLBACK
+============================================================ */
+
+function configureReviewCallbacks(
+  review
+){
+
+  if(
+    !review ||
+    typeof review.setReviewCallbacks !==
+    'function'
+  ){
+
+    return;
+
+  }
+
+
+  review.setReviewCallbacks({
+
+    sentToShip:
+      async function(){
+
+        /*
+          Report is now in Ship Review.
+        */
+
+        const sentReport =
+          arguments[0];
+
+
+        currentSubmittedReport =
+          sentReport ||
+          null;
+
+
+        showToast(
+          'REPORT SENT TO SHIP'
+        );
+
+
+        /*
+          Move user to Ship Response screen.
+        */
+
+        showScreen(
+          'responses'
+        );
+
+
+        await loadShipResponseScreen();
+
+      }
+
+  });
+
+}
+
+
+/* ============================================================
+   RETURN TO CHECKLIST
+============================================================ */
+
+async function returnToChecklist(){
+
+  const checklist =
+    await getChecklistModule();
+
+
+  if(
+    !checklist
+  ){
+
+    return;
+
+  }
+
+
+  if(
+    typeof checklist.updateChecklistHeader ===
+    'function'
+  ){
+
+    checklist.updateChecklistHeader();
+
+  }
+
+
+  checklist.renderChecklist();
+
+
+  showScreen(
+    'checklist'
+  );
+
+}
+
+
+/* ============================================================
+   REPORT MODULE CALLBACKS
+============================================================ */
+
+function configureReportsCallbacks(
+  reports
+){
+
+  if(
+    !reports ||
+    typeof reports.setReportCallbacks !==
+    'function'
+  ){
+
+    return;
+
+  }
+
+
+  reports.setReportCallbacks({
+
+    /*
+      OPEN REPORT
+    */
+
+    openReport:
+      async function(
+        report
+      ){
+
+        await openReportFromCallback(
+          report
+        );
+
+      },
+
+
+    /*
+      SUBMITTED -> REPORT OVERALL
+    */
+
+    viewSummary:
+      async function(
+        report
+      ){
+
+        await openSubmittedSummary(
+          report
+        );
+
+      },
+
+
+    /*
+      SUBMITTED -> FOLLOW UPS
+    */
+
+    viewFollowUps:
+      async function(
+        report
+      ){
+
+        await openSubmittedFollowUps(
+          report
+        );
+
+      },
+
+
+    showHome:
+      function(){
+
+        showScreen(
+          'home'
+        );
+
+      }
+
+  });
+
+}
+
+
+/* ============================================================
+   OPEN REPORT FROM CALLBACK
+============================================================ */
+
+async function openReportFromCallback(
+  report
+){
+
+  if(
+    !report
+  ){
+
+    return;
+
+  }
+
+
+  try{
+
+    loadReport(
+      report
+    );
+
+
+    checklistReturnScreen =
+      'open';
+
+
+    currentSubmittedReport =
+      null;
+
+
+    const checklist =
+      await getChecklistModule();
+
+
+    if(
+      !checklist
+    ){
+
+      return;
+
+    }
+
+
+    if(
+      typeof checklist.updateChecklistHeader ===
+      'function'
+    ){
+
+      checklist.updateChecklistHeader();
+
+    }
+
+
+    checklist.renderChecklist();
+
+
+    showScreen(
+      'checklist'
+    );
+
+  }catch(error){
+
+    console.error(
+      'Open report callback:',
+      error
+    );
+
+
+    showError(
+      'Could not open this report.',
+      error
+    );
+
+  }
+
+}
+
+
+/* ============================================================
+   OPEN SUBMITTED SUMMARY
+============================================================ */
+
+async function openSubmittedSummary(
+  report
+){
+
+  try{
+
+    currentSubmittedReport =
+      report;
+
+
+    summaryReturnScreen =
+      'submitted';
+
+
+    loadReport(
+      report
+    );
+
+
+    const reports =
+      await getReportsModule();
+
+
+    if(
+      !reports
+    ){
+
+      return;
+
+    }
+
+
+    if(
+      typeof reports.renderReportOverall ===
+      'function'
+    ){
+
+      reports.renderReportOverall(
+        report
+      );
+
+    }
+
+
+    setSummaryMode(
+      true
+    );
+
+
+    showScreen(
+      'summary'
+    );
+
+  }catch(error){
+
+    console.error(
+      'Submitted summary:',
+      error
+    );
+
+
+    showError(
+      'Could not open the submitted report.',
+      error
+    );
+
+  }
+
+}
+
+
+/* ============================================================
+   OPEN SUBMITTED FOLLOW UPS
+============================================================ */
+
+async function openSubmittedFollowUps(
+  report
+){
+
+  try{
+
+    currentSubmittedReport =
+      report;
+
+
+    loadReport(
+      report
+    );
+
+
+    const reports =
+      await getReportsModule();
+
+
+    if(
+      !reports
+    ){
+
+      return;
+
+    }
+
+
+    if(
+      typeof reports.renderReportFollowUps ===
+      'function'
+    ){
+
+      reports.renderReportFollowUps(
+        report
+      );
+
+    }
+
+
+    showScreen(
+      'followups'
+    );
+
+  }catch(error){
+
+    console.error(
+      'Submitted follow-ups:',
+      error
+    );
+
+
+    showError(
+      'Could not open follow-up points.',
+      error
+    );
+
+  }
+
+}
+
+
+/* ============================================================
+   OPEN REPORTS
+============================================================ */
+
+async function loadOpenReportsScreen(){
+
+  const container =
+    document.getElementById(
+      'openList'
+    );
+
+
+  if(
+    !container
+  ){
+
+    return;
+
+  }
+
+
+  container.innerHTML = `
+
+    <div class="empty">
+
+      Loading open reports...
+
+    </div>
+
+  `;
+
+
+  try{
+
+    const reports =
+      await getReportsModule();
+
+
+    if(
+      !reports
+    ){
+
+      return;
+
+    }
+
+
+    /*
+      Configure callbacks again in case
+      this is the first time module loaded.
+    */
+
+    configureReportsCallbacks(
+      reports
+    );
+
+
+    await reports.renderOpenReports();
+
+  }catch(error){
+
+    console.error(
+      'Open reports screen:',
+      error
+    );
+
+
+    container.innerHTML = `
+
+      <div class="empty">
+
+        Could not load Open Reports.
+
+        <br><br>
+
+        ${escapeHtml(
+          error?.message ||
+          'Unknown error'
+        )}
+
+      </div>
+
+    `;
+
+  }
+
+}
+
+
+/* ============================================================
+   SUBMITTED REPORTS
+============================================================ */
+
+async function loadSubmittedReportsScreen(){
+
+  const container =
+    document.getElementById(
+      'reportList'
+    );
+
+
+  if(
+    !container
+  ){
+
+    return;
+
+  }
+
+
+  container.innerHTML = `
+
+    <div class="empty">
+
+      Loading submitted reports...
+
+    </div>
+
+  `;
+
+
+  try{
+
+    const reports =
+      await getReportsModule();
+
+
+    if(
+      !reports
+    ){
+
+      return;
+
+    }
+
+
+    configureReportsCallbacks(
+      reports
+    );
+
+
+    await reports.renderSubmittedReports();
+
+  }catch(error){
+
+    console.error(
+      'Submitted reports screen:',
+      error
+    );
+
+
+    container.innerHTML = `
+
+      <div class="empty">
+
+        Could not load Submitted Reports.
+
+        <br><br>
+
+        ${escapeHtml(
+          error?.message ||
+          'Unknown error'
+        )}
+
+      </div>
+
+    `;
+
+  }
+
+}
+
+
+/* ============================================================
+   SHIP RESPONSE SCREEN
+============================================================ */
+
+async function loadShipResponseScreen(){
+
+  const container =
+    document.getElementById(
+      'responseList'
+    );
+
+
+  if(
+    !container
+  ){
+
+    return;
+
+  }
+
+
+  container.innerHTML = `
+
+    <div class="empty">
+
+      Loading reports waiting for ship response...
+
+    </div>
+
+  `;
+
+
+  try{
+
+    const result =
+      await getShipReviewReports();
+
+
+    if(
+      !result ||
+      !result.success
+    ){
+
+      throw (
+        result?.error ||
+        new Error(
+          'Could not load Ship Response reports.'
+        )
+      );
+
+    }
+
+
+    const reports =
+      result.data ||
+      [];
+
+
+    if(
+      reports.length === 0
+    ){
+
+      container.innerHTML = `
+
+        <div class="empty">
+
+          No reports are currently waiting
+          for ship response.
+
+        </div>
+
+      `;
+
+
+      return;
+
+    }
+
+
+    container.innerHTML =
+      reports
+        .map(
+          renderShipResponseReport
+        )
+        .join('');
+
+
+    bindShipResponseButtons();
+
+  }catch(error){
+
+    console.error(
+      'Ship response screen:',
+      error
+    );
+
+
+    container.innerHTML = `
+
+      <div class="empty">
+
+        Could not load Ship Response Report.
+
+        <br><br>
+
+        ${escapeHtml(
+          error?.message ||
+          'Unknown error'
+        )}
+
+      </div>
+
+    `;
+
+  }
+
+}
+
+
+/* ============================================================
+   SHIP RESPONSE REPORT CARD
+============================================================ */
+
+function renderShipResponseReport(
+  report
+){
+
+  const state =
+    report
+      ?.report_data
+      ?.state ||
+    {};
+
+
+  const points =
+    [];
+
+
+  SECTIONS.forEach(
+    section => {
+
+      section.items.forEach(
+        (
+          text,
+          index
+        ) => {
+
+          const key =
+            `${section.id}__${index}`;
+
+
+          const item =
+            state[key];
+
+
+          if(
+            item &&
+            item.checked &&
+            item.followUpNeeded
+          ){
+
+            points.push({
+
+              key,
+
+              section:
+                section.title,
+
+              text,
+
+              comments:
+                Array.isArray(
+                  item.comments
+                )
+                  ? item.comments
+                  : [],
+
+              photos:
+                Array.isArray(
+                  item.photos
+                )
+                  ? item.photos
+                  : [],
+
+              shipComments:
+                Array.isArray(
+                  item.shipComments
+                )
+                  ? item.shipComments
+                  : []
+
+            });
+
+          }
+
+        }
+      );
+
+    }
+  );
+
+
+  return `
+
+    <div
+      class="report-card blue"
+      data-response-card="${escapeHtml(
+        report.id
+      )}"
+    >
+
+      <h3>
+
+        ${escapeHtml(
+          report.ship ||
+          'Unnamed Ship'
+        )}
+
+      </h3>
+
+
+      <div
+        class="report-meta"
+      >
+
+        <b>Visit:</b>
+
+        ${escapeHtml(
+          report.date_on ||
+          ''
+        )}
+
+        ${
+          report.date_off
+            ? ` → ${escapeHtml(
+                report.date_off
+              )}`
+            : ''
+        }
+
+        <br>
+
+
+        <b>Reviewer:</b>
+
+        ${escapeHtml(
+          report.reviewer ||
+          ''
+        )}
+
+      </div>
+
+
+      <div
+        class="response-status"
+      >
+
+        SHIP RESPONSE REQUIRED
+
+      </div>
+
+
+      ${
+        points
+          .map(
+            point =>
+              renderShipResponsePoint(
+                report.id,
+                point
+              )
+          )
+          .join('')
+      }
+
+
+      <button
+        type="button"
+        class="btn-primary submit-ship-response"
+        data-response-report-id="${escapeHtml(
+          report.id
+        )}"
+      >
+
+        Submit Report
+
+      </button>
+
+    </div>
+
+  `;
+
+}
+
+
+/* ============================================================
+   SHIP RESPONSE POINT
+============================================================ */
+
+function renderShipResponsePoint(
+  reportId,
+  point
+){
+
+  return `
+
+    <div
+      class="response-point"
+      style="
+        margin-top:14px;
+        padding-top:14px;
+        border-top:1px solid var(--vv-line);
+      "
+    >
+
+
+      <div
+        class="response-section"
+      >
+
+        ${escapeHtml(
+          point.section
+        )}
+
+      </div>
+
+
+      <div
+        style="
+          margin-top:4px;
+          font-size:13px;
+          line-height:1.45;
+          font-weight:700;
+        "
+      >
+
+        ${escapeHtml(
+          point.text
+        )}
+
+      </div>
+
+
+      ${
+        point.comments.length > 0
+
+          ? `
+
+            <div
+              class="response-comments"
+              style="
+                margin-top:9px;
+              "
+            >
+
+              <div
+                class="response-label"
+              >
+
+                REVIEWER COMMENTS
+
+              </div>
+
+
+              ${
+                point.comments
+                  .map(
+                    comment => `
+
+                      <div class="comment">
+
+                        <strong>
+
+                          ${escapeHtml(
+                            comment.name ||
+                            'Reviewer'
+                          )}:
+
+                        </strong>
+
+
+                        ${escapeHtml(
+                          comment.text ||
+                          ''
+                        )}
+
+                      </div>
+
+                    `
+                  )
+                  .join('')
+              }
+
+            </div>
+
+          `
+
+          : `
+
+            <div
+              style="
+                margin-top:8px;
+                color:var(--vv-gray);
+                font-size:9px;
+              "
+            >
+
+              No reviewer comment was entered.
+
+            </div>
+
+          `
+
+      }
+
+
+      ${
+        point.photos.length > 0
+
+          ? `
+
+            <div
+              style="
+                margin-top:9px;
+              "
+            >
+
+              <div
+                class="response-label"
+              >
+
+                REVIEWER PHOTOS
+
+              </div>
+
+
+              <div
+                class="response-photos"
+              >
+
+                ${
+                  point.photos
+                    .map(
+                      photo => `
+
+                        <div class="response-photo">
+
+                          <img
+                            src="${escapeHtml(
+                              photo
+                            )}"
+                            alt="Reviewer photo"
+                          >
+
+                        </div>
+
+                      `
+                    )
+                    .join('')
+                }
+
+              </div>
+
+            </div>
+
+          `
+
+          : ''
+
+      }
+
+
+      ${
+        point.shipComments.length > 0
+
+          ? `
+
+            <div
+              style="
+                margin-top:9px;
+              "
+            >
+
+              <div
+                class="response-label"
+                style="
+                  color:var(--status-green);
+                "
+              >
+
+                PREVIOUS SHIP RESPONSE
+
+              </div>
+
+
+              ${
+                point.shipComments
+                  .map(
+                    comment => `
+
+                      <div
+                        class="ship-response-display"
+                      >
+
+                        <strong>
+
+                          ${escapeHtml(
+                            comment.name ||
+                            'Ship'
+                          )}:
+
+                        </strong>
+
+
+                        ${escapeHtml(
+                          comment.text ||
+                          ''
+                        )}
+
+                      </div>
+
+                    `
+                  )
+                  .join('')
+              }
+
+            </div>
+
+          `
+
+          : ''
+
+      }
+
+
+      <div
+        class="field"
+        style="
+          margin-top:11px;
+          margin-bottom:0;
+        "
+      >
+
+        <label
+          for="ship-response-${escapeHtml(
+            reportId
+          )}-${escapeHtml(
+            point.key
+          )}"
+        >
+
+          SHIP COMMENT
+
+        </label>
+
+
+        <textarea
+          id="ship-response-${escapeHtml(
+            reportId
+          )}-${escapeHtml(
+            point.key
+          )}"
+          class="ship-response-input"
+          data-report-id="${escapeHtml(
+            reportId
+          )}"
+          data-response-key="${escapeHtml(
+            point.key
+          )}"
+          placeholder="Enter ship response"
+        ></textarea>
+
+      </div>
+
+    </div>
+
+  `;
+
+}
+
+
+/* ============================================================
+   BIND SHIP RESPONSE BUTTONS
+============================================================ */
+
+function bindShipResponseButtons(){
+
+  document
+    .querySelectorAll(
+      '.submit-ship-response'
+    )
+    .forEach(
+      button => {
+
+        button.addEventListener(
+          'click',
+          async function(){
+
+            await submitShipResponseForReport(
+              button.dataset.responseReportId
+            );
+
+          }
+        );
+
+      }
+    );
+
+}
+
+
+/* ============================================================
+   SUBMIT SHIP RESPONSE
+============================================================ */
+
+async function submitShipResponseForReport(
+  reportId
+){
+
+  try{
+
+    const current =
+      await getReport(
+        reportId
+      );
+
+
+    if(
+      !current ||
+      !current.success ||
+      !current.data
+    ){
+
+      throw new Error(
+        'Could not load report.'
+      );
+
+    }
+
+
+    const sourceState =
+      current.data
+        ?.report_data
+        ?.state ||
+      {};
+
+
+    const newState =
+      JSON.parse(
+        JSON.stringify(
+          sourceState
+        )
+      );
+
+
+    const inputs =
+      document.querySelectorAll(
+        `[data-report-id="${reportId}"]`
+      );
+
+
+    let added =
+      0;
+
+
+    inputs.forEach(
+      input => {
+
+        const text =
+          input.value.trim();
+
+
+        if(
+          !text
+        ){
+
+          return;
+
+        }
+
+
+        const key =
+          input.dataset.responseKey;
+
+
+        if(
+          !newState[key]
+        ){
+
+          return;
+
+        }
+
+
+        if(
+          !Array.isArray(
+            newState[key].shipComments
+          )
+        ){
+
+          newState[key].shipComments =
+            [];
+
+        }
+
+
+        newState[key].shipComments.push({
+
+          name:
+            'Ship',
+
+          text,
+
+          timestamp:
+            new Date().toISOString()
+
+        });
+
+
+        added++;
+
+      }
+    );
+
+
+    if(
+      added === 0
+    ){
+
+      alert(
+        'Please enter at least one ship response.'
+      );
+
+
+      return;
+
+    }
+
+
+    /*
+      Verify all follow-ups have responses.
+    */
+
+    const incomplete =
+      Object.values(
+        newState
+      )
+      .filter(
+        item =>
+          item &&
+          item.checked &&
+          item.followUpNeeded &&
+          !(
+            Array.isArray(
+              item.shipComments
+            ) &&
+            item.shipComments.length > 0
+          )
+      );
+
+
+    if(
+      incomplete.length > 0
+    ){
+
+      alert(
+        `${incomplete.length} follow-up point(s) still need a ship response.`
+      );
+
+
+      return;
+
+    }
+
+
+    const confirmed =
+      window.confirm(
+        'Submit Ship Response?\n\n' +
+        'The report will move to Submitted Reports.'
+      );
+
+
+    if(
+      !confirmed
+    ){
+
+      return;
+
+    }
+
+
+    const result =
+      await submitShipResponse({
+
+        reportId,
+
+        state:
+          newState
+
+      });
+
+
+    if(
+      !result ||
+      !result.success
+    ){
+
+      throw (
+        result?.error ||
+        new Error(
+          'Could not submit Ship Response.'
+        )
+      );
+
+    }
+
+
+    showToast(
+      'SHIP RESPONSE SUBMITTED'
+    );
+
+
+    await loadShipResponseScreen();
+
+  }catch(error){
+
+    console.error(
+      'Submit Ship Response:',
+      error
+    );
+
+
+    showError(
+      'Could not submit Ship Response.',
+      error
+    );
+
+  }
+
+}
+
+
+/* ============================================================
+   SUMMARY
+============================================================ */
+
+function bindSummaryButtons(){
+
+  bindClick(
+    'summaryBackToReportBtn',
+    async function(){
+
+      const checklist =
+        await getChecklistModule();
+
+
+      if(
+        checklist
+      ){
+
+        checklist.renderChecklist();
+
+      }
+
+
+      showScreen(
+        'checklist'
+      );
+
+    }
+  );
+
+
+  bindClick(
+    'summarySubmitBtn',
+    async function(){
+
+      await openShipReview();
+
+    }
+  );
+
+
+  bindClick(
+    'summaryBackToSubmittedBtn',
+    async function(){
+
+      showScreen(
+        'submitted'
+      );
+
+
+      await loadSubmittedReportsScreen();
+
+    }
+  );
+
+
+  /*
+    Save PDF only.
+    No Print button.
+  */
+
+  bindClick(
+    'summaryPdfBtn',
+    async function(){
+
+      if(
+        !currentSubmittedReport
+      ){
+
+        alert(
+          'No submitted report selected.'
+        );
+
+
+        return;
+
+      }
+
+
+      const pdf =
+        await getPDFModule();
+
+
+      if(
+        !pdf
+      ){
+
+        return;
+
+      }
+
+
+      try{
+
+        loadReport(
+          currentSubmittedReport
+        );
+
+
+        pdf.generatePDF();
+
+      }catch(error){
+
+        console.error(
+          'Save PDF:',
+          error
+        );
+
+
+        showError(
+          'Could not save PDF.',
+          error
+        );
+
+      }
+
+    }
+  );
+
+}
+
+
+/* ============================================================
+   SUMMARY MODE
+============================================================ */
+
+function setSummaryMode(
+  submitted
+){
+
+  const active =
+    document.getElementById(
+      'summaryActiveActions'
+    );
+
+
+  const submittedActions =
+    document.getElementById(
+      'summarySubmittedActions'
+    );
+
+
+  if(
+    submitted
+  ){
+
+    if(
+      active
+    ){
+
+      active.classList.add(
+        'hidden'
+      );
+
+    }
+
+
+    if(
+      submittedActions
+    ){
+
+      submittedActions.classList.remove(
+        'hidden'
+      );
+
+    }
+
+  }else{
+
+    if(
+      active
+    ){
+
+      active.classList.remove(
+        'hidden'
+      );
+
+    }
+
+
+    if(
+      submittedActions
+    ){
+
+      submittedActions.classList.add(
+        'hidden'
+      );
+
+    }
+
+  }
+
+}
+
+
+/* ============================================================
+   FOLLOW-UP SCREEN
+============================================================ */
+
+function bindFollowUpButtons(){
+
+  bindClick(
+    'followupPdfBtn',
+    async function(){
+
+      if(
+        !currentSubmittedReport
+      ){
+
+        alert(
+          'No report selected.'
+        );
+
+
+        return;
+
+      }
+
+
+      const pdf =
+        await getPDFModule();
+
+
+      if(
+        !pdf
+      ){
+
+        return;
+
+      }
+
+
+      try{
+
+        pdf.generateFollowUpPDF(
+          currentSubmittedReport
+        );
+
+      }catch(error){
+
+        console.error(
+          'Follow-up PDF:',
+          error
+        );
+
+
+        showError(
+          'Could not save Follow-Up PDF.',
+          error
+        );
+
+      }
+
+    }
+  );
+
+}
+
+
+/* ============================================================
+   PDF
+============================================================ */
+
+function bindPDFButtons(){
+
+  /*
+    Active checklist PDF if #pdfBtn exists.
+  */
+
+  bindClick(
+    'pdfBtn',
+    async function(){
+
+      const pdf =
+        await getPDFModule();
+
+
+      if(
+        !pdf
+      ){
+
+        return;
+
+      }
+
+
+      try{
+
+        pdf.generatePDF();
+
+      }catch(error){
+
+        console.error(
+          'PDF:',
+          error
+        );
+
+
+        showError(
+          'Could not save PDF.',
+          error
+        );
+
+      }
+
+    }
+  );
+
+}
+
+
+/* ============================================================
+   HEADER BACK BUTTONS
+============================================================ */
+
+function bindHeaderBackButtons(){
+
+  bindClick(
+    'setupHeaderBack',
+    function(){
+
+      showScreen(
+        'home'
+      );
+
+    }
+  );
+
+
+  bindClick(
+    'checklistHeaderBack',
+    async function(){
+
+      if(
+        checklistReturnScreen ===
+        'open'
+      ){
+
+        showScreen(
+          'open'
+        );
+
+
+        await loadOpenReportsScreen();
+
+
+        return;
+
+      }
+
+
+      showScreen(
+        'home'
+      );
+
+    }
+  );
+
+
+  bindClick(
+    'reviewHeaderBack',
+    async function(){
+
+      await returnToChecklist();
+
+    }
+  );
+
+
+  bindClick(
+    'summaryHeaderBack',
+    async function(){
+
+      if(
+        summaryReturnScreen ===
+        'submitted'
+      ){
+
+        showScreen(
+          'submitted'
+        );
+
+
+        await loadSubmittedReportsScreen();
+
+
+        return;
+
+      }
+
+
+      showScreen(
+        'checklist'
+      );
+
+    }
+  );
+
+
+  bindClick(
+    'followupsHeaderBack',
+    async function(){
+
+      showScreen(
+        'submitted'
+      );
+
+
+      await loadSubmittedReportsScreen();
+
+    }
+  );
+
+
+  bindClick(
+    'openHeaderBack',
+    function(){
+
+      showScreen(
+        'home'
+      );
+
+    }
+  );
+
+
+  bindClick(
+    'submittedHeaderBack',
+    function(){
+
+      showScreen(
+        'home'
+      );
+
+    }
+  );
+
+
+  bindClick(
+    'responsesHeaderBack',
+    function(){
+
+      showScreen(
+        'home'
+      );
+
+    }
   );
 
 }
@@ -423,23 +3149,8 @@ function restoreAdminMode(){
 
 function bindAdminButton(){
 
-  const button =
-    document.getElementById(
-      'adminButton'
-    );
-
-
-  if(
-    !button
-  ){
-
-    return;
-
-  }
-
-
-  button.addEventListener(
-    'click',
+  bindClick(
+    'adminButton',
     function(){
 
       if(
@@ -594,3493 +3305,24 @@ function updateAdminButton(){
 
 
 /* ============================================================
-   SHOW SCREEN
+   RESET
 ============================================================ */
 
-export function showScreen(
-  screen
-){
+function resetToHome(){
 
-  if(
-    !SCREENS.includes(
-      screen
-    )
-  ){
+  resetReport();
 
-    screen =
-      'home';
+  currentSubmittedReport =
+    null;
 
-  }
+  checklistReturnScreen =
+    'setup';
 
-
-  SCREENS.forEach(
-    id => {
-
-      const element =
-        document.getElementById(
-          id
-        );
-
-
-      if(
-        !element
-      ){
-
-        return;
-
-      }
-
-
-      if(
-        id === screen
-      ){
-
-        element.classList.remove(
-          'hidden'
-        );
-
-
-        element.style.display =
-          '';
-
-      }else{
-
-        element.classList.add(
-          'hidden'
-        );
-
-
-        element.style.display =
-          'none';
-
-      }
-
-    }
-  );
-
-
-  window.scrollTo(
-    0,
-    0
-  );
-
-}
-
-
-/* ============================================================
-   SAFE BIND
-============================================================ */
-
-function bindClick(
-  id,
-  handler
-){
-
-  const element =
-    document.getElementById(
-      id
-    );
-
-
-  if(
-    !element
-  ){
-
-    return;
-
-  }
-
-
-  element.addEventListener(
-    'click',
-    handler
-  );
-
-}
-
-
-/* ============================================================
-   HOME
-============================================================ */
-
-function bindHomeButtons(){
-
-  bindClick(
-    'createReport',
-    function(){
-
-      clearSetupFields();
-
-
-      setupDefaultDate();
-
-
-      checklistReturnScreen =
-        'setup';
-
-
-      summaryReturnScreen =
-        'checklist';
-
-
-      showScreen(
-        'setup'
-      );
-
-    }
-  );
-
-
-  bindClick(
-    'openReport',
-    async function(){
-
-      showScreen(
-        'open'
-      );
-
-
-      await loadOpenReportsScreen();
-
-    }
-  );
-
-
-  bindClick(
-    'submittedReports',
-    async function(){
-
-      showScreen(
-        'submitted'
-      );
-
-
-      await loadSubmittedReportsScreen();
-
-    }
-  );
-
-
-  bindClick(
-    'shipResponseReport',
-    async function(){
-
-      showScreen(
-        'responses'
-      );
-
-
-      await loadShipResponsesScreen();
-
-    }
-  );
-
-
-  bindClick(
-    'setupHome',
-    function(){
-
-      showScreen(
-        'home'
-      );
-
-    }
-  );
-
-
-  bindClick(
-    'openHomeBtn',
-    function(){
-
-      showScreen(
-        'home'
-      );
-
-    }
-  );
-
-
-  bindClick(
-    'reportsHomeBtn',
-    function(){
-
-      showScreen(
-        'home'
-      );
-
-    }
-  );
-
-
-  bindClick(
-    'responsesHomeBtn',
-    function(){
-
-      showScreen(
-        'home'
-      );
-
-    }
-  );
-
-
-  bindClick(
-    'followupsHomeBtn',
-    function(){
-
-      showScreen(
-        'home'
-      );
-
-    }
-  );
-
-}
-
-
-/* ============================================================
-   SETUP
-============================================================ */
-
-function bindCreateReport(){
-
-  bindClick(
-    'startBtn',
-    handleStartReport
-  );
-
-}
-
-
-function clearSetupFields(){
-
-  [
-    'ship',
-
-    'dateOn',
-
-    'dateOff',
-
-    'reviewer'
-
-  ].forEach(
-    id => {
-
-      const input =
-        document.getElementById(
-          id
-        );
-
-
-      if(
-        input
-      ){
-
-        input.value =
-          '';
-
-      }
-
-    }
-  );
-
-}
-
-
-function setupDefaultDate(){
-
-  const input =
-    document.getElementById(
-      'dateOn'
-    );
-
-
-  if(
-    input &&
-    !input.value
-  ){
-
-    input.value =
-      new Date()
-        .toISOString()
-        .slice(
-          0,
-          10
-        );
-
-  }
-
-}
-
-
-/* ============================================================
-   CREATE REPORT
-============================================================ */
-
-async function handleStartReport(){
-
-  const ship =
-    document
-      .getElementById(
-        'ship'
-      )
-      ?.value
-      .trim();
-
-
-  const dateOn =
-    document
-      .getElementById(
-        'dateOn'
-      )
-      ?.value ||
-    '';
-
-
-  const dateOff =
-    document
-      .getElementById(
-        'dateOff'
-      )
-      ?.value ||
-    '';
-
-
-  const reviewer =
-    document
-      .getElementById(
-        'reviewer'
-      )
-      ?.value
-      .trim();
-
-
-  if(
-    !ship
-  ){
-
-    alert(
-      'Please enter the ship.'
-    );
-
-
-    return;
-
-  }
-
-
-  if(
-    !reviewer
-  ){
-
-    alert(
-      'Please enter the reviewer.'
-    );
-
-
-    return;
-
-  }
-
-
-  try{
-
-    startNewReport({
-
-      ship,
-
-      dateOn,
-
-      dateOff,
-
-      reviewer
-
-    });
-
-
-    checklistReturnScreen =
-      'setup';
-
-
-    summaryReturnScreen =
-      'checklist';
-
-
-    updateChecklistHeader();
-
-
-    /*
-      Load checklist only now.
-    */
-
-    const checklist =
-      await getChecklistModule();
-
-
-    if(
-      !checklist
-    ){
-
-      return;
-
-    }
-
-
-    /*
-      Render checklist.
-    */
-
-    checklist.renderChecklist();
-
-
-    showScreen(
-      'checklist'
-    );
-
-
-    /*
-      Create record in Supabase.
-    */
-
-    const result =
-      await saveOpenReport({
-
-        reportId:null,
-
-        meta:
-          getMeta(),
-
-        state:
-          getState()
-
-      });
-
-
-    if(
-      !result ||
-      !result.success
-    ){
-
-      throw (
-        result?.error ||
-        new Error(
-          'Could not create the report.'
-        )
-      );
-
-    }
-
-
-    if(
-      result.data?.id
-    ){
-
-      setReportId(
-        result.data.id
-      );
-
-    }
-
-
-    showToast(
-      'OPEN REPORT CREATED'
-    );
-
-  }catch(error){
-
-    console.error(
-      'Create report error:',
-      error
-    );
-
-
-    showError(
-      'Could not create the report.',
-      error
-    );
-
-  }
-
-}
-
-
-/* ============================================================
-   CHECKLIST
-============================================================ */
-
-function bindChecklistButtons(){
-
-  bindClick(
-    'summaryBtn',
-    async function(){
-
-      const saved =
-        await saveCurrentReport();
-
-
-      if(
-        !saved
-      ){
-
-        alert(
-          'Could not save the report.'
-        );
-
-
-        return;
-
-      }
-
-
-      summaryReturnScreen =
-        'checklist';
-
-
-      const checklist =
-        await getChecklistModule();
-
-
-      if(
-        checklist
-      ){
-
-        if(
-          typeof checklist.setSummaryMode ===
-          'function'
-        ){
-
-          checklist.setSummaryMode(
-            false
-          );
-
-        }
-
-
-        updateChecklistHeader();
-
-      }
-
-
-      await buildActiveSummary();
-
-
-      showScreen(
-        'summary'
-      );
-
-    }
-  );
-
-
-  bindClick(
-    'shipReviewBtn',
-    async function(){
-
-      await openShipReview();
-
-    }
-  );
-
-
-  const reviewer =
-    document.getElementById(
-      'hdrReviewer'
-    );
-
-
-  if(
-    reviewer
-  ){
-
-    reviewer.addEventListener(
-      'change',
-      async function(
-        event
-      ){
-
-        setReviewer(
-          event.target.value
-        );
-
-
-        await saveCurrentReport();
-
-      }
-    );
-
-  }
-
-}
-
-
-/* ============================================================
-   OPEN SHIP REVIEW
-============================================================ */
-
-async function openShipReview(){
-
-  const saved =
-    await saveCurrentReport();
-
-
-  if(
-    !saved
-  ){
-
-    alert(
-      'Could not save the report.'
-    );
-
-
-    return;
-
-  }
-
-
-  const review =
-    await getReviewModule();
-
-
-  if(
-    !review
-  ){
-
-    return;
-
-  }
-
-
-  const prepared =
-    await review.prepareShipReview();
-
-
-  if(
-    !prepared
-  ){
-
-    return;
-
-  }
-
+  summaryReturnScreen =
+    'checklist';
 
   showScreen(
-    'review'
-  );
-
-}
-
-
-/* ============================================================
-   REVIEW
-============================================================ */
-
-function bindReviewButtons(){
-
-  bindClick(
-    'reviewBackBtn',
-    async function(){
-
-      const checklist =
-        await getChecklistModule();
-
-
-      if(
-        checklist
-      ){
-
-        checklist.updateChecklistHeader();
-
-        checklist.renderChecklist();
-
-      }
-
-
-      showScreen(
-        'checklist'
-      );
-
-    }
-  );
-
-
-  bindClick(
-    'reviewSubmitBtn',
-    async function(){
-
-      const review =
-        await getReviewModule();
-
-
-      if(
-        !review
-      ){
-
-        return;
-
-      }
-
-
-      await review.sendCurrentReportToShip();
-
-    }
-  );
-
-}
-
-
-/* ============================================================
-   REVIEW CALLBACKS
-============================================================ */
-
-async function bindGlobalReportActions(){
-
-  /*
-    review.js exposes callbacks.
-    Load it only when application is ready.
-  */
-
-  try{
-
-    const review =
-      await getReviewModule();
-
-
-    if(
-      review &&
-      typeof review.setReviewCallbacks ===
-      'function'
-    ){
-
-      review.setReviewCallbacks({
-
-        sentToShip:
-          async function(){
-
-            resetReport();
-
-            clearSetupFields();
-
-            currentSubmittedReport =
-              null;
-
-
-            showScreen(
-              'responses'
-            );
-
-
-            showToast(
-              'REPORT SENT TO SHIP'
-            );
-
-
-            await loadShipResponsesScreen();
-
-          }
-
-      });
-
-    }
-
-  }catch(error){
-
-    console.error(
-      'Review callback setup:',
-      error
-    );
-
-  }
-
-}
-
-
-/* ============================================================
-   SUMMARY
-============================================================ */
-
-function bindSummaryButtons(){
-
-  bindClick(
-    'summaryBackToReportBtn',
-    async function(){
-
-      const checklist =
-        await getChecklistModule();
-
-
-      if(
-        checklist
-      ){
-
-        checklist.renderChecklist();
-
-      }
-
-
-      showScreen(
-        'checklist'
-      );
-
-    }
-  );
-
-
-  bindClick(
-    'summarySubmitBtn',
-    async function(){
-
-      await openShipReview();
-
-    }
-  );
-
-
-  bindClick(
-    'summaryBackToSubmittedBtn',
-    async function(){
-
-      showScreen(
-        'submitted'
-      );
-
-
-      await loadSubmittedReportsScreen();
-
-    }
-  );
-
-
-  bindClick(
-    'summaryPdfBtn',
-    async function(){
-
-      if(
-        !currentSubmittedReport
-      ){
-
-        alert(
-          'No submitted report selected.'
-        );
-
-
-        return;
-
-      }
-
-
-      const pdf =
-        await getPDFModule();
-
-
-      if(
-        !pdf
-      ){
-
-        return;
-
-      }
-
-
-      try{
-
-        pdf.generatePDF();
-
-      }catch(error){
-
-        console.error(
-          'PDF error:',
-          error
-        );
-
-
-        showError(
-          'Could not save PDF.',
-          error
-        );
-
-      }
-
-    }
-  );
-
-}
-
-
-/* ============================================================
-   ACTIVE SUMMARY
-============================================================ */
-
-async function buildActiveSummary(){
-
-  const meta =
-    getMeta();
-
-
-  const state =
-    getState();
-
-
-  const container =
-    document.getElementById(
-      'report-overall-content'
-    );
-
-
-  if(
-    !container
-  ){
-
-    return;
-
-  }
-
-
-  let checkedPoints =
-    [];
-
-
-  SECTIONS.forEach(
-    section => {
-
-      section.items.forEach(
-        (
-          text,
-          index
-        ) => {
-
-          const key =
-            `${section.id}__${index}`;
-
-
-          const item =
-            state[key];
-
-
-          if(
-            item &&
-            item.checked
-          ){
-
-            checkedPoints.push({
-
-              section:
-                section.title,
-
-              text,
-
-              comments:
-                Array.isArray(
-                  item.comments
-                )
-                  ? item.comments
-                  : [],
-
-              photos:
-                Array.isArray(
-                  item.photos
-                )
-                  ? item.photos
-                  : [],
-
-              followUpNeeded:
-                Boolean(
-                  item.followUpNeeded
-                ),
-
-              shipComments:
-                Array.isArray(
-                  item.shipComments
-                )
-                  ? item.shipComments
-                  : []
-
-            });
-
-          }
-
-        }
-      );
-
-    }
-  );
-
-
-  if(
-    checkedPoints.length === 0
-  ){
-
-    container.innerHTML = `
-
-      <div class="empty">
-
-        No checklist points have been checked yet.
-
-      </div>
-
-    `;
-
-
-    return;
-
-  }
-
-
-  /*
-    Group by department.
-  */
-
-  const groups =
-    [];
-
-
-  checkedPoints.forEach(
-    point => {
-
-      let group =
-        groups.find(
-          item =>
-            item.section ===
-            point.section
-        );
-
-
-      if(
-        !group
-      ){
-
-        group = {
-
-          section:
-            point.section,
-
-          points:[]
-
-        };
-
-
-        groups.push(
-          group
-        );
-
-      }
-
-
-      group.points.push(
-        point
-      );
-
-    }
-  );
-
-
-  container.innerHTML = `
-
-    <div
-      style="
-        margin-bottom:15px;
-      "
-    >
-
-      <div
-        style="
-          color:var(--vv-squid);
-          font-size:16px;
-          font-weight:800;
-        "
-      >
-
-        REPORT SUMMARY
-
-      </div>
-
-
-      <div
-        style="
-          margin-top:5px;
-          color:var(--vv-gray);
-          font-size:11px;
-        "
-      >
-
-        Ship:
-        ${escapeHtml(
-          meta.ship
-        )}
-
-        <br>
-
-        Visit:
-        ${escapeHtml(
-          meta.dateOn
-        )}
-
-        ${
-          meta.dateOff
-            ? ` → ${escapeHtml(meta.dateOff)}`
-            : ''
-        }
-
-        <br>
-
-        Reviewer:
-        ${escapeHtml(
-          meta.reviewer
-        )}
-
-      </div>
-
-    </div>
-
-
-    ${
-      groups
-        .map(
-          group => `
-
-            <div
-              style="
-                margin-bottom:18px;
-              "
-            >
-
-              <div
-                style="
-                  margin-bottom:9px;
-                  padding-bottom:6px;
-                  border-bottom:2px solid var(--vv-red);
-                  color:var(--vv-squid);
-                  font-size:14px;
-                  font-weight:800;
-                "
-              >
-
-                ${escapeHtml(
-                  group.section
-                )}
-
-              </div>
-
-
-              ${
-                group.points
-                  .map(
-                    point =>
-                      renderSummaryPoint(
-                        point
-                      )
-                  )
-                  .join('')
-              }
-
-            </div>
-
-          `
-        )
-        .join('')
-    }
-
-  `;
-
-}
-
-
-/* ============================================================
-   SUMMARY POINT
-============================================================ */
-
-function renderSummaryPoint(
-  point
-){
-
-  return `
-
-    <div
-      style="
-        margin-bottom:10px;
-        padding:11px;
-        border:1px solid var(--vv-line);
-        border-left:4px solid var(--vv-squid);
-        border-radius:7px;
-        background:#FFFFFF;
-      "
-    >
-
-      <div
-        style="
-          display:flex;
-          align-items:flex-start;
-          gap:8px;
-        "
-      >
-
-        <div
-          style="
-            width:23px;
-            height:23px;
-            flex:0 0 23px;
-            display:flex;
-            align-items:center;
-            justify-content:center;
-            border-radius:50%;
-            background:var(--vv-red);
-            color:#FFFFFF;
-            font-size:11px;
-            font-weight:800;
-          "
-        >
-
-          ✓
-
-        </div>
-
-
-        <div
-          style="
-            flex:1;
-            font-size:12px;
-            line-height:1.45;
-            font-weight:600;
-          "
-        >
-
-          ${escapeHtml(
-            point.text
-          )}
-
-        </div>
-
-      </div>
-
-
-      ${
-        point.comments.length
-          ? `
-
-            <div
-              style="
-                margin-top:9px;
-              "
-            >
-
-              <div class="response-label">
-
-                REVIEWER COMMENTS
-
-              </div>
-
-
-              ${
-                point.comments
-                  .map(
-                    comment => `
-
-                      <div class="comment">
-
-                        <strong>
-
-                          ${escapeHtml(
-                            comment.name ||
-                            'Reviewer'
-                          )}:
-
-                        </strong>
-
-
-                        ${escapeHtml(
-                          comment.text ||
-                          ''
-                        )}
-
-                      </div>
-
-                    `
-                  )
-                  .join('')
-              }
-
-            </div>
-
-          `
-          : ''
-      }
-
-
-      ${
-        point.photos.length
-          ? `
-
-            <div
-              style="
-                margin-top:9px;
-              "
-            >
-
-              <div class="response-label">
-
-                REVIEWER PHOTOS
-
-              </div>
-
-
-              <div
-                class="response-photos"
-              >
-
-                ${
-                  point.photos
-                    .map(
-                      photo => `
-
-                        <div class="response-photo">
-
-                          <img
-                            src="${escapeHtml(
-                              photo
-                            )}"
-                            alt="Reviewer photo"
-                          >
-
-                        </div>
-
-                      `
-                    )
-                    .join('')
-                }
-
-              </div>
-
-            </div>
-
-          `
-          : ''
-      }
-
-
-      ${
-        point.followUpNeeded
-          ? `
-
-            <div
-              style="
-                margin-top:9px;
-              "
-            >
-
-              <span class="status blue">
-
-                FOLLOW-UP NEEDED FROM SHIP
-
-              </span>
-
-            </div>
-
-          `
-          : ''
-      }
-
-
-      ${
-        point.shipComments.length
-          ? `
-
-            <div
-              style="
-                margin-top:9px;
-              "
-            >
-
-              <div
-                class="response-label"
-                style="
-                  color:var(--status-green);
-                "
-              >
-
-                SHIP COMMENTS / RESPONSES
-
-              </div>
-
-
-              ${
-                point.shipComments
-                  .map(
-                    comment => `
-
-                      <div
-                        class="ship-response-display"
-                      >
-
-                        <strong>
-
-                          ${escapeHtml(
-                            comment.name ||
-                            'Ship'
-                          )}:
-
-                        </strong>
-
-
-                        ${escapeHtml(
-                          comment.text ||
-                          ''
-                        )}
-
-                      </div>
-
-                    `
-                  )
-                  .join('')
-              }
-
-            </div>
-
-          `
-          : ''
-      }
-
-    </div>
-
-  `;
-
-}
-
-
-/* ============================================================
-   SAVE CURRENT REPORT
-============================================================ */
-
-async function saveCurrentReport(){
-
-  const reportId =
-    getReportId();
-
-
-  if(
-    !reportId
-  ){
-
-    return false;
-
-  }
-
-
-  try{
-
-    const result =
-      await saveOpenReport({
-
-        reportId,
-
-        meta:
-          getMeta(),
-
-        state:
-          getState()
-
-      });
-
-
-    return Boolean(
-      result &&
-      result.success
-    );
-
-  }catch(error){
-
-    console.error(
-      'saveCurrentReport:',
-      error
-    );
-
-
-    return false;
-
-  }
-
-}
-
-
-/* ============================================================
-   OPEN REPORTS
-============================================================ */
-
-async function loadOpenReportsScreen(){
-
-  const container =
-    document.getElementById(
-      'openList'
-    );
-
-
-  if(
-    !container
-  ){
-
-    return;
-
-  }
-
-
-  container.innerHTML = `
-
-    <div class="empty">
-
-      Loading open reports...
-
-    </div>
-
-  `;
-
-
-  try{
-
-    const reports =
-      await getOpenReports();
-
-
-    if(
-      !reports ||
-      !reports.success
-    ){
-
-      throw (
-        reports?.error ||
-        new Error(
-          'Could not load open reports.'
-        )
-      );
-
-    }
-
-
-    /*
-      Use reports module if available.
-    */
-
-    const module =
-      await getReportsModule();
-
-
-    if(
-      module &&
-      typeof module.renderOpenReports ===
-      'function'
-    ){
-
-      await module.renderOpenReports();
-
-
-      return;
-
-    }
-
-
-    /*
-      Fallback renderer.
-    */
-
-    renderBasicReportList(
-      container,
-      reports.data || [],
-      'open'
-    );
-
-  }catch(error){
-
-    console.error(
-      'Open Reports:',
-      error
-    );
-
-
-    container.innerHTML = `
-
-      <div class="empty">
-
-        Could not load Open Reports.
-
-        <br><br>
-
-        ${escapeHtml(
-          error?.message ||
-          'Unknown error'
-        )}
-
-      </div>
-
-    `;
-
-  }
-
-}
-
-
-/* ============================================================
-   SUBMITTED
-============================================================ */
-
-async function loadSubmittedReportsScreen(){
-
-  const container =
-    document.getElementById(
-      'reportList'
-    );
-
-
-  if(
-    !container
-  ){
-
-    return;
-
-  }
-
-
-  container.innerHTML = `
-
-    <div class="empty">
-
-      Loading submitted reports...
-
-    </div>
-
-  `;
-
-
-  try{
-
-    const reports =
-      await getSubmittedReports();
-
-
-    if(
-      !reports ||
-      !reports.success
-    ){
-
-      throw (
-        reports?.error ||
-        new Error(
-          'Could not load submitted reports.'
-        )
-      );
-
-    }
-
-
-    const module =
-      await getReportsModule();
-
-
-    if(
-      module &&
-      typeof module.renderSubmittedReports ===
-      'function'
-    ){
-
-      await module.renderSubmittedReports();
-
-
-      return;
-
-    }
-
-
-    renderBasicReportList(
-      container,
-      reports.data || [],
-      'submitted'
-    );
-
-  }catch(error){
-
-    console.error(
-      'Submitted Reports:',
-      error
-    );
-
-
-    container.innerHTML = `
-
-      <div class="empty">
-
-        Could not load Submitted Reports.
-
-        <br><br>
-
-        ${escapeHtml(
-          error?.message ||
-          'Unknown error'
-        )}
-
-      </div>
-
-    `;
-
-  }
-
-}
-
-
-/* ============================================================
-   SHIP RESPONSE
-============================================================ */
-
-async function loadShipResponsesScreen(){
-
-  const container =
-    document.getElementById(
-      'responseList'
-    );
-
-
-  if(
-    !container
-  ){
-
-    return;
-
-  }
-
-
-  container.innerHTML = `
-
-    <div class="empty">
-
-      Loading reports waiting for ship response...
-
-    </div>
-
-  `;
-
-
-  try{
-
-    const result =
-      await getShipReviewReports();
-
-
-    if(
-      !result ||
-      !result.success
-    ){
-
-      throw (
-        result?.error ||
-        new Error(
-          'Could not load Ship Response reports.'
-        )
-      );
-
-    }
-
-
-    /*
-      Prefer existing response renderer
-      if it can be loaded.
-    */
-
-    const reports =
-      result.data ||
-      [];
-
-
-    if(
-      reports.length === 0
-    ){
-
-      container.innerHTML = `
-
-        <div class="empty">
-
-          No reports are currently waiting
-          for ship response.
-
-        </div>
-
-      `;
-
-
-      return;
-
-    }
-
-
-    renderShipResponseFallback(
-      container,
-      reports
-    );
-
-  }catch(error){
-
-    console.error(
-      'Ship Response:',
-      error
-    );
-
-
-    container.innerHTML = `
-
-      <div class="empty">
-
-        Could not load Ship Response Report.
-
-        <br><br>
-
-        ${escapeHtml(
-          error?.message ||
-          'Unknown error'
-        )}
-
-      </div>
-
-    `;
-
-  }
-
-}
-
-
-/* ============================================================
-   BASIC REPORT LIST
-============================================================ */
-
-function renderBasicReportList(
-  container,
-  reports,
-  type
-){
-
-  if(
-    !reports ||
-    reports.length === 0
-  ){
-
-    container.innerHTML = `
-
-      <div class="empty">
-
-        ${
-          type === 'submitted'
-            ? 'No submitted reports.'
-            : 'No open reports.'
-        }
-
-      </div>
-
-    `;
-
-
-    return;
-
-  }
-
-
-  container.innerHTML =
-    reports
-      .map(
-        report => `
-
-          <div class="report-card">
-
-            <h3>
-
-              ${escapeHtml(
-                report.ship ||
-                'Unnamed Report'
-              )}
-
-            </h3>
-
-
-            <div
-              class="report-meta"
-            >
-
-              <b>Visit:</b>
-
-              ${escapeHtml(
-                report.date_on ||
-                ''
-              )}
-
-              ${
-                report.date_off
-                  ? ` → ${escapeHtml(
-                      report.date_off
-                    )}`
-                  : ''
-              }
-
-              <br>
-
-
-              <b>Reviewer:</b>
-
-              ${escapeHtml(
-                report.reviewer ||
-                ''
-              )}
-
-            </div>
-
-
-            <div
-              class="report-actions"
-            >
-
-              <button
-                type="button"
-                class="btn-primary"
-                data-basic-report-id="${escapeHtml(
-                  report.id
-                )}"
-              >
-
-                ${
-                  type === 'submitted'
-                    ? 'Review Report'
-                    : 'Open Report'
-                }
-
-              </button>
-
-            </div>
-
-          </div>
-
-        `
-      )
-      .join('');
-
-
-  container
-    .querySelectorAll(
-      '[data-basic-report-id]'
-    )
-    .forEach(
-      button => {
-
-        button.addEventListener(
-          'click',
-          async function(){
-
-            const report =
-              reports.find(
-                item =>
-                  String(
-                    item.id
-                  ) ===
-                  String(
-                    button.dataset.basicReportId
-                  )
-              );
-
-
-            if(
-              !report
-            ){
-
-              return;
-
-            }
-
-
-            if(
-              type === 'open'
-            ){
-
-              await openSavedReport(
-                report
-              );
-
-            }else{
-
-              await openSubmittedReport(
-                report
-              );
-
-            }
-
-          }
-        );
-
-      }
-    );
-
-}
-
-
-/* ============================================================
-   OPEN SAVED REPORT
-============================================================ */
-
-async function openSavedReport(
-  report
-){
-
-  try{
-
-    loadReport(
-      report
-    );
-
-
-    currentSubmittedReport =
-      null;
-
-
-    const checklist =
-      await getChecklistModule();
-
-
-    if(
-      !checklist
-    ){
-
-      return;
-
-    }
-
-
-    checklist.updateChecklistHeader();
-
-
-    checklist.renderChecklist();
-
-
-    checklistReturnScreen =
-      'open';
-
-
-    showScreen(
-      'checklist'
-    );
-
-
-    showToast(
-      'OPEN REPORT LOADED'
-    );
-
-  }catch(error){
-
-    console.error(
-      'Open saved report:',
-      error
-    );
-
-
-    showError(
-      'Could not open this report.',
-      error
-    );
-
-  }
-
-}
-
-
-/* ============================================================
-   OPEN SUBMITTED
-============================================================ */
-
-async function openSubmittedReport(
-  report
-){
-
-  try{
-
-    currentSubmittedReport =
-      report;
-
-
-    summaryReturnScreen =
-      'submitted';
-
-
-    loadReport(
-      report
-    );
-
-
-    /*
-      First use the reports module.
-    */
-
-    const module =
-      await getReportsModule();
-
-
-    if(
-      module &&
-      typeof module.renderReportOverall ===
-      'function'
-    ){
-
-      module.renderReportOverall(
-        report
-      );
-
-    }else{
-
-      await buildSubmittedSummaryFallback(
-        report
-      );
-
-    }
-
-
-    setSummaryMode(
-      true
-    );
-
-
-    showScreen(
-      'summary'
-    );
-
-  }catch(error){
-
-    console.error(
-      'Open submitted report:',
-      error
-    );
-
-
-    showError(
-      'Could not open submitted report.',
-      error
-    );
-
-  }
-
-}
-
-
-/* ============================================================
-   SUBMITTED SUMMARY FALLBACK
-============================================================ */
-
-async function buildSubmittedSummaryFallback(
-  report
-){
-
-  const container =
-    document.getElementById(
-      'report-overall-content'
-    );
-
-
-  if(
-    !container
-  ){
-
-    return;
-
-  }
-
-
-  const state =
-    report
-      ?.report_data
-      ?.state ||
-    {};
-
-
-  const meta =
-    report
-      ?.report_data
-      ?.meta ||
-    {
-
-      ship:
-        report.ship ||
-        '',
-
-      dateOn:
-        report.date_on ||
-        '',
-
-      dateOff:
-        report.date_off ||
-        '',
-
-      reviewer:
-        report.reviewer ||
-        ''
-
-    };
-
-
-  const points =
-    [];
-
-
-  SECTIONS.forEach(
-    section => {
-
-      section.items.forEach(
-        (
-          text,
-          index
-        ) => {
-
-          const key =
-            `${section.id}__${index}`;
-
-
-          const item =
-            state[key];
-
-
-          if(
-            item &&
-            item.checked
-          ){
-
-            points.push({
-
-              section:
-                section.title,
-
-              text,
-
-              comments:
-                Array.isArray(
-                  item.comments
-                )
-                  ? item.comments
-                  : [],
-
-              photos:
-                Array.isArray(
-                  item.photos
-                )
-                  ? item.photos
-                  : [],
-
-              followUpNeeded:
-                Boolean(
-                  item.followUpNeeded
-                ),
-
-              shipComments:
-                Array.isArray(
-                  item.shipComments
-                )
-                  ? item.shipComments
-                  : []
-
-            });
-
-          }
-
-        }
-      );
-
-    }
-  );
-
-
-  if(
-    points.length === 0
-  ){
-
-    container.innerHTML = `
-
-      <div class="empty">
-
-        No checked points in this report.
-
-      </div>
-
-    `;
-
-
-    return;
-
-  }
-
-
-  const groups =
-    [];
-
-
-  points.forEach(
-    point => {
-
-      let group =
-        groups.find(
-          item =>
-            item.section ===
-            point.section
-        );
-
-
-      if(
-        !group
-      ){
-
-        group = {
-
-          section:
-            point.section,
-
-          points:[]
-
-        };
-
-
-        groups.push(
-          group
-        );
-
-      }
-
-
-      group.points.push(
-        point
-      );
-
-    }
-  );
-
-
-  container.innerHTML = `
-
-    <div
-      style="
-        margin-bottom:16px;
-      "
-    >
-
-      <div
-        style="
-          color:var(--vv-squid);
-          font-size:16px;
-          font-weight:800;
-        "
-      >
-
-        REPORT OVERALL
-
-      </div>
-
-
-      <div
-        style="
-          margin-top:6px;
-          color:var(--vv-gray);
-          font-size:11px;
-          line-height:1.6;
-        "
-      >
-
-        <b>Ship:</b>
-
-        ${escapeHtml(
-          meta.ship ||
-          ''
-        )}
-
-        <br>
-
-
-        <b>Visit:</b>
-
-        ${escapeHtml(
-          meta.dateOn ||
-          ''
-        )}
-
-        ${
-          meta.dateOff
-            ? ` → ${escapeHtml(
-                meta.dateOff
-              )}`
-            : ''
-        }
-
-        <br>
-
-
-        <b>Reviewer:</b>
-
-        ${escapeHtml(
-          meta.reviewer ||
-          ''
-        )}
-
-      </div>
-
-    </div>
-
-
-    ${
-      groups
-        .map(
-          group => `
-
-            <div
-              style="
-                margin-bottom:18px;
-              "
-            >
-
-              <div
-                style="
-                  margin-bottom:9px;
-                  padding-bottom:6px;
-                  border-bottom:2px solid var(--vv-red);
-                  color:var(--vv-squid);
-                  font-size:14px;
-                  font-weight:800;
-                "
-              >
-
-                ${escapeHtml(
-                  group.section
-                )}
-
-              </div>
-
-
-              ${
-                group.points
-                  .map(
-                    point =>
-                      renderSummaryPoint(
-                        point
-                      )
-                  )
-                  .join('')
-              }
-
-            </div>
-
-          `
-        )
-        .join('')
-    }
-
-  `;
-
-}
-
-
-/* ============================================================
-   SHIP RESPONSE FALLBACK
-============================================================ */
-
-function renderShipResponseFallback(
-  container,
-  reports
-){
-
-  const cards =
-    [];
-
-
-  reports.forEach(
-    report => {
-
-      const state =
-        report
-          ?.report_data
-          ?.state ||
-        {};
-
-
-      const points =
-        [];
-
-
-      SECTIONS.forEach(
-        section => {
-
-          section.items.forEach(
-            (
-              text,
-              index
-            ) => {
-
-              const key =
-                `${section.id}__${index}`;
-
-
-              const item =
-                state[key];
-
-
-              if(
-                item &&
-                item.checked &&
-                item.followUpNeeded
-              ){
-
-                points.push({
-
-                  key,
-
-                  section:
-                    section.title,
-
-                  text,
-
-                  comments:
-                    Array.isArray(
-                      item.comments
-                    )
-                      ? item.comments
-                      : [],
-
-                  photos:
-                    Array.isArray(
-                      item.photos
-                    )
-                      ? item.photos
-                      : [],
-
-                  shipComments:
-                    Array.isArray(
-                      item.shipComments
-                    )
-                      ? item.shipComments
-                      : []
-
-                });
-
-              }
-
-            }
-          );
-
-        }
-      );
-
-
-      if(
-        points.length
-      ){
-
-        cards.push({
-
-          report,
-
-          points
-
-        });
-
-      }
-
-    }
-  );
-
-
-  if(
-    cards.length === 0
-  ){
-
-    container.innerHTML = `
-
-      <div class="empty">
-
-        No reports are currently waiting
-        for ship response.
-
-      </div>
-
-    `;
-
-
-    return;
-
-  }
-
-
-  container.innerHTML =
-    cards
-      .map(
-        group => `
-
-          <div class="report-card blue">
-
-
-            <h3>
-
-              ${escapeHtml(
-                group.report.ship ||
-                ''
-              )}
-
-            </h3>
-
-
-            <div class="report-meta">
-
-              <b>Visit:</b>
-
-              ${escapeHtml(
-                group.report.date_on ||
-                ''
-              )}
-
-              ${
-                group.report.date_off
-                  ? ` → ${escapeHtml(
-                      group.report.date_off
-                    )}`
-                  : ''
-              }
-
-              <br>
-
-
-              <b>Reviewer:</b>
-
-              ${escapeHtml(
-                group.report.reviewer ||
-                ''
-              )}
-
-            </div>
-
-
-            ${
-              group.points
-                .map(
-                  point =>
-                    renderResponseFallbackPoint(
-                      group.report.id,
-                      point
-                    )
-                )
-                .join('')
-            }
-
-
-            <button
-              type="button"
-              class="btn-primary save-ship-response"
-              data-report-id="${escapeHtml(
-                group.report.id
-              )}"
-              style="
-                margin-top:12px;
-              "
-            >
-
-              Submit Report
-
-            </button>
-
-
-          </div>
-
-        `
-      )
-      .join('');
-
-
-  bindShipResponseInputs();
-
-}
-
-
-/* ============================================================
-   SHIP RESPONSE POINT
-============================================================ */
-
-function renderResponseFallbackPoint(
-  reportId,
-  point
-){
-
-  return `
-
-    <div
-      style="
-        margin-top:12px;
-        padding-top:12px;
-        border-top:1px solid var(--vv-line);
-      "
-    >
-
-      <div
-        style="
-          color:var(--vv-squid);
-          font-size:8px;
-          font-weight:800;
-          text-transform:uppercase;
-        "
-      >
-
-        ${escapeHtml(
-          point.section
-        )}
-
-      </div>
-
-
-      <div
-        style="
-          margin-top:4px;
-          color:var(--vv-body);
-          font-size:12px;
-          line-height:1.45;
-          font-weight:700;
-        "
-      >
-
-        ${escapeHtml(
-          point.text
-        )}
-
-      </div>
-
-
-      <div
-        class="status blue"
-        style="
-          margin-top:7px;
-        "
-      >
-
-        FOLLOW-UP NEEDED FROM SHIP
-
-      </div>
-
-
-      ${
-        point.comments.length
-          ? `
-
-            <div
-              style="
-                margin-top:10px;
-              "
-            >
-
-              <div class="response-label">
-
-                REVIEWER COMMENTS
-
-              </div>
-
-
-              ${
-                point.comments
-                  .map(
-                    comment => `
-
-                      <div class="comment">
-
-                        <strong>
-
-                          ${escapeHtml(
-                            comment.name ||
-                            'Reviewer'
-                          )}:
-
-                        </strong>
-
-
-                        ${escapeHtml(
-                          comment.text ||
-                          ''
-                        )}
-
-                      </div>
-
-                    `
-                  )
-                  .join('')
-              }
-
-            </div>
-
-          `
-          : `
-
-            <div
-              style="
-                margin-top:8px;
-                color:var(--vv-gray);
-                font-size:9px;
-              "
-            >
-
-              No reviewer comment was entered.
-
-            </div>
-
-          `
-      }
-
-
-      ${
-        point.photos.length
-          ? `
-
-            <div
-              style="
-                margin-top:10px;
-              "
-            >
-
-              <div class="response-label">
-
-                REVIEWER PHOTOS
-
-              </div>
-
-
-              <div class="response-photos">
-
-                ${
-                  point.photos
-                    .map(
-                      photo => `
-
-                        <div class="response-photo">
-
-                          <img
-                            src="${escapeHtml(
-                              photo
-                            )}"
-                            alt="Reviewer photo"
-                          >
-
-                        </div>
-
-                      `
-                    )
-                    .join('')
-                }
-
-              </div>
-
-            </div>
-
-          `
-          : ''
-      }
-
-
-      <div
-        class="field"
-        style="
-          margin-top:11px;
-          margin-bottom:0;
-        "
-      >
-
-        <label>
-
-          SHIP COMMENT
-
-        </label>
-
-
-        <textarea
-          class="ship-response-input"
-          data-response-report="${escapeHtml(
-            reportId
-          )}"
-          data-response-key="${escapeHtml(
-            point.key
-          )}"
-          placeholder="Enter ship response"
-        ></textarea>
-
-      </div>
-
-    </div>
-
-  `;
-
-}
-
-
-/* ============================================================
-   SHIP RESPONSE INPUTS
-============================================================ */
-
-function bindShipResponseInputs(){
-
-  document
-    .querySelectorAll(
-      '.save-ship-response'
-    )
-    .forEach(
-      button => {
-
-        button.addEventListener(
-          'click',
-          async function(){
-
-            await submitFallbackShipResponse(
-              button.dataset.reportId
-            );
-
-          }
-        );
-
-      }
-    );
-
-}
-
-
-/* ============================================================
-   SUBMIT SHIP RESPONSE
-============================================================ */
-
-async function submitFallbackShipResponse(
-  reportId
-){
-
-  try{
-
-    const current =
-      await getReport(
-        reportId
-      );
-
-
-    if(
-      !current ||
-      !current.success ||
-      !current.data
-    ){
-
-      throw new Error(
-        'Could not load report.'
-      );
-
-    }
-
-
-    const state =
-      JSON.parse(
-        JSON.stringify(
-          current.data
-            ?.report_data
-            ?.state ||
-          {}
-        )
-      );
-
-
-    const inputs =
-      document.querySelectorAll(
-        `[data-response-report="${reportId}"]`
-      );
-
-
-    let added =
-      0;
-
-
-    inputs.forEach(
-      input => {
-
-        const text =
-          input.value.trim();
-
-
-        if(
-          !text
-        ){
-
-          return;
-
-        }
-
-
-        const key =
-          input.dataset.responseKey;
-
-
-        if(
-          !state[key]
-        ){
-
-          return;
-
-        }
-
-
-        if(
-          !Array.isArray(
-            state[key].shipComments
-          )
-        ){
-
-          state[key].shipComments =
-            [];
-
-        }
-
-
-        state[key].shipComments.push({
-
-          name:
-            'Ship',
-
-          text,
-
-          timestamp:
-            new Date().toISOString()
-
-        });
-
-
-        added++;
-
-      }
-    );
-
-
-    if(
-      added === 0
-    ){
-
-      alert(
-        'Please enter at least one ship response.'
-      );
-
-
-      return;
-
-    }
-
-
-    /*
-      Require every follow-up point
-      to have a ship response.
-    */
-
-    const incomplete =
-      Object.values(
-        state
-      )
-      .filter(
-        item =>
-          item &&
-          item.checked &&
-          item.followUpNeeded &&
-          !(
-            Array.isArray(
-              item.shipComments
-            ) &&
-            item.shipComments.length > 0
-          )
-      );
-
-
-    if(
-      incomplete.length > 0
-    ){
-
-      alert(
-        `${incomplete.length} follow-up point(s) still need a ship response.`
-      );
-
-
-      return;
-
-    }
-
-
-    if(
-      !window.confirm(
-        'Submit Ship Response?\n\n' +
-        'The report will move to Submitted Reports.'
-      )
-    ){
-
-      return;
-
-    }
-
-
-    const result =
-      await submitShipResponse({
-
-        reportId,
-
-        state
-
-      });
-
-
-    if(
-      !result ||
-      !result.success
-    ){
-
-      throw (
-        result?.error ||
-        new Error(
-          'Could not submit Ship Response.'
-        )
-      );
-
-    }
-
-
-    showToast(
-      'SHIP RESPONSE SUBMITTED'
-    );
-
-
-    await loadShipResponsesScreen();
-
-  }catch(error){
-
-    console.error(
-      'Submit ship response:',
-      error
-    );
-
-
-    showError(
-      'Could not submit Ship Response.',
-      error
-    );
-
-  }
-
-}
-
-
-/* ============================================================
-   SUMMARY MODE
-============================================================ */
-
-function setSummaryMode(
-  submitted
-){
-
-  const active =
-    document.getElementById(
-      'summaryActiveActions'
-    );
-
-
-  const submittedActions =
-    document.getElementById(
-      'summarySubmittedActions'
-    );
-
-
-  if(
-    submitted
-  ){
-
-    if(
-      active
-    ){
-
-      active.classList.add(
-        'hidden'
-      );
-
-    }
-
-
-    if(
-      submittedActions
-    ){
-
-      submittedActions.classList.remove(
-        'hidden'
-      );
-
-    }
-
-  }else{
-
-    if(
-      active
-    ){
-
-      active.classList.remove(
-        'hidden'
-      );
-
-    }
-
-
-    if(
-      submittedActions
-    ){
-
-      submittedActions.classList.add(
-        'hidden'
-      );
-
-    }
-
-  }
-
-}
-
-
-/* ============================================================
-   FOLLOW UPS
-============================================================ */
-
-function bindFollowUpButtons(){
-
-  bindClick(
-    'followupPdfBtn',
-    async function(){
-
-      if(
-        !currentSubmittedReport
-      ){
-
-        return;
-
-      }
-
-
-      const pdf =
-        await getPDFModule();
-
-
-      if(
-        !pdf
-      ){
-
-        return;
-
-      }
-
-
-      pdf.generateFollowUpPDF(
-        currentSubmittedReport
-      );
-
-    }
-  );
-
-}
-
-
-/* ============================================================
-   PDF
-============================================================ */
-
-function bindPDFButtons(){
-
-  /*
-    Active report PDF
-  */
-
-  bindClick(
-    'pdfBtn',
-    async function(){
-
-      const pdf =
-        await getPDFModule();
-
-
-      if(
-        !pdf
-      ){
-
-        return;
-
-      }
-
-
-      pdf.generatePDF();
-
-    }
-  );
-
-}
-
-
-/* ============================================================
-   HEADER BACK
-============================================================ */
-
-function bindHeaderBackButtons(){
-
-  bindClick(
-    'setupHeaderBack',
-    function(){
-
-      showScreen(
-        'home'
-      );
-
-    }
-  );
-
-
-  bindClick(
-    'checklistHeaderBack',
-    async function(){
-
-      showScreen(
-        checklistReturnScreen ||
-        'home'
-      );
-
-
-      if(
-        checklistReturnScreen ===
-        'open'
-      ){
-
-        await loadOpenReportsScreen();
-
-      }
-
-    }
-  );
-
-
-  bindClick(
-    'reviewHeaderBack',
-    async function(){
-
-      const checklist =
-        await getChecklistModule();
-
-
-      if(
-        checklist
-      ){
-
-        checklist.renderChecklist();
-
-      }
-
-
-      showScreen(
-        'checklist'
-      );
-
-    }
-  );
-
-
-  bindClick(
-    'summaryHeaderBack',
-    async function(){
-
-      if(
-        summaryReturnScreen ===
-        'submitted'
-      ){
-
-        showScreen(
-          'submitted'
-        );
-
-
-        await loadSubmittedReportsScreen();
-
-
-        return;
-
-      }
-
-
-      showScreen(
-        'checklist'
-      );
-
-    }
-  );
-
-
-  bindClick(
-    'followupsHeaderBack',
-    async function(){
-
-      showScreen(
-        'submitted'
-      );
-
-
-      await loadSubmittedReportsScreen();
-
-    }
-  );
-
-
-  bindClick(
-    'openHeaderBack',
-    function(){
-
-      showScreen(
-        'home'
-      );
-
-    }
-  );
-
-
-  bindClick(
-    'submittedHeaderBack',
-    function(){
-
-      showScreen(
-        'home'
-      );
-
-    }
-  );
-
-
-  bindClick(
-    'responsesHeaderBack',
-    function(){
-
-      showScreen(
-        'home'
-      );
-
-    }
-  );
-
-}
-
-
-/* ============================================================
-   APP ERROR
-============================================================ */
-
-function showError(
-  message,
-  error=null
-){
-
-  console.error(
-    message,
-    error
-  );
-
-
-  /*
-    Do not freeze the application.
-    Show a normal alert instead.
-  */
-
-  alert(
-    message +
-    (
-      error?.message
-        ? `\n\n${error.message}`
-        : ''
-    )
+    'home'
   );
 
 }
@@ -4111,6 +3353,33 @@ function showToast(
 
   console.log(
     message
+  );
+
+}
+
+
+/* ============================================================
+   ERROR
+============================================================ */
+
+function showError(
+  message,
+  error=null
+){
+
+  console.error(
+    message,
+    error
+  );
+
+
+  alert(
+    message +
+    (
+      error?.message
+        ? `\n\n${error.message}`
+        : ''
+    )
   );
 
 }
@@ -4152,7 +3421,9 @@ function escapeHtml(
 
 window.addEventListener(
   'error',
-  function(event){
+  function(
+    event
+  ){
 
     console.error(
       'Ship Visit Report error:',
@@ -4166,7 +3437,9 @@ window.addEventListener(
 
 window.addEventListener(
   'unhandledrejection',
-  function(event){
+  function(
+    event
+  ){
 
     console.error(
       'Ship Visit Report promise error:',
@@ -4175,3 +3448,24 @@ window.addEventListener(
 
   }
 );
+
+
+/* ============================================================
+   EXPORT
+============================================================ */
+
+export {
+
+  getChecklistModule,
+
+  getReviewModule,
+
+  getReportsModule,
+
+  getPDFModule,
+
+  saveCurrentReport,
+
+  resetToHome
+
+};
