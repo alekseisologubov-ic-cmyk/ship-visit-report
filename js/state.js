@@ -5,19 +5,18 @@
   state.js
   ============================================================
 
-  Central state manager.
+  Central application state.
 
-  Keeps together:
-
+  Stores:
   - Report ID
   - Ship
   - Visit dates
   - Reviewer
-  - Checklist state
+  - Checklist status
   - Reviewer comments
   - Photos
   - Follow-up flags
-  - Ship comments
+  - Ship responses
   - Report status
   - Submission date
 */
@@ -29,7 +28,7 @@ import {
 
 
 /* ============================================================
-   CURRENT REPORT
+   INTERNAL STATE
 ============================================================ */
 
 let reportId = null;
@@ -51,25 +50,20 @@ let meta = {
 let currentReviewer = '';
 
 
-let state =
-  emptyState();
+let state = emptyState();
 
 
-let reportStatus =
-  'open';
+let reportStatus = 'open';
 
 
-let submittedAt =
-  null;
+let submittedAt = null;
 
 
 /* ============================================================
    BASIC HELPERS
 ============================================================ */
 
-function cleanText(
-  value
-){
+function cleanText(value) {
 
   return String(
     value ?? ''
@@ -78,42 +72,44 @@ function cleanText(
 }
 
 
-function safeArray(
-  value
-){
+function clone(value) {
 
-  if(
+  return JSON.parse(
+    JSON.stringify(
+      value
+    )
+  );
+
+}
+
+
+function toArray(value) {
+
+  if (
     Array.isArray(value)
-  ){
+  ) {
 
     return value;
 
   }
 
 
-  /*
-    Support JSON strings from
-    older/saved report records.
-  */
-
-  if(
+  if (
     typeof value === 'string'
-  ){
+  ) {
 
     const text =
       value.trim();
 
 
-    if(
-      !text
-    ){
+    if (!text) {
 
       return [];
 
     }
 
 
-    try{
+    try {
 
       const parsed =
         JSON.parse(
@@ -127,7 +123,9 @@ function safeArray(
         ? parsed
         : [];
 
-    }catch(error){
+    } catch (
+      _error
+    ) {
 
       return [];
 
@@ -146,38 +144,31 @@ function safeArray(
 ============================================================ */
 
 function normalizeReviewerComments(
-  comments,
-  reviewerName=''
-){
+  value,
+  reviewerName = ''
+) {
 
   const source =
-    safeArray(
-      comments
+    toArray(
+      value
     );
 
 
   return source
     .map(
-      comment => {
+      entry => {
 
-        /*
-          Older format may have been
-          saved as a plain string.
-        */
-
-        if(
-          typeof comment === 'string'
-        ){
+        if (
+          typeof entry === 'string'
+        ) {
 
           const text =
             cleanText(
-              comment
+              entry
             );
 
 
-          if(
-            !text
-          ){
+          if (!text) {
 
             return null;
 
@@ -200,10 +191,10 @@ function normalizeReviewerComments(
         }
 
 
-        if(
-          !comment ||
-          typeof comment !== 'object'
-        ){
+        if (
+          !entry ||
+          typeof entry !== 'object'
+        ) {
 
           return null;
 
@@ -212,17 +203,15 @@ function normalizeReviewerComments(
 
         const text =
           cleanText(
-            comment.text ??
-            comment.comment ??
-            comment.message ??
-            comment.value ??
+            entry.text ??
+            entry.comment ??
+            entry.message ??
+            entry.value ??
             ''
           );
 
 
-        if(
-          !text
-        ){
+        if (!text) {
 
           return null;
 
@@ -233,9 +222,9 @@ function normalizeReviewerComments(
 
           name:
             cleanText(
-              comment.name ??
-              comment.reviewer ??
-              comment.author ??
+              entry.name ??
+              entry.reviewer ??
+              entry.author ??
               reviewerName ??
               'Reviewer'
             ) ||
@@ -244,8 +233,8 @@ function normalizeReviewerComments(
           text,
 
           timestamp:
-            comment.timestamp ??
-            comment.createdAt ??
+            entry.timestamp ??
+            entry.createdAt ??
             null
 
         };
@@ -264,32 +253,30 @@ function normalizeReviewerComments(
 ============================================================ */
 
 function normalizeShipComments(
-  comments
-){
+  value
+) {
 
   const source =
-    safeArray(
-      comments
+    toArray(
+      value
     );
 
 
   return source
     .map(
-      comment => {
+      entry => {
 
-        if(
-          typeof comment === 'string'
-        ){
+        if (
+          typeof entry === 'string'
+        ) {
 
           const text =
             cleanText(
-              comment
+              entry
             );
 
 
-          if(
-            !text
-          ){
+          if (!text) {
 
             return null;
 
@@ -298,21 +285,21 @@ function normalizeShipComments(
 
           return {
 
-            name:'Ship',
+            name: 'Ship',
 
             text,
 
-            timestamp:null
+            timestamp: null
 
           };
 
         }
 
 
-        if(
-          !comment ||
-          typeof comment !== 'object'
-        ){
+        if (
+          !entry ||
+          typeof entry !== 'object'
+        ) {
 
           return null;
 
@@ -321,17 +308,15 @@ function normalizeShipComments(
 
         const text =
           cleanText(
-            comment.text ??
-            comment.comment ??
-            comment.message ??
-            comment.value ??
+            entry.text ??
+            entry.comment ??
+            entry.message ??
+            entry.value ??
             ''
           );
 
 
-        if(
-          !text
-        ){
+        if (!text) {
 
           return null;
 
@@ -342,8 +327,8 @@ function normalizeShipComments(
 
           name:
             cleanText(
-              comment.name ??
-              comment.ship ??
+              entry.name ??
+              entry.ship ??
               'Ship'
             ) ||
             'Ship',
@@ -351,8 +336,8 @@ function normalizeShipComments(
           text,
 
           timestamp:
-            comment.timestamp ??
-            comment.createdAt ??
+            entry.timestamp ??
+            entry.createdAt ??
             null
 
         };
@@ -371,40 +356,40 @@ function normalizeShipComments(
 ============================================================ */
 
 function normalizePhotos(
-  photos
-){
+  value
+) {
 
   const source =
-    safeArray(
-      photos
+    toArray(
+      value
     );
 
 
   return source
     .map(
-      photo => {
+      entry => {
 
-        if(
-          typeof photo === 'string'
-        ){
+        if (
+          typeof entry === 'string'
+        ) {
 
           return cleanText(
-            photo
+            entry
           );
 
         }
 
 
-        if(
-          photo &&
-          typeof photo === 'object'
-        ){
+        if (
+          entry &&
+          typeof entry === 'object'
+        ) {
 
-          return (
-            photo.url ||
-            photo.src ||
-            photo.data ||
-            photo.image ||
+          return cleanText(
+            entry.url ??
+            entry.src ??
+            entry.data ??
+            entry.image ??
             ''
           );
 
@@ -415,9 +400,6 @@ function normalizePhotos(
 
       }
     )
-    .map(
-      cleanText
-    )
     .filter(
       Boolean
     );
@@ -426,83 +408,70 @@ function normalizePhotos(
 
 
 /* ============================================================
-   NORMALIZE ONE CHECKLIST ITEM
+   NORMALIZE ONE ITEM
 ============================================================ */
 
 function normalizeItem(
-  saved,
-  reviewerName=''
-){
+  item,
+  reviewerName = ''
+) {
 
-  const item =
+  const source =
     (
-      saved &&
-      typeof saved === 'object'
+      item &&
+      typeof item === 'object'
     )
-      ? saved
+      ? item
       : {};
 
 
   return {
 
     /*
-      Preserve checked state.
+      Preserve any additional fields.
     */
+
+    ...source,
+
 
     checked:
       Boolean(
-        item.checked
+        source.checked
       ),
 
 
-    /*
-      Preserve reviewer comments.
-    */
-
     comments:
       normalizeReviewerComments(
-        item.comments ??
-        item.reviewerComments ??
-        item.reviewer_comments ??
-        item.reviewComments ??
+        source.comments ??
+        source.reviewerComments ??
+        source.reviewer_comments ??
+        source.reviewComments ??
         [],
         reviewerName
       ),
 
 
-    /*
-      Preserve photos.
-    */
-
     photos:
       normalizePhotos(
-        item.photos ??
-        item.photo ??
+        source.photos ??
+        source.photo ??
         []
       ),
 
 
-    /*
-      Preserve follow-up.
-    */
-
     followUpNeeded:
       Boolean(
-        item.followUpNeeded ??
-        item.follow_up_needed ??
+        source.followUpNeeded ??
+        source.follow_up_needed ??
         false
       ),
 
 
-    /*
-      Preserve ship responses.
-    */
-
     shipComments:
       normalizeShipComments(
-        item.shipComments ??
-        item.ship_comments ??
-        item.shipComment ??
+        source.shipComments ??
+        source.ship_comments ??
+        source.shipComment ??
         []
       )
 
@@ -516,32 +485,31 @@ function normalizeItem(
 ============================================================ */
 
 function normalizeState(
-  savedState,
-  reviewerName=''
-){
+  incoming,
+  reviewerName = ''
+) {
 
-  const initial =
+  const base =
     emptyState();
 
 
-  const saved =
+  const source =
     (
-      savedState &&
-      typeof savedState === 'object'
+      incoming &&
+      typeof incoming === 'object'
     )
-      ? savedState
+      ? incoming
       : {};
 
 
   Object.keys(
-    initial
-  )
-  .forEach(
+    base
+  ).forEach(
     key => {
 
-      initial[key] =
+      base[key] =
         normalizeItem(
-          saved[key],
+          source[key],
           reviewerName
         );
 
@@ -549,87 +517,7 @@ function normalizeState(
   );
 
 
-  /*
-    Preserve only valid checklist keys.
-  */
-
-  Object.keys(
-    saved
-  )
-  .forEach(
-    key => {
-
-      if(
-        !initial[key]
-      ){
-
-        return;
-
-      }
-
-
-      /*
-        If the saved item contains additional
-        application properties, preserve them
-        while making sure our core fields are
-        normalized.
-      */
-
-      initial[key] = {
-
-        ...initial[key],
-
-        ...(
-          saved[key] &&
-          typeof saved[key] === 'object'
-            ? saved[key]
-            : {}
-        ),
-
-        checked:
-          Boolean(
-            saved[key]?.checked
-          ),
-
-        comments:
-          normalizeReviewerComments(
-            saved[key]?.comments ??
-            saved[key]?.reviewerComments ??
-            saved[key]?.reviewer_comments ??
-            saved[key]?.reviewComments ??
-            [],
-            reviewerName
-          ),
-
-        photos:
-          normalizePhotos(
-            saved[key]?.photos ??
-            saved[key]?.photo ??
-            []
-          ),
-
-        followUpNeeded:
-          Boolean(
-            saved[key]?.followUpNeeded ??
-            saved[key]?.follow_up_needed ??
-            false
-          ),
-
-        shipComments:
-          normalizeShipComments(
-            saved[key]?.shipComments ??
-            saved[key]?.ship_comments ??
-            saved[key]?.shipComment ??
-            []
-          )
-
-      };
-
-    }
-  );
-
-
-  return initial;
+  return base;
 
 }
 
@@ -638,7 +526,7 @@ function normalizeState(
    REPORT ID
 ============================================================ */
 
-export function getReportId(){
+export function getReportId() {
 
   return reportId;
 
@@ -647,7 +535,7 @@ export function getReportId(){
 
 export function setReportId(
   id
-){
+) {
 
   reportId =
     id ||
@@ -660,7 +548,7 @@ export function setReportId(
    META
 ============================================================ */
 
-export function getMeta(){
+export function getMeta() {
 
   return {
 
@@ -673,7 +561,7 @@ export function getMeta(){
 
 export function setMeta(
   newMeta
-){
+) {
 
   meta = {
 
@@ -710,7 +598,7 @@ export function setMeta(
    REVIEWER
 ============================================================ */
 
-export function getReviewer(){
+export function getReviewer() {
 
   return currentReviewer;
 
@@ -719,7 +607,7 @@ export function getReviewer(){
 
 export function setReviewer(
   name
-){
+) {
 
   currentReviewer =
     cleanText(
@@ -734,22 +622,20 @@ export function setReviewer(
 
 
 /* ============================================================
-   STATE
+   STATE ACCESS
 ============================================================ */
 
-export function getState(){
+export function getState() {
 
   return state;
 
 }
 
 
-export function getStateCopy(){
+export function getStateCopy() {
 
-  return JSON.parse(
-    JSON.stringify(
-      state
-    )
+  return clone(
+    state
   );
 
 }
@@ -757,7 +643,7 @@ export function getStateCopy(){
 
 export function setState(
   newState
-){
+) {
 
   state =
     normalizeState(
@@ -771,30 +657,26 @@ export function setState(
 
 
 /* ============================================================
-   GET ITEM
+   ITEM ACCESS
 ============================================================ */
 
 export function getItem(
   key
-){
+) {
 
   return state[key];
 
 }
 
 
-/* ============================================================
-   UPDATE ITEM
-============================================================ */
-
 export function updateItem(
   key,
   changes
-){
+) {
 
-  if(
+  if (
     !state[key]
-  ){
+  ) {
 
     return;
 
@@ -809,11 +691,6 @@ export function updateItem(
 
   };
 
-
-  /*
-    Immediately normalize the
-    core data after an update.
-  */
 
   state[key] =
     normalizeItem(
@@ -832,11 +709,11 @@ export function updateItem(
 
 export function toggleChecked(
   key
-){
+) {
 
-  if(
+  if (
     !state[key]
-  ){
+  ) {
 
     return false;
 
@@ -854,7 +731,7 @@ export function toggleChecked(
 
 export function isChecked(
   key
-){
+) {
 
   return Boolean(
     state[key]?.checked
@@ -870,13 +747,13 @@ export function isChecked(
 export function addReviewerComment(
   key,
   text
-){
+) {
 
-  if(
+  if (
     !state[key]
-  ){
+  ) {
 
-    return;
+    return false;
 
   }
 
@@ -887,20 +764,20 @@ export function addReviewerComment(
     );
 
 
-  if(
+  if (
     !clean
-  ){
+  ) {
 
-    return;
+    return false;
 
   }
 
 
-  if(
+  if (
     !Array.isArray(
       state[key].comments
     )
-  ){
+  ) {
 
     state[key].comments =
       [];
@@ -923,21 +800,20 @@ export function addReviewerComment(
 
   });
 
+
+  return true;
+
 }
 
-
-/* ============================================================
-   REPLACE REVIEWER COMMENTS
-============================================================ */
 
 export function setReviewerComments(
   key,
   comments
-){
+) {
 
-  if(
+  if (
     !state[key]
-  ){
+  ) {
 
     return;
 
@@ -962,13 +838,13 @@ export function setReviewerComments(
 export function addPhoto(
   key,
   photo
-){
+) {
 
-  if(
+  if (
     !state[key]
-  ){
+  ) {
 
-    return;
+    return false;
 
   }
 
@@ -979,20 +855,20 @@ export function addPhoto(
     );
 
 
-  if(
+  if (
     !clean
-  ){
+  ) {
 
-    return;
+    return false;
 
   }
 
 
-  if(
+  if (
     !Array.isArray(
       state[key].photos
     )
-  ){
+  ) {
 
     state[key].photos =
       [];
@@ -1004,41 +880,65 @@ export function addPhoto(
     clean
   );
 
+
+  return true;
+
+}
+
+
+export function setPhotos(
+  key,
+  photos
+) {
+
+  if (
+    !state[key]
+  ) {
+
+    return;
+
+  }
+
+
+  state[key].photos =
+    normalizePhotos(
+      photos
+    );
+
 }
 
 
 export function removePhoto(
   key,
   index
-){
+) {
 
-  if(
+  if (
     !state[key]
-  ){
+  ) {
 
-    return;
+    return false;
 
   }
 
 
-  if(
+  if (
     !Array.isArray(
       state[key].photos
     )
-  ){
+  ) {
 
-    return;
+    return false;
 
   }
 
 
-  if(
+  if (
     index < 0 ||
-    index >=
-      state[key].photos.length
-  ){
+    index >= state[key].photos.length
+  ) {
 
-    return;
+    return false;
 
   }
 
@@ -1047,6 +947,9 @@ export function removePhoto(
     index,
     1
   );
+
+
+  return true;
 
 }
 
@@ -1058,11 +961,11 @@ export function removePhoto(
 export function setFollowUp(
   key,
   needed
-){
+) {
 
-  if(
+  if (
     !state[key]
-  ){
+  ) {
 
     return;
 
@@ -1074,21 +977,6 @@ export function setFollowUp(
       needed
     );
 
-
-  /*
-    When follow-up is removed,
-    ship responses are cleared.
-  */
-
-  if(
-    !state[key].followUpNeeded
-  ){
-
-    state[key].shipComments =
-      [];
-
-  }
-
 }
 
 
@@ -1099,13 +987,13 @@ export function setFollowUp(
 export function addShipComment(
   key,
   text
-){
+) {
 
-  if(
+  if (
     !state[key]
-  ){
+  ) {
 
-    return;
+    return false;
 
   }
 
@@ -1116,20 +1004,20 @@ export function addShipComment(
     );
 
 
-  if(
+  if (
     !clean
-  ){
+  ) {
 
-    return;
+    return false;
 
   }
 
 
-  if(
+  if (
     !Array.isArray(
       state[key].shipComments
     )
-  ){
+  ) {
 
     state[key].shipComments =
       [];
@@ -1139,7 +1027,8 @@ export function addShipComment(
 
   state[key].shipComments.push({
 
-    name:'Ship',
+    name:
+      'Ship',
 
     text:
       clean,
@@ -1149,21 +1038,20 @@ export function addShipComment(
 
   });
 
+
+  return true;
+
 }
 
-
-/* ============================================================
-   REPLACE SHIP COMMENTS
-============================================================ */
 
 export function setShipComments(
   key,
   comments
-){
+) {
 
-  if(
+  if (
     !state[key]
-  ){
+  ) {
 
     return;
 
@@ -1182,7 +1070,7 @@ export function setShipComments(
    REPORT STATUS
 ============================================================ */
 
-export function getReportStatus(){
+export function getReportStatus() {
 
   return reportStatus;
 
@@ -1191,11 +1079,13 @@ export function getReportStatus(){
 
 export function setReportStatus(
   status
-){
+) {
 
   const allowed = [
 
     'open',
+
+    'ship_review',
 
     'submitted'
 
@@ -1212,7 +1102,7 @@ export function setReportStatus(
 }
 
 
-export function isOpenReport(){
+export function isOpenReport() {
 
   return (
     reportStatus ===
@@ -1222,7 +1112,17 @@ export function isOpenReport(){
 }
 
 
-export function isSubmittedReport(){
+export function isShipReviewReport() {
+
+  return (
+    reportStatus ===
+    'ship_review'
+  );
+
+}
+
+
+export function isSubmittedReport() {
 
   return (
     reportStatus ===
@@ -1236,7 +1136,7 @@ export function isSubmittedReport(){
    SUBMITTED DATE
 ============================================================ */
 
-export function getSubmittedAt(){
+export function getSubmittedAt() {
 
   return submittedAt;
 
@@ -1245,7 +1145,7 @@ export function getSubmittedAt(){
 
 export function setSubmittedAt(
   value
-){
+) {
 
   submittedAt =
     value ||
@@ -1255,10 +1155,10 @@ export function setSubmittedAt(
 
 
 /* ============================================================
-   FOLLOW-UP COUNT
+   FOLLOW-UP COUNTS
 ============================================================ */
 
-export function getFollowUpCount(){
+export function getFollowUpCount() {
 
   return Object.values(
     state
@@ -1273,7 +1173,7 @@ export function getFollowUpCount(){
 }
 
 
-export function getCompletedFollowUpCount(){
+export function getCompletedFollowUpCount() {
 
   return Object.values(
     state
@@ -1292,7 +1192,7 @@ export function getCompletedFollowUpCount(){
 }
 
 
-export function hasFollowUps(){
+export function hasFollowUps() {
 
   return (
     getFollowUpCount() >
@@ -1302,7 +1202,7 @@ export function hasFollowUps(){
 }
 
 
-export function areAllFollowUpsComplete(){
+export function areAllFollowUpsComplete() {
 
   const followUps =
     Object.values(
@@ -1315,14 +1215,9 @@ export function areAllFollowUpsComplete(){
     );
 
 
-  /*
-    No follow-ups means the report
-    is already complete.
-  */
-
-  if(
+  if (
     followUps.length === 0
-  ){
+  ) {
 
     return true;
 
@@ -1334,8 +1229,7 @@ export function areAllFollowUpsComplete(){
       Array.isArray(
         item.shipComments
       ) &&
-      item.shipComments.length >
-        0
+      item.shipComments.length > 0
   );
 
 }
@@ -1345,21 +1239,32 @@ export function areAllFollowUpsComplete(){
    STATUS COLOR
 ============================================================ */
 
-export function getStatusColor(){
+export function getStatusColor() {
 
-  if(
+  if (
     reportStatus ===
     'open'
-  ){
+  ) {
 
     return 'red';
 
   }
 
 
-  if(
-    areAllFollowUpsComplete()
-  ){
+  if (
+    reportStatus ===
+    'ship_review'
+  ) {
+
+    return 'blue';
+
+  }
+
+
+  if (
+    reportStatus ===
+    'submitted'
+  ) {
 
     return 'green';
 
@@ -1372,10 +1277,10 @@ export function getStatusColor(){
 
 
 /* ============================================================
-   RESET
+   RESET REPORT
 ============================================================ */
 
-export function resetReport(){
+export function resetReport() {
 
   reportId =
     null;
@@ -1383,13 +1288,13 @@ export function resetReport(){
 
   meta = {
 
-    ship:'',
+    ship: '',
 
-    dateOn:'',
+    dateOn: '',
 
-    dateOff:'',
+    dateOff: '',
 
-    reviewer:''
+    reviewer: ''
 
   };
 
@@ -1417,16 +1322,11 @@ export function resetReport(){
 ============================================================ */
 
 export function startNewReport({
-
   ship,
-
   dateOn,
-
   dateOff,
-
   reviewer
-
-}){
+} = {}) {
 
   reportId =
     null;
@@ -1481,11 +1381,11 @@ export function startNewReport({
 
 export function loadReport(
   report
-){
+) {
 
-  if(
+  if (
     !report
-  ){
+  ) {
 
     resetReport();
 
@@ -1505,11 +1405,10 @@ export function loadReport(
 
 
   /*
-    Meta can exist both at the
-    top level and inside report_data.
+    Meta
   */
 
-  const savedMeta =
+  const storedMeta =
     report
       ?.report_data
       ?.meta ||
@@ -1521,25 +1420,29 @@ export function loadReport(
     ship:
       cleanText(
         report.ship ??
-        savedMeta.ship
+        storedMeta.ship ??
+        ''
       ),
 
     dateOn:
       cleanText(
         report.date_on ??
-        savedMeta.dateOn
+        storedMeta.dateOn ??
+        ''
       ),
 
     dateOff:
       cleanText(
         report.date_off ??
-        savedMeta.dateOff
+        storedMeta.dateOff ??
+        ''
       ),
 
     reviewer:
       cleanText(
         report.reviewer ??
-        savedMeta.reviewer
+        storedMeta.reviewer ??
+        ''
       )
 
   };
@@ -1550,15 +1453,15 @@ export function loadReport(
 
 
   /*
-    IMPORTANT:
-    Normalize the complete report state
-    instead of simply spreading it.
+    Checklist state.
 
-    This preserves reviewer comments,
-    photos, follow-ups and ship responses.
+    This is the important part:
+    comments, photos, follow-up and ship
+    responses are normalized when reports
+    are loaded again.
   */
 
-  const savedState =
+  const storedState =
     report
       ?.report_data
       ?.state ||
@@ -1567,7 +1470,7 @@ export function loadReport(
 
   state =
     normalizeState(
-      savedState,
+      storedState,
       currentReviewer ||
       meta.reviewer ||
       'Reviewer'
@@ -1575,7 +1478,7 @@ export function loadReport(
 
 
   /*
-    Status
+    Report status.
   */
 
   setReportStatus(
@@ -1585,7 +1488,7 @@ export function loadReport(
 
 
   /*
-    Submitted date
+    Submitted time.
   */
 
   setSubmittedAt(
@@ -1600,7 +1503,7 @@ export function loadReport(
    REPORT DATA
 ============================================================ */
 
-export function getReportData(){
+export function getReportData() {
 
   return {
 
@@ -1619,7 +1522,7 @@ export function getReportData(){
    COMPLETE SNAPSHOT
 ============================================================ */
 
-export function getSnapshot(){
+export function getSnapshot() {
 
   return {
 
@@ -1648,7 +1551,7 @@ export function getSnapshot(){
    VALIDATION
 ============================================================ */
 
-export function isValidReport(){
+export function isValidReport() {
 
   return Boolean(
 
@@ -1660,15 +1563,15 @@ export function isValidReport(){
 }
 
 
-export function missingRequiredFields(){
+export function missingRequiredFields() {
 
   const missing =
     [];
 
 
-  if(
+  if (
     !meta.ship
-  ){
+  ) {
 
     missing.push(
       'Ship'
@@ -1677,9 +1580,9 @@ export function missingRequiredFields(){
   }
 
 
-  if(
+  if (
     !meta.reviewer
-  ){
+  ) {
 
     missing.push(
       'Reviewer'
@@ -1697,7 +1600,7 @@ export function missingRequiredFields(){
    SUMMARY COUNTS
 ============================================================ */
 
-export function getSummaryCounts(){
+export function getSummaryCounts() {
 
   let total =
     0;
@@ -1732,5 +1635,211 @@ export function getSummaryCounts(){
       total++;
 
 
-      if(
+      if (
+        item?.checked
+      ) {
+
+        checked++;
+
+      }
+
+
+      if (
+        Array.isArray(
+          item?.photos
+        )
+      ) {
+
+        photos +=
+          item.photos.length;
+
+      }
+
+
+      if (
+        Array.isArray(
+          item?.comments
+        )
+      ) {
+
+        comments +=
+          item.comments.length;
+
+      }
+
+
+      if (
+        item?.followUpNeeded
+      ) {
+
+        followUps++;
+
+      }
+
+
+      if (
+        Array.isArray(
+          item?.shipComments
+        )
+      ) {
+
+        shipResponses +=
+          item.shipComments.length;
+
+      }
+
+    }
+  );
+
+
+  return {
+
+    total,
+
+    checked,
+
+    photos,
+
+    comments,
+
+    followUps,
+
+    shipResponses,
+
+    completedFollowUps:
+      getCompletedFollowUpCount()
+
+  };
+
+}
+
+
+/* ============================================================
+   CHECKED POINTS
+============================================================ */
+
+export function getCheckedPoints() {
+
+  return Object.entries(
+    state
+  )
+  .filter(
+    (
+      [
+        _key,
         item
+      ]
+    ) =>
+      item &&
+      item.checked
+  )
+  .map(
+    (
+      [
+        key,
+        item
+      ]
+    ) => ({
+
+      key,
+
+      ...item
+
+    })
+  );
+
+}
+
+
+/* ============================================================
+   FOLLOW-UP POINTS
+============================================================ */
+
+export function getFollowUpPoints() {
+
+  return Object.entries(
+    state
+  )
+  .filter(
+    (
+      [
+        _key,
+        item
+      ]
+    ) =>
+      item &&
+      item.followUpNeeded
+  )
+  .map(
+    (
+      [
+        key,
+        item
+      ]
+    ) => ({
+
+      key,
+
+      ...item
+
+    })
+  );
+
+}
+
+
+/* ============================================================
+   EXPORT NORMALIZATION HELPERS
+============================================================ */
+
+export function normalizeReportState(
+  value
+) {
+
+  return normalizeState(
+    value,
+    currentReviewer ||
+    meta.reviewer ||
+    'Reviewer'
+  );
+
+}
+
+
+export function normalizeComments(
+  value
+) {
+
+  return normalizeReviewerComments(
+    value,
+    currentReviewer ||
+    meta.reviewer ||
+    'Reviewer'
+  );
+
+}
+
+
+export function normalizeShipResponseComments(
+  value
+) {
+
+  return normalizeShipComments(
+    value
+  );
+
+}
+
+
+export function normalizeItemState(
+  value
+) {
+
+  return normalizeItem(
+    value,
+    currentReviewer ||
+    meta.reviewer ||
+    'Reviewer'
+  );
+
+}
