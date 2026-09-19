@@ -4,32 +4,8 @@
   SHIP VISIT REPORT
   main.js
   ============================================================
-
-  FLOW
-
-  CREATE REPORT
-      ↓
-  OPEN REPORTS
-      ↓
-  CHECKLIST
-      ↓
-  REPORT OVERALL
-      ↓
-  SHIP REVIEW
-      ↓
-  SEND TO SHIP
-      ↓
-  SHIP RESPONSE REPORT
-      ↓
-  SUBMIT SHIP RESPONSE
-      ↓
-  SUBMITTED REPORTS
 */
 
-
-/* =========================================================
-   IMPORTS
-========================================================= */
 
 import {
   SECTIONS
@@ -110,26 +86,36 @@ let summaryReturnScreen = 'checklist';
 
 
 /* =========================================================
-   CURRENT SUBMITTED REPORT
+   CURRENT REPORT
 ========================================================= */
 
 let currentSubmittedReport = null;
 
 
 /* =========================================================
-   SCREEN LIST
+   SCREENS
 ========================================================= */
 
 const SCREENS = [
+
   'home',
+
   'setup',
+
   'checklist',
+
   'review',
+
   'summary',
+
   'followups',
+
   'open',
+
   'submitted',
+
   'responses'
+
 ];
 
 
@@ -146,7 +132,7 @@ function(){
 
 
 /* =========================================================
-   START APPLICATION
+   INITIALIZE
 ========================================================= */
 
 document.addEventListener(
@@ -154,10 +140,6 @@ document.addEventListener(
   initializeApp
 );
 
-
-/* =========================================================
-   INITIALIZE
-========================================================= */
 
 function initializeApp(){
 
@@ -289,14 +271,10 @@ function bindAdminButton(){
           .toLowerCase();
 
 
-      const allowed =
-        ADMIN_EMAILS.includes(
-          normalized
-        );
-
-
       if(
-        !allowed
+        !ADMIN_EMAILS.includes(
+          normalized
+        )
       ){
 
         alert(
@@ -465,7 +443,7 @@ export function showScreen(
 
 
 /* =========================================================
-   GENERIC CLICK BINDING
+   GENERIC CLICK
 ========================================================= */
 
 function bindClick(
@@ -497,18 +475,17 @@ function bindClick(
 
 
 /* =========================================================
-   HOME BUTTONS
+   HOME
 ========================================================= */
 
 function bindHomeButtons(){
-
-  /* CREATE REPORT */
 
   bindClick(
     'createReport',
     () => {
 
       clearSetupFields();
+
 
       setupDefaultDate();
 
@@ -529,8 +506,6 @@ function bindHomeButtons(){
   );
 
 
-  /* OPEN REPORTS */
-
   bindClick(
     'openReport',
     async () => {
@@ -545,8 +520,6 @@ function bindHomeButtons(){
     }
   );
 
-
-  /* SUBMITTED REPORTS */
 
   bindClick(
     'submittedReports',
@@ -563,8 +536,6 @@ function bindHomeButtons(){
   );
 
 
-  /* SHIP RESPONSE REPORT */
-
   bindClick(
     'shipResponseReport',
     async () => {
@@ -579,8 +550,6 @@ function bindHomeButtons(){
     }
   );
 
-
-  /* HOME BUTTONS */
 
   bindClick(
     'setupHome',
@@ -645,12 +614,10 @@ function bindHomeButtons(){
 
 
 /* =========================================================
-   HEADER BACK BUTTONS
+   HEADER BACK
 ========================================================= */
 
 function bindHeaderBackButtons(){
-
-  /* SETUP → HOME */
 
   bindClick(
     'setupHeaderBack',
@@ -663,8 +630,6 @@ function bindHeaderBackButtons(){
     }
   );
 
-
-  /* CHECKLIST → PREVIOUS */
 
   bindClick(
     'checklistHeaderBack',
@@ -692,8 +657,6 @@ function bindHeaderBackButtons(){
   );
 
 
-  /* SHIP REVIEW → CHECKLIST */
-
   bindClick(
     'reviewHeaderBack',
     () => {
@@ -710,8 +673,6 @@ function bindHeaderBackButtons(){
     }
   );
 
-
-  /* SUMMARY → PREVIOUS */
 
   bindClick(
     'summaryHeaderBack',
@@ -739,10 +700,6 @@ function bindHeaderBackButtons(){
       }
 
 
-      /*
-        Active report.
-      */
-
       setSummaryMode(
         false
       );
@@ -761,8 +718,6 @@ function bindHeaderBackButtons(){
   );
 
 
-  /* FOLLOW UPS → SUBMITTED */
-
   bindClick(
     'followupsHeaderBack',
     async () => {
@@ -778,8 +733,6 @@ function bindHeaderBackButtons(){
   );
 
 
-  /* OPEN → HOME */
-
   bindClick(
     'openHeaderBack',
     () => {
@@ -792,8 +745,6 @@ function bindHeaderBackButtons(){
   );
 
 
-  /* SUBMITTED → HOME */
-
   bindClick(
     'submittedHeaderBack',
     () => {
@@ -805,8 +756,6 @@ function bindHeaderBackButtons(){
     }
   );
 
-
-  /* RESPONSES → HOME */
 
   bindClick(
     'responsesHeaderBack',
@@ -966,10 +915,6 @@ async function handleStartReport(){
 
   try{
 
-    /*
-      Initialize local report state.
-    */
-
     startNewReport({
 
       ship,
@@ -1001,10 +946,6 @@ async function handleStartReport(){
     );
 
 
-    /*
-      Create OPEN report in Supabase.
-    */
-
     const result =
       await saveOpenReport({
 
@@ -1027,7 +968,7 @@ async function handleStartReport(){
       throw (
         result?.error ||
         new Error(
-          'Could not create the report in Supabase.'
+          'Could not create the report.'
         )
       );
 
@@ -1052,7 +993,7 @@ async function handleStartReport(){
   }catch(error){
 
     console.error(
-      'Create report:',
+      'Start report:',
       error
     );
 
@@ -1105,23 +1046,10 @@ async function saveCurrentReport(){
       });
 
 
-    if(
-      !result ||
-      !result.success
-    ){
-
-      console.error(
-        'Save report failed:',
-        result?.error
-      );
-
-
-      return false;
-
-    }
-
-
-    return true;
+    return Boolean(
+      result &&
+      result.success
+    );
 
   }catch(error){
 
@@ -1171,10 +1099,6 @@ function bindChecklistButtons(){
   }
 
 
-  /*
-    REPORT OVERALL
-  */
-
   bindClick(
     'summaryBtn',
     async () => {
@@ -1197,10 +1121,6 @@ function bindChecklistButtons(){
       }
 
 
-      /*
-        This is an ACTIVE report.
-      */
-
       summaryReturnScreen =
         'checklist';
 
@@ -1220,10 +1140,6 @@ function bindChecklistButtons(){
     }
   );
 
-
-  /*
-    SEND TO SHIP REVIEW
-  */
 
   bindClick(
     'shipReviewBtn',
@@ -1283,10 +1199,6 @@ async function openShipReview(){
 
 function bindReviewButtons(){
 
-  /*
-    BACK
-  */
-
   bindClick(
     'reviewBackBtn',
     () => {
@@ -1303,10 +1215,6 @@ function bindReviewButtons(){
     }
   );
 
-
-  /*
-    SEND TO SHIP
-  */
 
   bindClick(
     'reviewSubmitBtn',
@@ -1329,11 +1237,7 @@ function bindReviewCallbacks(){
   setReviewCallbacks({
 
     sentToShip:
-      async report => {
-
-        /*
-          Clear local active report.
-        */
+      async () => {
 
         resetReport();
 
@@ -1344,11 +1248,6 @@ function bindReviewCallbacks(){
           null;
 
 
-        /*
-          Important:
-          once sent, immediately show Ship Response.
-        */
-
         showScreen(
           'responses'
         );
@@ -1358,11 +1257,6 @@ function bindReviewCallbacks(){
           'REPORT SENT TO SHIP'
         );
 
-
-        /*
-          Load the report from the
-          ship_review status.
-        */
 
         await loadShipReviewReports();
 
@@ -1380,8 +1274,7 @@ function bindReviewCallbacks(){
 function bindSummaryButtons(){
 
   /*
-    ACTIVE REPORT:
-    Back to Checklist.
+    Active report.
   */
 
   bindClick(
@@ -1407,8 +1300,7 @@ function bindSummaryButtons(){
 
 
   /*
-    ACTIVE REPORT:
-    Send to Ship Review.
+    Active report.
   */
 
   bindClick(
@@ -1422,8 +1314,7 @@ function bindSummaryButtons(){
 
 
   /*
-    SUBMITTED REPORT:
-    Back to Submitted Reports.
+    Submitted report.
   */
 
   bindClick(
@@ -1442,8 +1333,7 @@ function bindSummaryButtons(){
 
 
   /*
-    SUBMITTED REPORT:
-    Save PDF.
+    Submitted report PDF.
   */
 
   bindClick(
@@ -1486,7 +1376,6 @@ function bindSummaryButtons(){
       }catch(error){
 
         console.error(
-          'Generate PDF:',
           error
         );
 
@@ -1506,8 +1395,7 @@ function bindSummaryButtons(){
 
 
   /*
-    SUBMITTED REPORT:
-    Print.
+    Submitted report print.
   */
 
   bindClick(
@@ -1528,38 +1416,22 @@ function bindSummaryButtons(){
       }
 
 
-      try{
-
-        loadReport(
-          currentSubmittedReport
-        );
+      loadReport(
+        currentSubmittedReport
+      );
 
 
-        renderReportOverall(
-          currentSubmittedReport
-        );
+      renderReportOverall(
+        currentSubmittedReport
+      );
 
 
-        await wait(
-          150
-        );
+      await wait(
+        150
+      );
 
 
-        window.print();
-
-      }catch(error){
-
-        console.error(
-          'Print:',
-          error
-        );
-
-
-        alert(
-          'Could not print the report.'
-        );
-
-      }
+      window.print();
 
     }
   );
@@ -1587,15 +1459,11 @@ function setSummaryMode(
     );
 
 
-  const submittedPrintRow =
+  const printRow =
     document.getElementById(
       'summarySubmittedPrintRow'
     );
 
-
-  /*
-    ACTIVE REPORT
-  */
 
   if(
     !submitted
@@ -1624,10 +1492,10 @@ function setSummaryMode(
 
 
     if(
-      submittedPrintRow
+      printRow
     ){
 
-      submittedPrintRow.classList.add(
+      printRow.classList.add(
         'hidden'
       );
 
@@ -1638,10 +1506,6 @@ function setSummaryMode(
 
   }
 
-
-  /*
-    SUBMITTED REPORT
-  */
 
   if(
     activeActions
@@ -1666,10 +1530,10 @@ function setSummaryMode(
 
 
   if(
-    submittedPrintRow
+    printRow
   ){
 
-    submittedPrintRow.classList.remove(
+    printRow.classList.remove(
       'hidden'
     );
 
@@ -1679,7 +1543,7 @@ function setSummaryMode(
 
 
 /* =========================================================
-   SUMMARY
+   BUILD ACTIVE SUMMARY
 ========================================================= */
 
 function buildCurrentSummary(){
@@ -1777,18 +1641,14 @@ function buildCurrentSummary(){
             text,
 
             comments:
-              Array.isArray(
-                item.comments
-              )
-                ? item.comments
-                : [],
+              getReviewerComments(
+                item
+              ),
 
             photos:
-              Array.isArray(
-                item.photos
-              )
-                ? item.photos
-                : [],
+              getPhotos(
+                item
+              ),
 
             followUpNeeded:
               Boolean(
@@ -1796,11 +1656,9 @@ function buildCurrentSummary(){
               ),
 
             shipComments:
-              Array.isArray(
-                item.shipComments
+              getShipComments(
+                item
               )
-                ? item.shipComments
-                : []
 
           });
 
@@ -1824,165 +1682,6 @@ function buildCurrentSummary(){
 
     }
   );
-
-
-  /*
-    Hidden PDF statistics.
-  */
-
-  const checked =
-    departments.reduce(
-      (
-        total,
-        department
-      ) =>
-        total +
-        department.points.length,
-      0
-    );
-
-
-  const comments =
-    departments.reduce(
-      (
-        total,
-        department
-      ) =>
-        total +
-        department.points.reduce(
-          (
-            count,
-            point
-          ) =>
-            count +
-            point.comments.length +
-            point.shipComments.length,
-          0
-        ),
-      0
-    );
-
-
-  const photos =
-    departments.reduce(
-      (
-        total,
-        department
-      ) =>
-        total +
-        department.points.reduce(
-          (
-            count,
-            point
-          ) =>
-            count +
-            point.photos.length,
-          0
-        ),
-      0
-    );
-
-
-  const followUps =
-    departments.reduce(
-      (
-        total,
-        department
-      ) =>
-        total +
-        department.points.filter(
-          point =>
-            point.followUpNeeded
-        ).length,
-      0
-    );
-
-
-  const stats =
-    document.getElementById(
-      'stats'
-    );
-
-
-  if(
-    stats
-  ){
-
-    stats.innerHTML = `
-
-      <div class="stat">
-
-        <div class="stat-number">
-          ${checked}
-        </div>
-
-        <div class="stat-label">
-          CHECKED POINTS
-        </div>
-
-      </div>
-
-
-      <div class="stat">
-
-        <div class="stat-number">
-          ${comments}
-        </div>
-
-        <div class="stat-label">
-          COMMENTS
-        </div>
-
-      </div>
-
-
-      <div class="stat">
-
-        <div class="stat-number">
-          ${photos}
-        </div>
-
-        <div class="stat-label">
-          PHOTOS
-        </div>
-
-      </div>
-
-
-      <div class="stat">
-
-        <div class="stat-number">
-          ${followUps}
-        </div>
-
-        <div class="stat-label">
-          FOLLOW-UPS
-        </div>
-
-      </div>
-
-    `;
-
-  }
-
-
-  const overall =
-    document.getElementById(
-      'overall'
-    );
-
-
-  if(
-    overall
-  ){
-
-    overall.value =
-      `${meta.ship || ''} Ship Visit Report. ` +
-      `${checked} checked point(s). ` +
-      `${followUps} follow-up point(s). ` +
-      `${photos} attached photo(s).`;
-
-  }
 
 
   const visible =
@@ -2068,6 +1767,336 @@ function buildCurrentSummary(){
 
 
 /* =========================================================
+   NORMALIZE REVIEWER COMMENTS
+========================================================= */
+
+function getReviewerComments(
+  item
+){
+
+  if(
+    !item
+  ){
+
+    return [];
+
+  }
+
+
+  /*
+    CURRENT FORMAT:
+
+    comments: [
+      {
+        name,
+        text,
+        timestamp
+      }
+    ]
+  */
+
+  if(
+    Array.isArray(
+      item.comments
+    )
+  ){
+
+    return item.comments
+      .filter(
+        comment => {
+
+          if(
+            !comment
+          ){
+
+            return false;
+
+          }
+
+
+          const text =
+            comment.text ??
+            comment.comment ??
+            comment.message ??
+            '';
+
+
+          return Boolean(
+            String(
+              text
+            ).trim()
+          );
+
+        }
+      )
+      .map(
+        comment => ({
+
+          name:
+            comment.name ||
+            comment.reviewer ||
+            getReviewer() ||
+            'Reviewer',
+
+          text:
+            String(
+              comment.text ??
+              comment.comment ??
+              comment.message ??
+              ''
+            ).trim(),
+
+          timestamp:
+            comment.timestamp ||
+            null
+
+        })
+      );
+
+  }
+
+
+  /*
+    LEGACY FORMAT:
+    comment: "..."
+  */
+
+  if(
+    typeof item.comment ===
+    'string'
+  ){
+
+    const text =
+      item.comment.trim();
+
+
+    if(
+      text
+    ){
+
+      return [
+        {
+
+          name:
+            item.reviewer ||
+            getReviewer() ||
+            'Reviewer',
+
+          text,
+
+          timestamp:null
+
+        }
+      ];
+
+    }
+
+  }
+
+
+  /*
+    LEGACY FORMAT:
+    reviewerComment: "..."
+  */
+
+  if(
+    typeof item.reviewerComment ===
+    'string'
+  ){
+
+    const text =
+      item.reviewerComment.trim();
+
+
+    if(
+      text
+    ){
+
+      return [
+        {
+
+          name:
+            item.reviewer ||
+            getReviewer() ||
+            'Reviewer',
+
+          text,
+
+          timestamp:null
+
+        }
+      ];
+
+    }
+
+  }
+
+
+  /*
+    LEGACY FORMAT:
+    reviewerComments: [...]
+  */
+
+  if(
+    Array.isArray(
+      item.reviewerComments
+    )
+  ){
+
+    return item.reviewerComments
+      .map(
+        comment => {
+
+          if(
+            typeof comment ===
+            'string'
+          ){
+
+            return {
+
+              name:
+                getReviewer() ||
+                'Reviewer',
+
+              text:
+                comment.trim(),
+
+              timestamp:null
+
+            };
+
+          }
+
+
+          return {
+
+            name:
+              comment?.name ||
+              comment?.reviewer ||
+              getReviewer() ||
+              'Reviewer',
+
+            text:
+              String(
+                comment?.text ??
+                comment?.comment ??
+                ''
+              ).trim(),
+
+            timestamp:
+              comment?.timestamp ||
+              null
+
+          };
+
+        }
+      )
+      .filter(
+        comment =>
+          comment.text
+      );
+
+  }
+
+
+  return [];
+
+}
+
+
+/* =========================================================
+   NORMALIZE PHOTOS
+========================================================= */
+
+function getPhotos(
+  item
+){
+
+  if(
+    !item
+  ){
+
+    return [];
+
+  }
+
+
+  if(
+    Array.isArray(
+      item.photos
+    )
+  ){
+
+    return item.photos.filter(
+      photo =>
+        Boolean(
+          photo
+        )
+    );
+
+  }
+
+
+  if(
+    typeof item.photo ===
+    'string' &&
+    item.photo.trim()
+  ){
+
+    return [
+      item.photo.trim()
+    ];
+
+  }
+
+
+  return [];
+
+}
+
+
+/* =========================================================
+   NORMALIZE SHIP COMMENTS
+========================================================= */
+
+function getShipComments(
+  item
+){
+
+  if(
+    !item
+  ){
+
+    return [];
+
+  }
+
+
+  if(
+    Array.isArray(
+      item.shipComments
+    )
+  ){
+
+    return item.shipComments
+      .filter(
+        comment =>
+          comment &&
+          String(
+            comment.text ||
+            ''
+          ).trim()
+      );
+
+  }
+
+
+  return [];
+
+}
+
+
+/* =========================================================
    SUMMARY POINT
 ========================================================= */
 
@@ -2075,13 +2104,18 @@ function renderSummaryPoint(
   point
 ){
 
+  const complete =
+    point.followUpNeeded &&
+    point.shipComments.length > 0;
+
+
   return `
 
     <div
       style="
         margin-bottom:12px;
         padding:13px;
-        background:#fff;
+        background:#FFFFFF;
         border:1px solid var(--vv-line);
         border-left:4px solid var(--vv-squid);
         border-radius:8px;
@@ -2105,7 +2139,7 @@ function renderSummaryPoint(
             align-items:center;
             justify-content:center;
             background:var(--vv-red);
-            color:#fff;
+            color:#FFFFFF;
             border-radius:50%;
             font-size:12px;
             font-weight:800;
@@ -2145,9 +2179,19 @@ function renderSummaryPoint(
               "
             >
 
-              <span class="status blue">
+              <span
+                class="status ${
+                  complete
+                    ? 'green'
+                    : 'blue'
+                }"
+              >
 
-                FOLLOW-UP NEEDED FROM SHIP
+                ${
+                  complete
+                    ? 'SHIP FOLLOW-UP COMPLETED'
+                    : 'FOLLOW-UP NEEDED FROM SHIP'
+                }
 
               </span>
 
@@ -2158,18 +2202,14 @@ function renderSummaryPoint(
       }
 
 
-      ${
-        renderReviewerComments(
-          point.comments
-        )
-      }
+      ${renderReviewerComments(
+        point.comments
+      )}
 
 
-      ${
-        renderReviewerPhotos(
-          point.photos
-        )
-      }
+      ${renderReviewerPhotos(
+        point.photos
+      )}
 
 
       ${
@@ -2188,7 +2228,7 @@ function renderSummaryPoint(
 
 
 /* =========================================================
-   REVIEWER COMMENTS
+   REVIEWER COMMENTS HTML
 ========================================================= */
 
 function renderReviewerComments(
@@ -2215,15 +2255,7 @@ function renderReviewerComments(
       "
     >
 
-      <div
-        style="
-          color:var(--vv-squid);
-          font-size:9px;
-          font-weight:800;
-          letter-spacing:.04em;
-          margin-bottom:5px;
-        "
-      >
+      <div class="response-label">
 
         REVIEWER COMMENTS
 
@@ -2235,7 +2267,9 @@ function renderReviewerComments(
           .map(
             comment => `
 
-              <div class="comment">
+              <div
+                class="comment"
+              >
 
                 <strong>
 
@@ -2275,7 +2309,7 @@ function renderReviewerComments(
 
 
 /* =========================================================
-   REVIEWER PHOTOS
+   REVIEWER PHOTOS HTML
 ========================================================= */
 
 function renderReviewerPhotos(
@@ -2302,17 +2336,9 @@ function renderReviewerPhotos(
       "
     >
 
-      <div
-        style="
-          color:var(--vv-squid);
-          font-size:9px;
-          font-weight:800;
-          letter-spacing:.04em;
-          margin-bottom:6px;
-        "
-      >
+      <div class="response-label">
 
-        ATTACHED PHOTOS
+        REVIEWER PHOTOS
 
       </div>
 
@@ -2324,9 +2350,7 @@ function renderReviewerPhotos(
             .map(
               photo => `
 
-                <div
-                  class="response-photo"
-                >
+                <div class="response-photo">
 
                   <img
                     src="${photo}"
@@ -2350,7 +2374,7 @@ function renderReviewerPhotos(
 
 
 /* =========================================================
-   SHIP COMMENTS FOR SUMMARY
+   SHIP COMMENTS HTML
 ========================================================= */
 
 function renderShipComments(
@@ -2370,7 +2394,7 @@ function renderShipComments(
         style="
           margin-top:10px;
           padding:8px 10px;
-          background:#fff8f8;
+          background:#FFF8F8;
           border-left:3px solid var(--vv-red);
           border-radius:6px;
           color:var(--vv-red);
@@ -2505,13 +2529,6 @@ async function loadOpenReports(){
 
         Could not load Open Reports.
 
-        <br><br>
-
-        ${escapeHtml(
-          error?.message ||
-          'Unknown error'
-        )}
-
       </div>
 
     `;
@@ -2563,24 +2580,6 @@ async function loadSubmittedReports(){
       'Submitted Reports:',
       error
     );
-
-
-    container.innerHTML = `
-
-      <div class="empty">
-
-        Could not load Submitted Reports.
-
-        <br><br>
-
-        ${escapeHtml(
-          error?.message ||
-          'Unknown error'
-        )}
-
-      </div>
-
-    `;
 
   }
 
@@ -2701,11 +2700,6 @@ async function loadShipReviewReports(){
                   state[key];
 
 
-                /*
-                  Only checked Follow-Up
-                  points go to the ship.
-                */
-
                 if(
                   item &&
                   item.checked &&
@@ -2722,25 +2716,19 @@ async function loadShipReviewReports(){
                     text,
 
                     comments:
-                      Array.isArray(
-                        item.comments
-                      )
-                        ? item.comments
-                        : [],
+                      getReviewerComments(
+                        item
+                      ),
 
                     photos:
-                      Array.isArray(
-                        item.photos
-                      )
-                        ? item.photos
-                        : [],
+                      getPhotos(
+                        item
+                      ),
 
                     shipComments:
-                      Array.isArray(
-                        item.shipComments
+                      getShipComments(
+                        item
                       )
-                        ? item.shipComments
-                        : []
 
                   });
 
@@ -2805,7 +2793,7 @@ async function loadShipReviewReports(){
   }catch(error){
 
     console.error(
-      'Ship Response:',
+      'Ship Response Reports:',
       error
     );
 
@@ -2871,7 +2859,9 @@ function renderShipResponseGroup(
       </h3>
 
 
-      <div class="report-meta">
+      <div
+        class="report-meta"
+      >
 
         <b>Visit:</b>
 
@@ -2969,9 +2959,7 @@ function renderShipResponsePoint(
 
       <!-- SECTION -->
 
-      <div
-        class="response-section"
-      >
+      <div class="response-section">
 
         ${escapeHtml(
           point.section
@@ -2980,11 +2968,9 @@ function renderShipResponsePoint(
       </div>
 
 
-      <!-- CHECKLIST POINT -->
+      <!-- POINT -->
 
-      <div
-        class="response-text"
-      >
+      <div class="response-text">
 
         ${escapeHtml(
           point.text
@@ -3010,10 +2996,9 @@ function renderShipResponsePoint(
       </div>
 
 
-      <!-- ORIGINAL REVIEWER COMMENTS -->
+      <!-- REVIEWER COMMENTS -->
 
       ${
-        point.comments &&
         point.comments.length > 0
 
           ? `
@@ -3024,9 +3009,7 @@ function renderShipResponsePoint(
               "
             >
 
-              <div
-                class="response-label"
-              >
+              <div class="response-label">
 
                 REVIEWER COMMENTS
 
@@ -3038,7 +3021,9 @@ function renderShipResponsePoint(
                   .map(
                     comment => `
 
-                      <div class="comment">
+                      <div
+                        class="comment"
+                      >
 
                         <strong>
 
@@ -3079,8 +3064,12 @@ function renderShipResponsePoint(
             <div
               style="
                 margin-top:10px;
+                padding:8px 9px;
+                border-left:3px solid var(--vv-line);
+                border-radius:5px;
+                background:#F8F6F9;
                 color:var(--vv-gray);
-                font-size:11px;
+                font-size:10px;
               "
             >
 
@@ -3092,10 +3081,9 @@ function renderShipResponsePoint(
       }
 
 
-      <!-- ORIGINAL REVIEWER PHOTOS -->
+      <!-- REVIEWER PHOTOS -->
 
       ${
-        point.photos &&
         point.photos.length > 0
 
           ? `
@@ -3120,9 +3108,7 @@ function renderShipResponsePoint(
                     .map(
                       photo => `
 
-                        <div
-                          class="response-photo"
-                        >
+                        <div class="response-photo">
 
                           <img
                             src="${photo}"
@@ -3150,7 +3136,6 @@ function renderShipResponsePoint(
       <!-- PREVIOUS SHIP COMMENTS -->
 
       ${
-        point.shipComments &&
         point.shipComments.length > 0
 
           ? `
@@ -3232,7 +3217,9 @@ function renderShipResponsePoint(
       >
 
         <label>
+
           SHIP COMMENT
+
         </label>
 
 
@@ -3337,10 +3324,6 @@ async function handleSubmitShipResponse(
       0;
 
 
-    /*
-      Add the new ship comments.
-    */
-
     inputs.forEach(
       input => {
 
@@ -3387,8 +3370,7 @@ async function handleSubmitShipResponse(
           .shipComments
           .push({
 
-            name:
-              'Ship',
+            name:'Ship',
 
             text,
 
@@ -3418,10 +3400,6 @@ async function handleSubmitShipResponse(
 
     }
 
-
-    /*
-      All follow-up points must be answered.
-    */
 
     const incomplete =
       Object.values(
@@ -3501,14 +3479,6 @@ async function handleSubmitShipResponse(
     );
 
 
-    /*
-      Refresh.
-
-      Because status is now submitted,
-      this report disappears from
-      Ship Response Report.
-    */
-
     await loadShipReviewReports();
 
   }catch(error){
@@ -3533,7 +3503,7 @@ async function handleSubmitShipResponse(
 
 
 /* =========================================================
-   FOLLOW-UP BUTTONS
+   FOLLOW-UP
 ========================================================= */
 
 function bindFollowUpButtons(){
@@ -3548,12 +3518,6 @@ function bindFollowUpButtons(){
 
         generateFollowUpPDF(
           currentSubmittedReport
-        );
-
-      }else{
-
-        showToast(
-          'No submitted report selected.'
         );
 
       }
@@ -3575,7 +3539,7 @@ function bindFollowUpButtons(){
 
 
 /* =========================================================
-   PDF BUTTONS
+   PDF
 ========================================================= */
 
 function bindPDFButtons(){
@@ -3610,10 +3574,6 @@ function bindReportCallbacks(){
 
   setReportCallbacks({
 
-    /*
-      OPEN REPORT → CHECKLIST
-    */
-
     openReport:
       async report => {
 
@@ -3643,10 +3603,6 @@ function bindReportCallbacks(){
       },
 
 
-    /*
-      SUBMITTED REPORT → OVERALL
-    */
-
     viewSummary:
       async report => {
 
@@ -3668,12 +3624,6 @@ function bindReportCallbacks(){
         );
 
 
-        /*
-          This is the important part:
-          Submitted reports do NOT have
-          Send to Ship controls.
-        */
-
         setSummaryMode(
           true
         );
@@ -3685,10 +3635,6 @@ function bindReportCallbacks(){
 
       },
 
-
-    /*
-      SUBMITTED REPORT → FOLLOW UPS
-    */
 
     viewFollowUps:
       async report => {
@@ -3713,10 +3659,6 @@ function bindReportCallbacks(){
 
       },
 
-
-    /*
-      HOME
-    */
 
     showHome:
       () => {
@@ -3815,7 +3757,7 @@ function showToast(
 
 
 /* =========================================================
-   GLOBAL ERROR HANDLERS
+   GLOBAL ERRORS
 ========================================================= */
 
 window.addEventListener(
