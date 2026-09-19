@@ -5,21 +5,21 @@
   pdf.js
   ============================================================
 
-  PDF + PRINT USE THE SAME REPORT TEMPLATE
+  PDF + PRINT REPORT TEMPLATE
 
-  REPORT ORDER:
-
-  1. Virgin Voyages Header
+  REPORT ORDER
+  ------------------------------------------------------------
+  1. Virgin Voyages header
   2. Report Information
      - Ship
      - Visit Dates
      - Reviewer
   3. Report Summary
-  4. Checked Points Only
-  5. Reviewer Comments
-  6. Reviewer Photos
-  7. Follow-Up Status
-  8. Ship Comments / Responses
+  4. Checked checklist points only
+  5. Reviewer comments
+  6. Reviewer photos
+  7. Follow-up status
+  8. Ship comments / responses
 */
 
 
@@ -62,16 +62,14 @@ function escapeHtml(value){
     character => {
 
       const map = {
-
         '&':'&amp;',
         '<':'&lt;',
         '>':'&gt;',
         '"':'&quot;',
         "'":'&#39;'
-
       };
 
-      return map[character];
+      return map[character] || character;
 
     }
   );
@@ -96,7 +94,7 @@ function getJsPDF(){
 
 
 /* ============================================================
-   COMMENT NORMALIZATION
+   REVIEWER COMMENTS
 ============================================================ */
 
 function getReviewerComments(item){
@@ -112,7 +110,6 @@ function getReviewerComments(item){
 
   /*
     Current format:
-
     comments: [
       {
         name,
@@ -179,7 +176,7 @@ function getReviewerComments(item){
 
 
   /*
-    Older single string format.
+    Legacy single string.
   */
 
   if(
@@ -208,7 +205,7 @@ function getReviewerComments(item){
 
 
   /*
-    Older reviewerComment format.
+    Legacy reviewerComment.
   */
 
   if(
@@ -237,7 +234,7 @@ function getReviewerComments(item){
 
 
   /*
-    Older reviewerComments array.
+    Legacy array.
   */
 
   if(
@@ -277,6 +274,7 @@ function getReviewerComments(item){
               safeText(
                 comment?.text ??
                 comment?.comment ??
+                comment?.message ??
                 ''
               ).trim(),
 
@@ -302,7 +300,7 @@ function getReviewerComments(item){
 
 
 /* ============================================================
-   PHOTO NORMALIZATION
+   PHOTOS
 ============================================================ */
 
 function getPhotos(item){
@@ -346,7 +344,7 @@ function getPhotos(item){
 
 
 /* ============================================================
-   SHIP COMMENT NORMALIZATION
+   SHIP COMMENTS
 ============================================================ */
 
 function getShipComments(item){
@@ -364,13 +362,61 @@ function getShipComments(item){
     Array.isArray(item.shipComments)
   ){
 
-    return item.shipComments.filter(
-      comment =>
-        comment &&
-        safeText(
-          comment.text
-        ).trim()
-    );
+    return item.shipComments
+      .filter(
+        comment =>
+          comment &&
+          safeText(
+            comment.text
+          ).trim()
+      )
+      .map(
+        comment => ({
+
+          name:
+            comment.name ||
+            comment.ship ||
+            'Ship',
+
+          text:
+            safeText(
+              comment.text ||
+              ''
+            ).trim(),
+
+          timestamp:
+            comment.timestamp ||
+            null
+
+        })
+      );
+
+  }
+
+
+  /*
+    Legacy ship response string.
+  */
+
+  if(
+    typeof item.shipComment === 'string' &&
+    item.shipComment.trim()
+  ){
+
+    return [
+
+      {
+
+        name:'Ship',
+
+        text:
+          item.shipComment.trim(),
+
+        timestamp:null
+
+      }
+
+    ];
 
   }
 
@@ -417,7 +463,7 @@ function getCheckedPoints(state){
 
 
           /*
-            FINAL REPORT ONLY SHOWS CHECKED ITEMS.
+            Only checked points are included.
           */
 
           if(
@@ -435,10 +481,17 @@ function getCheckedPoints(state){
             key,
 
             section:
-              section.title,
+              section.title ||
+              section.name ||
+              'Section',
 
             text:
               safeText(text),
+
+            followUpNeeded:
+              Boolean(
+                item.followUpNeeded
+              ),
 
             comments:
               getReviewerComments(
@@ -453,11 +506,6 @@ function getCheckedPoints(state){
             shipComments:
               getShipComments(
                 item
-              ),
-
-            followUpNeeded:
-              Boolean(
-                item.followUpNeeded
               )
 
           });
@@ -475,12 +523,10 @@ function getCheckedPoints(state){
 
 
 /* ============================================================
-   GROUP POINTS BY SECTION
+   GROUP POINTS
 ============================================================ */
 
-function groupPoints(
-  points
-){
+function groupPoints(points){
 
   const groups = [];
 
@@ -531,7 +577,7 @@ function groupPoints(
 
 
 /* ============================================================
-   COUNTS
+   TOTAL CHECKLIST POINTS
 ============================================================ */
 
 function getTotalChecklistPoints(){
@@ -561,9 +607,11 @@ function getTotalChecklistPoints(){
 }
 
 
-function getReportCounts(
-  points
-){
+/* ============================================================
+   REPORT COUNTS
+============================================================ */
+
+function getReportCounts(points){
 
   let comments = 0;
 
@@ -640,7 +688,7 @@ function makeFileName(
   date
 ){
 
-  const safeShip =
+  const cleanShip =
     safeText(
       ship ||
       'Ship'
@@ -656,7 +704,7 @@ function makeFileName(
       );
 
 
-  const safeDate =
+  const cleanDate =
     safeText(
       date ||
       'date'
@@ -671,10 +719,10 @@ function makeFileName(
   return {
 
     report:
-      `Ship_Visit_Report_${safeShip}_${safeDate}.pdf`,
+      `Ship_Visit_Report_${cleanShip}_${cleanDate}.pdf`,
 
     followup:
-      `Ship_Visit_Follow_Up_${safeShip}_${safeDate}.pdf`
+      `Ship_Visit_Follow_Up_${cleanShip}_${cleanDate}.pdf`
 
   };
 
@@ -798,7 +846,7 @@ function addImageToPDF(
   }catch(error){
 
     console.warn(
-      'PDF image error:',
+      'Could not add report image:',
       error
     );
 
@@ -878,6 +926,8 @@ export function generatePDF(){
       unit:'pt',
 
       format:'a4',
+
+      orientation:'portrait',
 
       compress:true
 
@@ -1088,21 +1138,23 @@ export function generatePDF(){
 
 
   /* ==========================================================
-     PAGE
+     NEW PAGE
   ========================================================== */
 
   function newPage(){
 
     drawFooter();
 
-
     doc.addPage();
-
 
     drawHeader();
 
   }
 
+
+  /* ==========================================================
+     SPACE
+  ========================================================== */
 
   function ensureSpace(
     amount
@@ -1262,9 +1314,7 @@ export function generatePDF(){
 
 
     doc.text(
-      safeText(
-        label
-      ).toUpperCase(),
+      safeText(label).toUpperCase(),
       margin + 9,
       y
     );
@@ -1302,7 +1352,7 @@ export function generatePDF(){
 
 
   /* ==========================================================
-     SECTION
+     SECTION TITLE
   ========================================================== */
 
   function addSectionTitle(
@@ -1368,7 +1418,7 @@ export function generatePDF(){
 
 
     /*
-      Circle.
+      Checked circle.
     */
 
     doc.setFillColor(
@@ -1432,14 +1482,6 @@ export function generatePDF(){
       Status.
     */
 
-    let status =
-      'CHECKED';
-
-
-    let statusColor =
-      blue;
-
-
     if(
       point.followUpNeeded
     ){
@@ -1448,42 +1490,49 @@ export function generatePDF(){
         point.shipComments.length > 0
       ){
 
-        status =
-          'SHIP FOLLOW-UP COMPLETED';
-
-
-        statusColor =
-          green;
+        addText(
+          'SHIP FOLLOW-UP COMPLETED',
+          {
+            size:7.5,
+            color:green,
+            bold:true,
+            x:margin + 24,
+            width:contentWidth - 24,
+            lineHeight:10
+          }
+        );
 
       }else{
 
-        status =
-          'FOLLOW-UP NEEDED FROM SHIP';
-
-
-        statusColor =
-          blue;
+        addText(
+          'FOLLOW-UP NEEDED FROM SHIP',
+          {
+            size:7.5,
+            color:blue,
+            bold:true,
+            x:margin + 24,
+            width:contentWidth - 24,
+            lineHeight:10
+          }
+        );
 
       }
+
+    }else{
+
+      addText(
+        'CHECKED',
+        {
+          size:7.5,
+          color:blue,
+          bold:true,
+          x:margin + 24,
+          width:contentWidth - 24,
+          lineHeight:10
+        }
+      );
 
     }
-
-
-    y +=
-      2;
-
-
-    addText(
-      status,
-      {
-        size:7.5,
-        color:statusColor,
-        bold:true,
-        x:margin + 24,
-        width:contentWidth - 24,
-        lineHeight:10
-      }
-    );
 
 
     /*
@@ -1564,7 +1613,7 @@ export function generatePDF(){
           );
 
 
-          const result =
+          const image =
             addImageToPDF(
               doc,
               photo,
@@ -1576,11 +1625,11 @@ export function generatePDF(){
 
 
           if(
-            result.height > 0
+            image.height > 0
           ){
 
             y +=
-              result.height +
+              image.height +
               8;
 
           }
@@ -1592,7 +1641,7 @@ export function generatePDF(){
 
 
     /*
-      Follow-up.
+      Ship response.
     */
 
     if(
@@ -1656,6 +1705,10 @@ export function generatePDF(){
     }
 
 
+    /*
+      Separator.
+    */
+
     y +=
       6;
 
@@ -1687,15 +1740,13 @@ export function generatePDF(){
 
 
   /* ==========================================================
-     REPORT
+     BUILD PDF
   ========================================================== */
 
   drawHeader();
 
 
-  /*
-    INFORMATION
-  */
+  /* REPORT INFORMATION */
 
   addText(
     'REPORT INFORMATION',
@@ -1739,9 +1790,7 @@ export function generatePDF(){
     5;
 
 
-  /*
-    SUMMARY
-  */
+  /* REPORT SUMMARY */
 
   addText(
     'REPORT SUMMARY',
@@ -2048,12 +2097,10 @@ export function generatePDF(){
     77;
 
 
-  /*
-    INTRO.
-  */
+  /* DESCRIPTION */
 
   addText(
-    'The report below contains only the checklist points checked during the ship visit, together with reviewer comments, attached photos, follow-up requirements and ship responses.',
+    'The report contains only the checklist points checked during the ship visit, together with reviewer comments, attached photos, follow-up requirements and ship responses.',
     {
       size:8.5,
       color:gray,
@@ -2067,9 +2114,7 @@ export function generatePDF(){
     8;
 
 
-  /*
-    POINTS.
-  */
+  /* POINTS */
 
   if(
     points.length === 0
@@ -2132,7 +2177,7 @@ export function generatePDF(){
 
 /* ============================================================
    PRINT REPORT
-   SAME TEMPLATE AS PDF
+   SAME CONTENT + SAME TEMPLATE
 ============================================================ */
 
 export function printReport(){
@@ -2169,51 +2214,12 @@ export function printReport(){
     );
 
 
-  /*
-    Open print window.
-  */
-
-  const printWindow =
-    window.open(
-      '',
-      '_blank',
-      'width=1000,height=1000'
-    );
-
-
-  if(
-    !printWindow
-  ){
-
-    alert(
-      'Please allow pop-ups to print the report.'
-    );
-
-
-    return false;
-
-  }
-
-
-  /*
-    Generate the EXACT same structure
-    used by the PDF.
-  */
-
   const reportSections =
     groups.length === 0
 
       ? `
 
-        <div
-          style="
-            padding:20px;
-            color:#CC0000;
-            font-size:10px;
-            font-weight:800;
-            text-align:center;
-          "
-        >
+        <div class="empty-report">
 
           No checklist points were checked.
 
@@ -2225,7 +2231,7 @@ export function printReport(){
           .map(
             group => `
 
-              <div>
+              <section class="report-section">
 
                 <div class="section-title">
 
@@ -2247,11 +2253,37 @@ export function printReport(){
                     .join('')
                 }
 
-              </div>
+              </section>
 
             `
           )
           .join('');
+
+
+  /*
+    Open dedicated print window.
+  */
+
+  const printWindow =
+    window.open(
+      '',
+      '_blank',
+      'width=900,height=1100'
+    );
+
+
+  if(
+    !printWindow
+  ){
+
+    alert(
+      'Please allow pop-ups to print the report.'
+    );
+
+
+    return false;
+
+  }
 
 
   const html = `
@@ -2266,20 +2298,30 @@ export function printReport(){
 
 
 <title>
-
-  Ship Visit Report -
-  ${escapeHtml(
+  Ship Visit Report - ${escapeHtml(
     meta.ship ||
     ''
   )}
-
 </title>
 
 
 <style>
 
 /* ==========================================================
-   BASE
+   PAGE
+========================================================== */
+
+@page {
+
+  size:A4 portrait;
+
+  margin:0;
+
+}
+
+
+/* ==========================================================
+   RESET
 ========================================================== */
 
 * {
@@ -2289,8 +2331,13 @@ export function printReport(){
 
 html,
 body {
+
   margin:0;
+
   padding:0;
+
+  width:100%;
+
 }
 
 
@@ -2305,18 +2352,22 @@ body {
     Calibri,
     sans-serif;
 
-  font-size:11px;
+  font-size:10pt;
 
 }
 
 
+/* ==========================================================
+   REPORT
+========================================================== */
+
 .report {
 
-  width:100%;
+  width:210mm;
 
-  max-width:900px;
+  min-height:297mm;
 
-  margin:20px auto;
+  margin:0 auto;
 
   background:#FFFFFF;
 
@@ -2333,9 +2384,10 @@ body {
 
   width:100%;
 
-  height:88px;
+  height:33mm;
 
-  padding:28px 32px;
+  padding:
+    8mm 12mm;
 
   overflow:hidden;
 
@@ -2352,15 +2404,15 @@ body {
 
   position:absolute;
 
-  inset:-120px;
+  inset:-35mm;
 
   background:
     repeating-linear-gradient(
       45deg,
       transparent 0,
-      transparent 36px,
-      rgba(255,255,255,.055) 36px,
-      rgba(255,255,255,.055) 38px
+      transparent 9mm,
+      rgba(255,255,255,.055) 9mm,
+      rgba(255,255,255,.055) 9.5mm
     );
 
   pointer-events:none;
@@ -2379,7 +2431,11 @@ body {
 
 .eyebrow {
 
-  font-size:10px;
+  margin:0 0 2mm;
+
+  color:#FFFFFF;
+
+  font-size:8pt;
 
   line-height:1.2;
 
@@ -2390,15 +2446,13 @@ body {
 }
 
 
-.header h1 {
-
-  margin:7px 0 0;
+.header-title {
 
   color:#FFFFFF;
 
-  font-size:20px;
+  font-size:20pt;
 
-  line-height:1.1;
+  line-height:1.05;
 
   font-weight:800;
 
@@ -2411,7 +2465,8 @@ body {
 
 .body {
 
-  padding:28px 32px 40px;
+  padding:
+    9mm 12mm 12mm;
 
 }
 
@@ -2422,11 +2477,13 @@ body {
 
 .info-title {
 
-  margin-bottom:10px;
+  margin-bottom:3mm;
 
   color:#3C1053;
 
-  font-size:11px;
+  font-size:10pt;
+
+  line-height:1.2;
 
   font-weight:800;
 
@@ -2440,20 +2497,23 @@ body {
   grid-template-columns:
     repeat(3,minmax(0,1fr));
 
-  gap:10px;
+  gap:3mm;
 
-  margin-bottom:23px;
+  margin-bottom:7mm;
 
 }
 
 
 .info-box {
 
-  padding:11px;
+  min-height:17mm;
 
-  border:1px solid #E7E1EA;
+  padding:3mm;
 
-  border-radius:7px;
+  border:
+    .3mm solid #E7E1EA;
+
+  border-radius:2mm;
 
   background:#F8F6F9;
 
@@ -2462,11 +2522,13 @@ body {
 
 .info-label {
 
-  margin-bottom:4px;
+  margin-bottom:1.5mm;
 
   color:#3C1053;
 
-  font-size:7px;
+  font-size:6.5pt;
+
+  line-height:1.1;
 
   font-weight:800;
 
@@ -2481,9 +2543,9 @@ body {
 
   color:#333333;
 
-  font-size:10px;
+  font-size:8.5pt;
 
-  line-height:1.4;
+  line-height:1.35;
 
   font-weight:600;
 
@@ -2496,13 +2558,14 @@ body {
 
 .summary {
 
-  margin-bottom:25px;
+  margin-bottom:7mm;
 
-  padding:15px;
+  padding:4mm;
 
-  border-left:4px solid #E10A0A;
+  border-left:
+    1.2mm solid #E10A0A;
 
-  border-radius:7px;
+  border-radius:2mm;
 
   background:#F8F6F9;
 
@@ -2511,11 +2574,13 @@ body {
 
 .summary-title {
 
-  margin-bottom:10px;
+  margin-bottom:3mm;
 
   color:#3C1053;
 
-  font-size:11px;
+  font-size:10pt;
+
+  line-height:1.2;
 
   font-weight:800;
 
@@ -2529,18 +2594,19 @@ body {
   grid-template-columns:
     repeat(4,minmax(0,1fr));
 
-  gap:8px;
+  gap:2.5mm;
 
 }
 
 
 .summary-item {
 
-  padding:8px;
+  padding:2.5mm;
 
-  border:1px solid #E7E1EA;
+  border:
+    .3mm solid #E7E1EA;
 
-  border-radius:5px;
+  border-radius:1.5mm;
 
   background:#FFFFFF;
 
@@ -2553,7 +2619,9 @@ body {
 
   color:#3C1053;
 
-  font-size:15px;
+  font-size:13pt;
+
+  line-height:1.1;
 
   font-weight:800;
 
@@ -2562,11 +2630,13 @@ body {
 
 .summary-label {
 
-  margin-top:2px;
+  margin-top:1mm;
 
   color:#8A8A8A;
 
-  font-size:6px;
+  font-size:6pt;
+
+  line-height:1.1;
 
   font-weight:800;
 
@@ -2577,9 +2647,11 @@ body {
 
 .followup-summary {
 
-  margin-top:8px;
+  margin-top:2mm;
 
-  font-size:8px;
+  font-size:7pt;
+
+  line-height:1.2;
 
   font-weight:800;
 
@@ -2592,34 +2664,45 @@ body {
 
 .intro {
 
-  margin-bottom:20px;
+  margin-bottom:6mm;
 
   color:#8A8A8A;
 
-  font-size:9px;
+  font-size:7.5pt;
 
-  line-height:1.5;
+  line-height:1.45;
 
 }
 
 
 /* ==========================================================
-   SECTION TITLE
+   SECTIONS
 ========================================================== */
+
+.report-section {
+
+  width:100%;
+
+  margin:0;
+
+}
+
 
 .section-title {
 
-  margin-top:22px;
+  margin:
+    6mm 0 3mm;
 
-  margin-bottom:12px;
+  padding-bottom:2mm;
 
-  padding-bottom:7px;
-
-  border-bottom:2px solid #E10A0A;
+  border-bottom:
+    .6mm solid #E10A0A;
 
   color:#3C1053;
 
-  font-size:13px;
+  font-size:11pt;
+
+  line-height:1.2;
 
   font-weight:800;
 
@@ -2634,15 +2717,17 @@ body {
 
 .point {
 
-  margin-bottom:14px;
+  margin-bottom:3mm;
 
-  padding:14px;
+  padding:3.5mm;
 
-  border:1px solid #E7E1EA;
+  border:
+    .3mm solid #E7E1EA;
 
-  border-left:4px solid #3C1053;
+  border-left:
+    1.2mm solid #3C1053;
 
-  border-radius:8px;
+  border-radius:2mm;
 
   background:#FFFFFF;
 
@@ -2657,18 +2742,12 @@ body {
 
   align-items:flex-start;
 
-  gap:9px;
+  gap:2.5mm;
 
 }
 
 
 .check {
-
-  width:22px;
-
-  height:22px;
-
-  flex:0 0 22px;
 
   display:flex;
 
@@ -2676,13 +2755,23 @@ body {
 
   justify-content:center;
 
+  width:6mm;
+
+  height:6mm;
+
+  min-width:6mm;
+
+  min-height:6mm;
+
   border-radius:50%;
 
   background:#E10A0A;
 
   color:#FFFFFF;
 
-  font-size:12px;
+  font-size:7pt;
+
+  line-height:1;
 
   font-weight:800;
 
@@ -2691,11 +2780,13 @@ body {
 
 .point-text {
 
+  flex:1;
+
   color:#333333;
 
-  font-size:10px;
+  font-size:8.5pt;
 
-  line-height:1.45;
+  line-height:1.4;
 
   font-weight:700;
 
@@ -2710,13 +2801,14 @@ body {
 
   display:inline-block;
 
-  margin-top:8px;
+  margin-top:2mm;
 
-  padding:5px 8px;
+  padding:
+    1.3mm 2mm;
 
   border-radius:999px;
 
-  font-size:7px;
+  font-size:6pt;
 
   line-height:1;
 
@@ -2749,13 +2841,15 @@ body {
 
 .label {
 
-  margin-top:12px;
+  margin-top:3mm;
 
-  margin-bottom:5px;
+  margin-bottom:1.2mm;
 
   color:#3C1053;
 
-  font-size:7px;
+  font-size:6pt;
+
+  line-height:1.2;
 
   font-weight:800;
 
@@ -2765,24 +2859,35 @@ body {
 
 
 /* ==========================================================
-   COMMENT
+   REVIEWER COMMENT
 ========================================================== */
 
 .comment {
 
-  margin-top:5px;
+  margin-bottom:1.5mm;
 
-  padding:8px 10px;
+  padding:
+    2mm 2.5mm;
 
-  border-left:3px solid #3C1053;
+  border-left:
+    .8mm solid #3C1053;
 
-  border-radius:5px;
+  border-radius:1.2mm;
 
   background:#F8F5FA;
 
-  font-size:9px;
+  color:#333333;
 
-  line-height:1.5;
+  font-size:7.5pt;
+
+  line-height:1.45;
+
+}
+
+
+.comment strong {
+
+  color:#3C1053;
 
 }
 
@@ -2797,22 +2902,27 @@ body {
 
   flex-wrap:wrap;
 
-  gap:8px;
+  gap:2.5mm;
 
 }
 
 
 .photo {
 
-  width:145px;
+  width:38mm;
 
-  max-height:145px;
+  max-width:38mm;
+
+  max-height:38mm;
 
   overflow:hidden;
 
-  border:1px solid #E7E1EA;
+  border:
+    .3mm solid #E7E1EA;
 
-  border-radius:6px;
+  border-radius:1.5mm;
+
+  background:#F4F2F5;
 
 }
 
@@ -2825,7 +2935,7 @@ body {
 
   height:auto;
 
-  max-height:145px;
+  max-height:38mm;
 
   object-fit:contain;
 
@@ -2833,39 +2943,72 @@ body {
 
 
 /* ==========================================================
-   SHIP COMMENT
+   SHIP RESPONSE
 ========================================================== */
 
 .ship-comment {
 
-  margin-top:5px;
+  margin-bottom:1.5mm;
 
-  padding:8px 10px;
+  padding:
+    2mm 2.5mm;
 
-  border-left:3px solid #008A52;
+  border-left:
+    .8mm solid #008A52;
 
-  border-radius:5px;
+  border-radius:1.2mm;
 
   background:#EAF8F0;
 
-  font-size:9px;
+  color:#333333;
 
-  line-height:1.5;
+  font-size:7.5pt;
+
+  line-height:1.45;
+
+}
+
+
+.ship-comment strong {
+
+  color:#008A52;
+
+}
+
+
+.no-response {
+
+  margin-top:2mm;
+
+  color:#CC0000;
+
+  font-size:6.5pt;
+
+  line-height:1.2;
+
+  font-weight:800;
 
 }
 
 
 /* ==========================================================
-   NO RESPONSE
+   EMPTY
 ========================================================== */
 
-.no-response {
+.empty-report {
 
-  margin-top:7px;
+  padding:8mm;
+
+  border:
+    .3mm solid #E7E1EA;
+
+  border-radius:2mm;
 
   color:#CC0000;
 
-  font-size:8px;
+  text-align:center;
+
+  font-size:8pt;
 
   font-weight:800;
 
@@ -2878,17 +3021,18 @@ body {
 
 .footer {
 
-  margin-top:25px;
+  margin-top:8mm;
 
-  padding-top:10px;
+  padding-top:3mm;
 
-  border-top:1px solid #E7E1EA;
+  border-top:
+    .3mm solid #E7E1EA;
 
   color:#8A8A8A;
 
-  font-size:8px;
+  font-size:6pt;
 
-  line-height:1.4;
+  line-height:1.3;
 
   text-align:center;
 
@@ -2899,19 +3043,23 @@ body {
    PRINT
 ========================================================== */
 
-@page {
-
-  size:A4;
-
-  margin:12mm;
-
-}
-
-
 @media print {
+
+  @page {
+
+    size:A4 portrait;
+
+    margin:12mm;
+
+  }
+
 
   html,
   body {
+
+    width:210mm;
+
+    min-height:297mm;
 
     background:#FFFFFF;
 
@@ -2920,9 +3068,11 @@ body {
 
   .report {
 
+    width:100%;
+
     max-width:none;
 
-    width:100%;
+    min-height:auto;
 
     margin:0;
 
@@ -2963,7 +3113,9 @@ body {
 <div class="report">
 
 
-  <!-- HEADER -->
+  <!-- ========================================================
+       HEADER
+  ========================================================= -->
 
   <div class="header">
 
@@ -2976,18 +3128,20 @@ body {
       </div>
 
 
-      <h1>
+      <div class="header-title">
 
         Ship Visit Report
 
-      </h1>
+      </div>
 
     </div>
 
   </div>
 
 
-  <!-- BODY -->
+  <!-- ========================================================
+       BODY
+  ========================================================= -->
 
   <div class="body">
 
@@ -3077,7 +3231,7 @@ body {
     </div>
 
 
-    <!-- SUMMARY -->
+    <!-- REPORT SUMMARY -->
 
     <div class="summary">
 
@@ -3201,15 +3355,16 @@ body {
 
     <div class="intro">
 
-      The report below contains only the checklist
-      points checked during the ship visit, together
-      with reviewer comments, attached photos,
-      follow-up requirements and ship responses.
+      The report contains only the checklist
+      points checked during the ship visit,
+      together with reviewer comments,
+      attached photos, follow-up requirements
+      and ship responses.
 
     </div>
 
 
-    <!-- POINTS -->
+    <!-- REPORT SECTIONS -->
 
     ${reportSections}
 
@@ -3239,6 +3394,7 @@ body {
 
   </div>
 
+
 </div>
 
 
@@ -3254,7 +3410,7 @@ window.addEventListener(
         window.print();
 
       },
-      350
+      500
     );
 
   }
@@ -3301,7 +3457,9 @@ function renderPrintPoint(
       <div class="point-title">
 
         <div class="check">
+
           ✓
+
         </div>
 
 
@@ -3431,7 +3589,9 @@ function renderPrintPoint(
                       <div class="photo">
 
                         <img
-                          src="${photo}"
+                          src="${escapeHtml(
+                            photo
+                          )}"
                           alt="Reviewer photo"
                         >
 
@@ -3596,11 +3756,14 @@ export function generateFollowUpPDF(
     {};
 
 
-  const points =
+  const allPoints =
     getCheckedPoints(
       state
-    )
-    .filter(
+    );
+
+
+  const points =
+    allPoints.filter(
       point =>
         point.followUpNeeded
     );
@@ -3612,6 +3775,8 @@ export function generateFollowUpPDF(
       unit:'pt',
 
       format:'a4',
+
+      orientation:'portrait',
 
       compress:true
 
@@ -3645,6 +3810,10 @@ export function generateFollowUpPDF(
 
   const green =
     [0,138,82];
+
+
+  const blue =
+    [36,99,184];
 
 
   const gray =
@@ -3788,11 +3957,11 @@ export function generateFollowUpPDF(
 
 
   function ensureSpace(
-    height
+    amount
   ){
 
     if(
-      y + height >
+      y + amount >
       H - 38
     ){
 
@@ -3962,7 +4131,7 @@ export function generateFollowUpPDF(
         8,
         point.shipComments.length > 0
           ? green
-          : red,
+          : blue,
         margin,
         width,
         true
