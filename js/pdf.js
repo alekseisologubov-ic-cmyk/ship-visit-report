@@ -7,17 +7,22 @@
 
   FINAL REPORT FORMAT
 
-  1. Virgin Voyages header
-  2. Ship name
-  3. Visit dates
+  1. Ship Visit Report
+  2. Ship
+  3. Visit Dates
   4. Reviewer
-  5. Report summary
+  5. Report Summary
   6. Checked checklist points only
   7. Reviewer comments
   8. Reviewer photos
   9. Follow-up status
   10. Ship comments / responses
-  11. Consistent PDF + Print layout
+
+  Functions used by main.js:
+
+    generatePDF()
+    generateFollowUpPDF()
+    printReport()
 */
 
 
@@ -33,75 +38,86 @@ import {
 } from './state.js';
 
 
-/* =========================================================
-   LOAD jsPDF
-========================================================= */
+/* ============================================================
+   BASIC HELPERS
+============================================================ */
 
+
+/**
+ * Convert anything to safe text.
+ */
+function safeText(value){
+
+  if(
+    value === null ||
+    value === undefined
+  ){
+
+    return '';
+
+  }
+
+  return String(value);
+
+}
+
+
+/**
+ * Escape HTML for print output.
+ */
+function escapeHtml(value){
+
+  return safeText(value).replace(
+    /[&<>"']/g,
+    character => {
+
+      const map = {
+
+        '&':'&amp;',
+        '<':'&lt;',
+        '>':'&gt;',
+        '"':'&quot;',
+        "'":'&#39;'
+
+      };
+
+      return map[character];
+
+    }
+  );
+
+}
+
+
+/**
+ * Get jsPDF constructor.
+ */
 function getJsPDF(){
 
   if(
     window.jspdf &&
-    window.jspdf.jsPDF
+    typeof window.jspdf.jsPDF === 'function'
   ){
 
     return window.jspdf.jsPDF;
 
   }
 
-
   return null;
 
 }
 
 
-/* =========================================================
-   SAFE TEXT
-========================================================= */
-
-function safeText(
-  value
-){
-
-  return String(
-    value ?? ''
-  );
-
-}
+/* ============================================================
+   COMMENT NORMALIZATION
+============================================================ */
 
 
-/* =========================================================
-   HTML ESCAPE
-========================================================= */
-
-function escapeHtml(
-  value
-){
-
-  return safeText(
-    value
-  ).replace(
-    /[&<>"']/g,
-    character => ({
-
-      '&':'&amp;',
-      '<':'&lt;',
-      '>':'&gt;',
-      '"':'&quot;',
-      "'":'&#39;'
-
-    }[character])
-  );
-
-}
-
-
-/* =========================================================
-   NORMALIZE COMMENTS
-========================================================= */
-
-function getReviewerComments(
-  item
-){
+/**
+ * Get reviewer comments from the current
+ * report data structure.
+ */
+function getReviewerComments(item){
 
   if(
     !item
@@ -112,56 +128,80 @@ function getReviewerComments(
   }
 
 
+  /*
+    Current format:
+
+    comments: [
+      {
+        name: "...",
+        text: "...",
+        timestamp: "..."
+      }
+    ]
+  */
+
   if(
-    Array.isArray(
-      item.comments
-    )
+    Array.isArray(item.comments)
   ){
 
     return item.comments
       .filter(
         comment => {
 
+          if(
+            !comment
+          ){
+
+            return false;
+
+          }
+
+
           const text =
-            comment?.text ??
-            comment?.comment ??
-            comment?.message ??
+            comment.text ??
+            comment.comment ??
+            comment.message ??
             '';
 
 
           return Boolean(
-            safeText(
-              text
-            ).trim()
+            safeText(text).trim()
           );
 
         }
       )
       .map(
-        comment => ({
+        comment => {
 
-          name:
-            comment?.name ||
-            comment?.reviewer ||
-            'Reviewer',
+          return {
 
-          text:
-            safeText(
-              comment?.text ??
-              comment?.comment ??
-              comment?.message ??
-              ''
-            ).trim()
+            name:
+              comment.name ||
+              comment.reviewer ||
+              'Reviewer',
 
-        })
+            text:
+              safeText(
+                comment.text ??
+                comment.comment ??
+                comment.message ??
+                ''
+              ).trim()
+
+          };
+
+        }
       );
 
   }
 
 
+  /*
+    Legacy single comment.
+  */
+
   if(
-    typeof item.comment ===
-    'string' &&
+    typeof item.comment === 'string' &&
     item.comment.trim()
   ){
 
@@ -169,7 +209,9 @@ function getReviewerComments(
 
       {
 
-        name:'Reviewer',
+        name:
+          item.reviewer ||
+          'Reviewer',
 
         text:
           item.comment.trim()
@@ -181,9 +223,12 @@ function getReviewerComments(
   }
 
 
+  /*
+    Legacy reviewerComment.
+  */
+
   if(
-    typeof item.reviewerComment ===
-    'string' &&
+    typeof item.reviewerComment === 'string' &&
     item.reviewerComment.trim()
   ){
 
@@ -191,7 +236,9 @@ function getReviewerComments(
 
       {
 
-        name:'Reviewer',
+        name:
+          item.reviewer ||
+          'Reviewer',
 
         text:
           item.reviewerComment.trim()
@@ -203,18 +250,70 @@ function getReviewerComments(
   }
 
 
+  /*
+    Legacy reviewerComments array.
+  */
+
+  if(
+    Array.isArray(item.reviewerComments)
+  ){
+
+    return item.reviewerComments
+      .map(
+        comment => {
+
+          if(
+            typeof comment === 'string'
+          ){
+
+            return {
+
+              name:'Reviewer',
+
+              text:
+                comment.trim()
+
+            };
+
+          }
+
+
+          return {
+
+            name:
+              comment?.name ||
+              comment?.reviewer ||
+              'Reviewer',
+
+            text:
+              safeText(
+                comment?.text ??
+                comment?.comment ??
+                ''
+              ).trim()
+
+          };
+
+        }
+      )
+      .filter(
+        comment =>
+          comment.text
+      );
+
+  }
+
+
   return [];
 
 }
 
 
-/* =========================================================
-   PHOTOS
-========================================================= */
+/* ============================================================
+   PHOTO NORMALIZATION
+============================================================ */
 
-function getPhotos(
-  item
-){
+function getPhotos(item){
 
   if(
     !item
@@ -226,24 +325,19 @@ function getPhotos(
 
 
   if(
-    Array.isArray(
-      item.photos
-    )
+    Array.isArray(item.photos)
   ){
 
     return item.photos.filter(
       photo =>
-        Boolean(
-          photo
-        )
+        Boolean(photo)
     );
 
   }
 
 
   if(
-    typeof item.photo ===
-    'string' &&
+    typeof item.photo === 'string' &&
     item.photo.trim()
   ){
 
@@ -259,13 +353,11 @@ function getPhotos(
 }
 
 
-/* =========================================================
+/* ============================================================
    SHIP COMMENTS
-========================================================= */
+============================================================ */
 
-function getShipComments(
-  item
-){
+function getShipComments(item){
 
   if(
     !item
@@ -277,19 +369,16 @@ function getShipComments(
 
 
   if(
-    Array.isArray(
-      item.shipComments
-    )
+    Array.isArray(item.shipComments)
   ){
 
-    return item.shipComments
-      .filter(
-        comment =>
-          comment &&
-          safeText(
-            comment.text
-          ).trim()
-      );
+    return item.shipComments.filter(
+      comment =>
+        comment &&
+        safeText(
+          comment.text
+        ).trim()
+    );
 
   }
 
@@ -299,13 +388,11 @@ function getShipComments(
 }
 
 
-/* =========================================================
-   CHECKED POINTS
-========================================================= */
+/* ============================================================
+   COLLECT CHECKED POINTS
+============================================================ */
 
-function getCheckedPoints(
-  state
-){
+function getCheckedPoints(state){
 
   const points = [];
 
@@ -313,9 +400,19 @@ function getCheckedPoints(
   SECTIONS.forEach(
     section => {
 
+      if(
+        !section ||
+        !Array.isArray(section.items)
+      ){
+
+        return;
+
+      }
+
+
       section.items.forEach(
         (
-          itemText,
+          text,
           index
         ) => {
 
@@ -326,6 +423,11 @@ function getCheckedPoints(
           const item =
             state[key];
 
+
+          /*
+            Only checked items belong in
+            the final report.
+          */
 
           if(
             !item ||
@@ -345,9 +447,14 @@ function getCheckedPoints(
               section.title,
 
             text:
-              itemText,
+              safeText(text),
 
-            item,
+            checked:true,
+
+            followUpNeeded:
+              Boolean(
+                item.followUpNeeded
+              ),
 
             comments:
               getReviewerComments(
@@ -362,11 +469,6 @@ function getCheckedPoints(
             shipComments:
               getShipComments(
                 item
-              ),
-
-            followUpNeeded:
-              Boolean(
-                item.followUpNeeded
               )
 
           });
@@ -383,78 +485,91 @@ function getCheckedPoints(
 }
 
 
-/* =========================================================
+/* ============================================================
    COUNTS
-========================================================= */
+============================================================ */
 
-function getCounts(
-  state,
-  checkedPoints
-){
+function getTotalChecklistPoints(){
 
-  let total =
-    0;
+  let total = 0;
 
 
   SECTIONS.forEach(
     section => {
 
-      total +=
-        section.items.length;
+      if(
+        section &&
+        Array.isArray(section.items)
+      ){
+
+        total +=
+          section.items.length;
+
+      }
 
     }
   );
 
 
-  const checked =
-    checkedPoints.length;
+  return total;
+
+}
 
 
-  const comments =
-    checkedPoints.reduce(
-      (
-        total,
-        point
-      ) =>
-        total +
-        point.comments.length +
-        point.shipComments.length,
-      0
-    );
+function getReportCounts(
+  points
+){
+
+  let comments = 0;
+
+  let photos = 0;
+
+  let followUps = 0;
+
+  let completedFollowUps = 0;
 
 
-  const photos =
-    checkedPoints.reduce(
-      (
-        total,
-        point
-      ) =>
-        total +
-        point.photos.length,
-      0
-    );
+  points.forEach(
+    point => {
+
+      comments +=
+        point.comments.length;
+
+      photos +=
+        point.photos.length;
 
 
-  const followUps =
-    checkedPoints.filter(
-      point =>
+      if(
         point.followUpNeeded
-    ).length;
+      ){
+
+        followUps++;
 
 
-  const completedFollowUps =
-    checkedPoints.filter(
-      point =>
-        point.followUpNeeded &&
-        point.shipComments.length > 0
-    ).length;
+        if(
+          point.shipComments.length > 0
+        ){
+
+          completedFollowUps++;
+
+          comments +=
+            point.shipComments.length;
+
+        }
+
+      }
+
+    }
+  );
 
 
   return {
 
-    total,
+    total:
+      getTotalChecklistPoints(),
 
-    checked,
+    checked:
+      points.length,
 
     comments,
 
@@ -469,42 +584,59 @@ function getCounts(
 }
 
 
-/* =========================================================
-   POINT STATUS
-========================================================= */
+/* ============================================================
+   SAFE FILE NAME
+============================================================ */
 
-function getPointStatus(
-  point
+function makeFileName(
+  ship,
+  date
 ){
 
-  if(
-    point.followUpNeeded
-  ){
-
-    if(
-      point.shipComments.length > 0
-    ){
-
-      return 'FOLLOW-UP COMPLETED';
-
-    }
-
-
-    return 'FOLLOW-UP NEEDED FROM SHIP';
-
-  }
+  const safeShip =
+    safeText(
+      ship || 'Ship'
+    )
+      .trim()
+      .replace(
+        /\s+/g,
+        '_'
+      )
+      .replace(
+        /[^a-zA-Z0-9_-]/g,
+        ''
+      );
 
 
-  return 'CHECKED';
+  const safeDate =
+    safeText(
+      date || 'date'
+    )
+      .trim()
+      .replace(
+        /[^0-9-]/g,
+        ''
+      );
+
+
+  return {
+
+    report:
+      `Ship_Visit_Report_${safeShip}_${safeDate}.pdf`,
+
+    followup:
+      `Ship_Visit_Follow_Up_${safeShip}_${safeDate}.pdf`
+
+  };
 
 }
 
 
-/* =========================================================
+/* ============================================================
    PDF IMAGE
-========================================================= */
+============================================================ */
 
-function addPdfImage(
+function addImageToPDF(
   doc,
   source,
   x,
@@ -565,12 +697,12 @@ function addPdfImage(
 
 
       if(
-        height >
-        maxHeight
+        height > maxHeight
       ){
 
         height =
           maxHeight;
+
 
         width =
           height *
@@ -581,78 +713,80 @@ function addPdfImage(
     }
 
 
-    doc.addImage(
-      source,
-      'JPEG',
-      x,
-      y,
-      width,
-      height
-    );
-
-
-    return {
-
-      width,
-
-      height
-
-    };
-
-  }catch(error){
-
     /*
-      Some browser-generated images can
-      still be inserted without image
-      properties. Try PNG next.
+      Use JPEG first.
     */
 
     try{
 
       doc.addImage(
         source,
-        'PNG',
+        'JPEG',
         x,
         y,
-        maxWidth,
-        maxHeight
+        width,
+        height
       );
 
 
       return {
 
-        width:maxWidth,
+        width,
 
-        height:maxHeight
+        height
 
       };
 
-    }catch(secondError){
+    }catch(jpegError){
 
-      console.error(
-        'PDF image error:',
-        secondError
+      /*
+        Try PNG if JPEG fails.
+      */
+
+      doc.addImage(
+        source,
+        'PNG',
+        x,
+        y,
+        width,
+        height
       );
 
 
       return {
 
-        width:0,
+        width,
 
-        height:0
+        height
 
       };
 
     }
+
+  }catch(error){
+
+    console.warn(
+      'Could not add image to PDF:',
+      error
+    );
+
+
+    return {
+
+      width:0,
+
+      height:0
+
+    };
 
   }
 
 }
 
 
-/* =========================================================
+/* ============================================================
    GENERATE PDF
-========================================================= */
+============================================================ */
 
 export function generatePDF(){
 
@@ -675,11 +809,11 @@ export function generatePDF(){
 
 
   const meta =
-    getMeta();
+    getMeta() || {};
 
 
   const state =
-    getState();
+    getState() || {};
 
 
   const reviewer =
@@ -688,20 +822,15 @@ export function generatePDF(){
     'Reviewer';
 
 
-  /*
-    ONLY CHECKED POINTS
-  */
-
-  const checkedPoints =
+  const points =
     getCheckedPoints(
       state
     );
 
 
   const counts =
-    getCounts(
-      state,
-      checkedPoints
+    getReportCounts(
+      points
     );
 
 
@@ -718,13 +847,11 @@ export function generatePDF(){
 
 
   const pageWidth =
-    doc.internal.pageSize
-      .getWidth();
+    doc.internal.pageSize.getWidth();
 
 
   const pageHeight =
-    doc.internal.pageSize
-      .getHeight();
+    doc.internal.pageSize.getHeight();
 
 
   const margin =
@@ -735,10 +862,6 @@ export function generatePDF(){
     pageWidth -
     margin * 2;
 
-
-  /*
-    Virgin Voyages colors.
-  */
 
   const squid =
     [60,16,83];
@@ -768,20 +891,19 @@ export function generatePDF(){
     [248,246,249];
 
 
-  let y =
-    0;
+  let y = 0;
 
 
-  /* =======================================================
+  /* ==========================================================
      HEADER
-  ======================================================= */
+  ========================================================== */
 
-  function header(
-    title = 'Ship Visit Report'
-  ){
+  function drawHeader(){
 
     doc.setFillColor(
-      ...squid
+      squid[0],
+      squid[1],
+      squid[2]
     );
 
 
@@ -795,14 +917,13 @@ export function generatePDF(){
 
 
     /*
-      Simple diagonal Virgin-style
-      background detail.
+      Diagonal decorative lines.
     */
 
     doc.setDrawColor(
-      95,
-      45,
-      118
+      92,
+      44,
+      115
     );
 
 
@@ -812,9 +933,9 @@ export function generatePDF(){
 
 
     for(
-      let x = -100;
-      x < pageWidth + 100;
-      x += 35
+      let x = -120;
+      x < pageWidth + 120;
+      x += 38
     ){
 
       doc.line(
@@ -858,9 +979,9 @@ export function generatePDF(){
 
 
     doc.text(
-      title,
+      'Ship Visit Report',
       margin,
-      54
+      53
     );
 
 
@@ -870,14 +991,16 @@ export function generatePDF(){
   }
 
 
-  /* =======================================================
+  /* ==========================================================
      FOOTER
-  ======================================================= */
+  ========================================================== */
 
-  function footer(){
+  function drawFooter(){
 
     doc.setFillColor(
-      ...dark
+      dark[0],
+      dark[1],
+      dark[2]
     );
 
 
@@ -904,19 +1027,21 @@ export function generatePDF(){
 
 
     doc.setFontSize(
-      7.5
+      7
     );
 
 
     doc.text(
-      'INTERNAL USE ONLY',
+      'Virgin Voyages — Ship Visit Report',
       margin,
       pageHeight - 9
     );
 
 
     doc.text(
-      `${meta.ship || ''} • ${meta.dateOn || ''}`,
+      safeText(
+        meta.ship || ''
+      ),
       pageWidth - margin,
       pageHeight - 9,
       {
@@ -927,33 +1052,33 @@ export function generatePDF(){
   }
 
 
-  /* =======================================================
+  /* ==========================================================
      NEW PAGE
-  ======================================================= */
+  ========================================================== */
 
   function newPage(){
 
-    footer();
+    drawFooter();
 
 
     doc.addPage();
 
 
-    header();
+    drawHeader();
 
   }
 
 
-  /* =======================================================
-     SPACE
-  ======================================================= */
+  /* ==========================================================
+     CHECK SPACE
+  ========================================================== */
 
   function ensureSpace(
-    amount
+    height
   ){
 
     if(
-      y + amount >
+      y + height >
       pageHeight - 38
     ){
 
@@ -964,9 +1089,9 @@ export function generatePDF(){
   }
 
 
-  /* =======================================================
+  /* ==========================================================
      TEXT
-  ======================================================= */
+  ========================================================== */
 
   function addText(
     value,
@@ -1001,7 +1126,7 @@ export function generatePDF(){
 
     const lineHeight =
       options.lineHeight ??
-      (size + 4);
+      13;
 
 
     const lines =
@@ -1027,7 +1152,9 @@ export function generatePDF(){
 
 
     doc.setTextColor(
-      ...color
+      color[0],
+      color[1],
+      color[2]
     );
 
 
@@ -1052,32 +1179,27 @@ export function generatePDF(){
       }
     );
 
-
-    return lines.length;
-
   }
 
 
-  /* =======================================================
-     LABEL / VALUE FIELD
-  ======================================================= */
+  /* ==========================================================
+     INFORMATION BOX
+  ========================================================== */
 
-  function addInfoField(
+  function addInfoBox(
     label,
     value
   ){
 
     ensureSpace(
-      35
+      38
     );
 
 
-    const boxHeight =
-      30;
-
-
     doc.setFillColor(
-      ...light
+      light[0],
+      light[1],
+      light[2]
     );
 
 
@@ -1085,15 +1207,10 @@ export function generatePDF(){
       margin,
       y - 13,
       contentWidth,
-      boxHeight,
+      31,
       5,
       5,
       'F'
-    );
-
-
-    doc.setTextColor(
-      ...squid
     );
 
 
@@ -1104,12 +1221,21 @@ export function generatePDF(){
 
 
     doc.setFontSize(
-      7.5
+      7
+    );
+
+
+    doc.setTextColor(
+      squid[0],
+      squid[1],
+      squid[2]
     );
 
 
     doc.text(
-      label.toUpperCase(),
+      safeText(
+        label
+      ).toUpperCase(),
       margin + 9,
       y
     );
@@ -1122,12 +1248,14 @@ export function generatePDF(){
 
 
     doc.setFontSize(
-      9.5
+      9
     );
 
 
     doc.setTextColor(
-      ...dark
+      dark[0],
+      dark[1],
+      dark[2]
     );
 
 
@@ -1135,20 +1263,20 @@ export function generatePDF(){
       safeText(
         value
       ),
-      margin + 88,
+      margin + 95,
       y
     );
 
 
     y +=
-      34;
+      36;
 
   }
 
 
-  /* =======================================================
+  /* ==========================================================
      SECTION TITLE
-  ======================================================= */
+  ========================================================== */
 
   function addSectionTitle(
     title
@@ -1160,25 +1288,27 @@ export function generatePDF(){
 
 
     doc.setDrawColor(
-      ...red
+      red[0],
+      red[1],
+      red[2]
     );
 
 
     doc.setLineWidth(
-      1.2
+      1.3
     );
 
 
     doc.line(
       margin,
       y,
-      margin + 45,
+      margin + 50,
       y
     );
 
 
     y +=
-      14;
+      15;
 
 
     addText(
@@ -1186,7 +1316,8 @@ export function generatePDF(){
       {
         size:12,
         color:squid,
-        bold:true
+        bold:true,
+        width:contentWidth
       }
     );
 
@@ -1197,39 +1328,16 @@ export function generatePDF(){
   }
 
 
-  /* =======================================================
-     POINT
-  ======================================================= */
+  /* ==========================================================
+     CHECKED POINT
+  ========================================================== */
 
   function addPoint(
     point
   ){
 
-    /*
-      Estimate space before beginning.
-    */
-
     ensureSpace(
-      55
-    );
-
-
-    const startY =
-      y;
-
-
-    /*
-      Point border box is calculated after
-      content is written.
-    */
-
-    doc.setDrawColor(
-      ...squid
-    );
-
-
-    doc.setLineWidth(
-      0.7
+      65
     );
 
 
@@ -1238,7 +1346,9 @@ export function generatePDF(){
     */
 
     doc.setFillColor(
-      ...red
+      red[0],
+      red[1],
+      red[2]
     );
 
 
@@ -1247,13 +1357,6 @@ export function generatePDF(){
       y - 3,
       8,
       'F'
-    );
-
-
-    doc.setTextColor(
-      255,
-      255,
-      255
     );
 
 
@@ -1268,15 +1371,22 @@ export function generatePDF(){
     );
 
 
+    doc.setTextColor(
+      255,
+      255,
+      255
+    );
+
+
     doc.text(
       '✓',
-      margin + 6.3,
+      margin + 6.2,
       y
     );
 
 
     /*
-      Checklist text.
+      Point text.
     */
 
     addText(
@@ -1296,34 +1406,39 @@ export function generatePDF(){
       Status.
     */
 
-    const status =
-      getPointStatus(
-        point
-      );
+    let status =
+      'CHECKED';
 
 
     let statusColor =
-      gray;
+      blue;
 
 
     if(
-      status ===
-      'FOLLOW-UP NEEDED FROM SHIP'
+      point.followUpNeeded
     ){
 
-      statusColor =
-        red;
+      if(
+        point.shipComments.length > 0
+      ){
 
-    }
+        status =
+          'SHIP FOLLOW-UP COMPLETED';
 
 
-    if(
-      status ===
-      'FOLLOW-UP COMPLETED'
-    ){
+        statusColor =
+          green;
 
-      statusColor =
-        green;
+      }else{
+
+        status =
+          'FOLLOW-UP NEEDED FROM SHIP';
+
+
+        statusColor =
+          blue;
+
+      }
 
     }
 
@@ -1335,11 +1450,12 @@ export function generatePDF(){
     addText(
       status,
       {
-        size:7.8,
+        size:7.5,
         color:statusColor,
         bold:true,
         x:margin + 24,
-        width:contentWidth - 24
+        width:contentWidth - 24,
+        lineHeight:11
       }
     );
 
@@ -1359,11 +1475,12 @@ export function generatePDF(){
       addText(
         'REVIEWER COMMENTS',
         {
-          size:7.7,
+          size:7.5,
           color:squid,
           bold:true,
           x:margin + 24,
-          width:contentWidth - 24
+          width:contentWidth - 24,
+          lineHeight:10
         }
       );
 
@@ -1389,7 +1506,7 @@ export function generatePDF(){
 
 
     /*
-      Photos.
+      Reviewer photos.
     */
 
     if(
@@ -1403,11 +1520,12 @@ export function generatePDF(){
       addText(
         'ATTACHED PHOTOS',
         {
-          size:7.7,
+          size:7.5,
           color:squid,
           bold:true,
           x:margin + 24,
-          width:contentWidth - 24
+          width:contentWidth - 24,
+          lineHeight:10
         }
       );
 
@@ -1416,12 +1534,12 @@ export function generatePDF(){
         photo => {
 
           ensureSpace(
-            165
+            160
           );
 
 
           const image =
-            addPdfImage(
+            addImageToPDF(
               doc,
               photo,
               margin + 31,
@@ -1432,7 +1550,7 @@ export function generatePDF(){
 
 
           if(
-            image.height
+            image.height > 0
           ){
 
             y +=
@@ -1448,7 +1566,7 @@ export function generatePDF(){
 
 
     /*
-      Follow-up.
+      Ship responses.
     */
 
     if(
@@ -1459,43 +1577,19 @@ export function generatePDF(){
         3;
 
 
-      addText(
-        point.shipComments.length > 0
-          ? 'SHIP FOLLOW-UP COMPLETED'
-          : 'FOLLOW-UP NEEDED FROM SHIP',
-        {
-          size:8,
-          color:
-            point.shipComments.length > 0
-              ? green
-              : red,
-          bold:true,
-          x:margin + 24,
-          width:contentWidth - 24
-        }
-      );
-
-
-      /*
-        Ship comments.
-      */
-
       if(
         point.shipComments.length > 0
       ){
 
-        y +=
-          2;
-
-
         addText(
           'SHIP COMMENTS / RESPONSES',
           {
-            size:7.7,
+            size:7.5,
             color:green,
             bold:true,
             x:margin + 24,
-            width:contentWidth - 24
+            width:contentWidth - 24,
+            lineHeight:10
           }
         );
 
@@ -1517,21 +1611,37 @@ export function generatePDF(){
           }
         );
 
+      }else{
+
+        addText(
+          'NO SHIP RESPONSE YET',
+          {
+            size:7.8,
+            color:red,
+            bold:true,
+            x:margin + 24,
+            width:contentWidth - 24,
+            lineHeight:10
+          }
+        );
+
       }
 
     }
 
 
     /*
-      Separator.
+      Point separator.
     */
 
     y +=
-      5;
+      6;
 
 
     doc.setDrawColor(
-      ...[225,220,228]
+      225,
+      220,
+      228
     );
 
 
@@ -1549,23 +1659,21 @@ export function generatePDF(){
 
 
     y +=
-      9;
+      10;
 
   }
 
 
-  /* =======================================================
-     START PDF
-  ======================================================= */
+  /* ==========================================================
+     START
+  ========================================================== */
 
-  header(
-    'Ship Visit Report'
-  );
+  drawHeader();
 
 
-  /* =======================================================
+  /* ==========================================================
      REPORT INFORMATION
-  ======================================================= */
+  ========================================================== */
 
   addText(
     'REPORT INFORMATION',
@@ -1578,17 +1686,17 @@ export function generatePDF(){
 
 
   y +=
-    7;
+    8;
 
 
-  addInfoField(
+  addInfoBox(
     'Ship',
     meta.ship ||
     ''
   );
 
 
-  addInfoField(
+  addInfoBox(
     'Visit Dates',
     `${meta.dateOn || ''}` +
     (
@@ -1599,19 +1707,19 @@ export function generatePDF(){
   );
 
 
-  addInfoField(
+  addInfoBox(
     'Reviewer',
     reviewer
   );
 
 
   y +=
-    3;
+    5;
 
 
-  /* =======================================================
+  /* ==========================================================
      SUMMARY
-  ======================================================= */
+  ========================================================== */
 
   addText(
     'REPORT SUMMARY',
@@ -1624,22 +1732,18 @@ export function generatePDF(){
 
 
   y +=
-    4;
-
-
-  const summaryBoxHeight =
-    54;
+    5;
 
 
   ensureSpace(
-    summaryBoxHeight
+    75
   );
 
 
   doc.setFillColor(
-    248,
-    246,
-    249
+    light[0],
+    light[1],
+    light[2]
   );
 
 
@@ -1647,7 +1751,7 @@ export function generatePDF(){
     margin,
     y - 10,
     contentWidth,
-    summaryBoxHeight,
+    67,
     6,
     6,
     'F'
@@ -1670,19 +1774,16 @@ export function generatePDF(){
 
 
   doc.setTextColor(
-    ...dark
+    dark[0],
+    dark[1],
+    dark[2]
   );
 
 
   doc.text(
-    `${counts.checked} of ${counts.total} points checked`,
+    `${counts.checked} of ${counts.total}`,
     margin + 10,
     summaryY
-  );
-
-
-  doc.setTextColor(
-    ...gray
   );
 
 
@@ -1692,24 +1793,178 @@ export function generatePDF(){
   );
 
 
+  doc.setFontSize(
+    7
+  );
+
+
+  doc.setTextColor(
+    gray[0],
+    gray[1],
+    gray[2]
+  );
+
+
   doc.text(
-    `${counts.comments} comments`,
+    'CHECKED POINTS',
     margin + 10,
-    summaryY + 15
+    summaryY + 12
+  );
+
+
+  doc.setFont(
+    'helvetica',
+    'bold'
+  );
+
+
+  doc.setFontSize(
+    9
+  );
+
+
+  doc.setTextColor(
+    dark[0],
+    dark[1],
+    dark[2]
   );
 
 
   doc.text(
-    `${counts.photos} photos`,
-    margin + 150,
-    summaryY + 15
+    String(
+      counts.comments
+    ),
+    margin + 130,
+    summaryY
+  );
+
+
+  doc.setFont(
+    'helvetica',
+    'normal'
+  );
+
+
+  doc.setFontSize(
+    7
+  );
+
+
+  doc.setTextColor(
+    gray[0],
+    gray[1],
+    gray[2]
   );
 
 
   doc.text(
-    `${counts.followUps} follow-up points`,
-    margin + 275,
-    summaryY + 15
+    'COMMENTS',
+    margin + 130,
+    summaryY + 12
+  );
+
+
+  doc.setFont(
+    'helvetica',
+    'bold'
+  );
+
+
+  doc.setFontSize(
+    9
+  );
+
+
+  doc.setTextColor(
+    dark[0],
+    dark[1],
+    dark[2]
+  );
+
+
+  doc.text(
+    String(
+      counts.photos
+    ),
+    margin + 225,
+    summaryY
+  );
+
+
+  doc.setFont(
+    'helvetica',
+    'normal'
+  );
+
+
+  doc.setFontSize(
+    7
+  );
+
+
+  doc.setTextColor(
+    gray[0],
+    gray[1],
+    gray[2]
+  );
+
+
+  doc.text(
+    'PHOTOS',
+    margin + 225,
+    summaryY + 12
+  );
+
+
+  doc.setFont(
+    'helvetica',
+    'bold'
+  );
+
+
+  doc.setFontSize(
+    9
+  );
+
+
+  doc.setTextColor(
+    dark[0],
+    dark[1],
+    dark[2]
+  );
+
+
+  doc.text(
+    String(
+      counts.followUps
+    ),
+    margin + 320,
+    summaryY
+  );
+
+
+  doc.setFont(
+    'helvetica',
+    'normal'
+  );
+
+
+  doc.setFontSize(
+    7
+  );
+
+
+  doc.setTextColor(
+    gray[0],
+    gray[1],
+    gray[2]
+  );
+
+
+  doc.text(
+    'FOLLOW-UPS',
+    margin + 320,
+    summaryY + 12
   );
 
 
@@ -1717,40 +1972,50 @@ export function generatePDF(){
     counts.followUps > 0
   ){
 
-    doc.setTextColor(
-      counts.completedFollowUps ===
-      counts.followUps
-        ? ...green
-        : ...blue
-    );
-
-
     doc.setFont(
       'helvetica',
       'bold'
     );
 
 
+    doc.setFontSize(
+      8
+    );
+
+
+    const followupColor =
+      counts.completedFollowUps ===
+      counts.followUps
+        ? green
+        : blue;
+
+
+    doc.setTextColor(
+      followupColor[0],
+      followupColor[1],
+      followupColor[2]
+    );
+
+
     doc.text(
-      `${counts.completedFollowUps}/${counts.followUps} follow-ups completed`,
+      `Follow-Ups Completed: ${counts.completedFollowUps}/${counts.followUps}`,
       margin + 10,
-      summaryY + 31
+      summaryY + 35
     );
 
   }
 
 
   y +=
-    summaryBoxHeight +
-    12;
+    77;
 
 
-  /* =======================================================
-     INTRO
-  ======================================================= */
+  /* ==========================================================
+     DESCRIPTION
+  ========================================================== */
 
   addText(
-    'The report below contains the checklist points that were checked during the ship visit, together with reviewer comments, attached photos, follow-up requirements and ship responses.',
+    'The report below contains only the checklist points checked during the ship visit, together with reviewer comments, attached photos, follow-up requirements and ship responses.',
     {
       size:8.5,
       color:gray,
@@ -1764,22 +2029,18 @@ export function generatePDF(){
     8;
 
 
-  /* =======================================================
+  /* ==========================================================
      CHECKED POINTS
-  ======================================================= */
-
-  let currentSection =
-    '';
-
+  ========================================================== */
 
   if(
-    checkedPoints.length === 0
+    points.length === 0
   ){
 
     addText(
       'No checklist points were checked.',
       {
-        size:10,
+        size:9.5,
         color:red,
         bold:true
       }
@@ -1787,7 +2048,11 @@ export function generatePDF(){
 
   }else{
 
-    checkedPoints.forEach(
+    let currentSection =
+      '';
+
+
+    points.forEach(
       point => {
 
         if(
@@ -1816,50 +2081,22 @@ export function generatePDF(){
   }
 
 
-  /* =======================================================
-     FINAL FOOTER
-  ======================================================= */
-
-  footer();
+  drawFooter();
 
 
-  /* =======================================================
-     FILE NAME
-  ======================================================= */
+  /* ==========================================================
+     SAVE
+  ========================================================== */
 
-  const safeShip =
-    safeText(
-      meta.ship ||
-      'Ship'
-    )
-      .trim()
-      .replace(
-        /\s+/g,
-        '_'
-      )
-      .replace(
-        /[^a-zA-Z0-9_-]/g,
-        ''
-      );
-
-
-  const safeDate =
-    safeText(
-      meta.dateOn ||
-      'date'
-    )
-      .replace(
-        /[^0-9-]/g,
-        ''
-      );
-
-
-  const filename =
-    `Ship_Visit_Report_${safeShip}_${safeDate}.pdf`;
+  const names =
+    makeFileName(
+      meta.ship,
+      meta.dateOn
+    );
 
 
   doc.save(
-    filename
+    names.report
   );
 
 
@@ -1868,1231 +2105,9 @@ export function generatePDF(){
 }
 
 
-/* =========================================================
-   PRINT REPORT
-========================================================= */
-
-export function printReport(){
-
-  const meta =
-    getMeta();
-
-
-  const state =
-    getState();
-
-
-  const reviewer =
-    getReviewer() ||
-    meta.reviewer ||
-    'Reviewer';
-
-
-  const points =
-    getCheckedPoints(
-      state
-    );
-
-
-  const counts =
-    getCounts(
-      state,
-      points
-    );
-
-
-  /*
-    Group by section.
-  */
-
-  const groups =
-    [];
-
-
-  points.forEach(
-    point => {
-
-      let group =
-        groups.find(
-          item =>
-            item.section ===
-            point.section
-        );
-
-
-      if(
-        !group
-      ){
-
-        group = {
-
-          section:
-            point.section,
-
-          points:[]
-
-        };
-
-
-        groups.push(
-          group
-        );
-
-      }
-
-
-      group.points.push(
-        point
-      );
-
-    }
-  );
-
-
-  const reportWindow =
-    window.open(
-      '',
-      '_blank',
-      'width=900,height=1000'
-    );
-
-
-  if(
-    !reportWindow
-  ){
-
-    alert(
-      'Please allow pop-ups to print the report.'
-    );
-
-
-    return false;
-
-  }
-
-
-  reportWindow.document.open();
-
-
-  reportWindow.document.write(`
-
-<!DOCTYPE html>
-
-<html>
-
-<head>
-
-<meta charset="UTF-8">
-
-<title>
-  Ship Visit Report - ${escapeHtml(
-    meta.ship || ''
-  )}
-</title>
-
-
-<style>
-
-  * {
-    box-sizing:border-box;
-  }
-
-
-  body {
-
-    margin:0;
-
-    padding:25px;
-
-    background:#F8F6F9;
-
-    color:#333;
-
-    font-family:
-      Arial,
-      Calibri,
-      sans-serif;
-
-  }
-
-
-  .report {
-
-    max-width:900px;
-
-    margin:0 auto;
-
-    background:#FFFFFF;
-
-  }
-
-
-  .header {
-
-    position:relative;
-
-    padding:28px 32px;
-
-    color:#FFFFFF;
-
-    background:#3C1053;
-
-    overflow:hidden;
-
-  }
-
-
-  .header::after {
-
-    content:'';
-
-    position:absolute;
-
-    inset:-100px;
-
-    background:
-      repeating-linear-gradient(
-        45deg,
-        transparent 0,
-        transparent 35px,
-        rgba(255,255,255,.055) 35px,
-        rgba(255,255,255,.055) 37px
-      );
-
-    pointer-events:none;
-
-  }
-
-
-  .header-content {
-
-    position:relative;
-
-    z-index:1;
-
-  }
-
-
-  .eyebrow {
-
-    font-size:11px;
-
-    font-weight:800;
-
-    letter-spacing:.08em;
-
-  }
-
-
-  .header h1 {
-
-    margin:8px 0 0;
-
-    font-size:28px;
-
-    line-height:1.1;
-
-  }
-
-
-  .body {
-
-    padding:28px 32px 40px;
-
-  }
-
-
-  .section-title {
-
-    margin-top:24px;
-
-    margin-bottom:12px;
-
-    padding-bottom:7px;
-
-    border-bottom:2px solid #E10A0A;
-
-    color:#3C1053;
-
-    font-size:17px;
-
-    font-weight:800;
-
-  }
-
-
-  .info-title {
-
-    margin-bottom:10px;
-
-    color:#3C1053;
-
-    font-size:15px;
-
-    font-weight:800;
-
-  }
-
-
-  .info-grid {
-
-    display:grid;
-
-    grid-template-columns:
-      repeat(3,1fr);
-
-    gap:10px;
-
-    margin-bottom:22px;
-
-  }
-
-
-  .info-box {
-
-    padding:12px;
-
-    border-radius:7px;
-
-    background:#F8F6F9;
-
-    border:1px solid #E7E1EA;
-
-  }
-
-
-  .info-label {
-
-    margin-bottom:4px;
-
-    color:#3C1053;
-
-    font-size:8px;
-
-    font-weight:800;
-
-    text-transform:uppercase;
-
-    letter-spacing:.05em;
-
-  }
-
-
-  .info-value {
-
-    color:#333333;
-
-    font-size:11px;
-
-    line-height:1.4;
-
-    font-weight:600;
-
-  }
-
-
-  .summary {
-
-    margin-bottom:25px;
-
-    padding:14px;
-
-    border-left:4px solid #E10A0A;
-
-    border-radius:7px;
-
-    background:#F8F6F9;
-
-  }
-
-
-  .summary-title {
-
-    margin-bottom:10px;
-
-    color:#3C1053;
-
-    font-size:14px;
-
-    font-weight:800;
-
-  }
-
-
-  .summary-grid {
-
-    display:grid;
-
-    grid-template-columns:
-      repeat(4,1fr);
-
-    gap:8px;
-
-  }
-
-
-  .summary-item {
-
-    padding:8px;
-
-    background:#FFFFFF;
-
-    border:1px solid #E7E1EA;
-
-    border-radius:5px;
-
-    text-align:center;
-
-  }
-
-
-  .summary-number {
-
-    color:#3C1053;
-
-    font-size:17px;
-
-    font-weight:800;
-
-  }
-
-
-  .summary-label {
-
-    margin-top:2px;
-
-    color:#8A8A8A;
-
-    font-size:7px;
-
-    font-weight:800;
-
-    text-transform:uppercase;
-
-  }
-
-
-  .intro {
-
-    margin-bottom:18px;
-
-    color:#8A8A8A;
-
-    font-size:10px;
-
-    line-height:1.5;
-
-  }
-
-
-  .point {
-
-    margin-bottom:14px;
-
-    padding:14px;
-
-    border:1px solid #E7E1EA;
-
-    border-left:4px solid #3C1053;
-
-    border-radius:8px;
-
-    background:#FFFFFF;
-
-    page-break-inside:avoid;
-
-  }
-
-
-  .point-title {
-
-    display:flex;
-
-    gap:9px;
-
-    align-items:flex-start;
-
-  }
-
-
-  .check {
-
-    width:22px;
-
-    height:22px;
-
-    flex:0 0 22px;
-
-    display:flex;
-
-    align-items:center;
-
-    justify-content:center;
-
-    border-radius:50%;
-
-    background:#E10A0A;
-
-    color:#FFFFFF;
-
-    font-size:12px;
-
-    font-weight:800;
-
-  }
-
-
-  .point-text {
-
-    color:#333333;
-
-    font-size:12px;
-
-    line-height:1.45;
-
-    font-weight:700;
-
-  }
-
-
-  .status {
-
-    display:inline-block;
-
-    margin-top:8px;
-
-    padding:5px 8px;
-
-    border-radius:999px;
-
-    font-size:8px;
-
-    font-weight:800;
-
-  }
-
-
-  .status.red {
-
-    color:#CC0000;
-
-    background:#FFF1F1;
-
-  }
-
-
-  .status.green {
-
-    color:#008A52;
-
-    background:#EAF8F0;
-
-  }
-
-
-  .status.blue {
-
-    color:#2463B8;
-
-    background:#EEF5FF;
-
-  }
-
-
-  .label {
-
-    margin-top:12px;
-
-    margin-bottom:5px;
-
-    color:#3C1053;
-
-    font-size:8px;
-
-    font-weight:800;
-
-    letter-spacing:.04em;
-
-  }
-
-
-  .comment {
-
-    margin-top:5px;
-
-    padding:8px 10px;
-
-    border-left:3px solid #3C1053;
-
-    border-radius:5px;
-
-    background:#F8F5FA;
-
-    font-size:10px;
-
-    line-height:1.5;
-
-  }
-
-
-  .photo-grid {
-
-    display:flex;
-
-    flex-wrap:wrap;
-
-    gap:8px;
-
-  }
-
-
-  .photo {
-
-    width:145px;
-
-    max-height:145px;
-
-    overflow:hidden;
-
-    border:1px solid #E7E1EA;
-
-    border-radius:6px;
-
-  }
-
-
-  .photo img {
-
-    display:block;
-
-    width:100%;
-
-    height:auto;
-
-    max-height:145px;
-
-    object-fit:contain;
-
-  }
-
-
-  .ship-comment {
-
-    margin-top:5px;
-
-    padding:8px 10px;
-
-    border-left:3px solid #008A52;
-
-    border-radius:5px;
-
-    background:#EAF8F0;
-
-    font-size:10px;
-
-    line-height:1.5;
-
-  }
-
-
-  .footer {
-
-    margin-top:25px;
-
-    padding-top:10px;
-
-    border-top:1px solid #E7E1EA;
-
-    color:#8A8A8A;
-
-    font-size:8px;
-
-    text-align:center;
-
-  }
-
-
-  @media print {
-
-    @page {
-
-      size:A4;
-
-      margin:12mm;
-
-    }
-
-
-    body {
-
-      padding:0;
-
-      background:#FFFFFF;
-
-    }
-
-
-    .report {
-
-      max-width:none;
-
-    }
-
-
-    .header {
-
-      print-color-adjust:exact;
-
-      -webkit-print-color-adjust:exact;
-
-    }
-
-
-    .summary,
-    .status,
-    .check,
-    .comment,
-    .ship-comment {
-
-      print-color-adjust:exact;
-
-      -webkit-print-color-adjust:exact;
-
-    }
-
-  }
-
-</style>
-
-</head>
-
-
-<body>
-
-<div class="report">
-
-
-  <div class="header">
-
-    <div class="header-content">
-
-      <div class="eyebrow">
-        — VIRGIN VOYAGES
-      </div>
-
-      <h1>
-        Ship Visit Report
-      </h1>
-
-    </div>
-
-  </div>
-
-
-  <div class="body">
-
-
-    <!-- REPORT INFORMATION -->
-
-    <div class="info-title">
-      REPORT INFORMATION
-    </div>
-
-
-    <div class="info-grid">
-
-
-      <div class="info-box">
-
-        <div class="info-label">
-          Ship
-        </div>
-
-        <div class="info-value">
-          ${escapeHtml(
-            meta.ship || ''
-          )}
-        </div>
-
-      </div>
-
-
-      <div class="info-box">
-
-        <div class="info-label">
-          Visit Dates
-        </div>
-
-        <div class="info-value">
-
-          ${escapeHtml(
-            meta.dateOn || ''
-          )}
-
-          ${
-            meta.dateOff
-              ? ` → ${escapeHtml(
-                  meta.dateOff
-                )}`
-              : ''
-          }
-
-        </div>
-
-      </div>
-
-
-      <div class="info-box">
-
-        <div class="info-label">
-          Reviewer
-        </div>
-
-        <div class="info-value">
-
-          ${escapeHtml(
-            reviewer
-          )}
-
-        </div>
-
-      </div>
-
-
-    </div>
-
-
-    <!-- SUMMARY -->
-
-    <div class="summary">
-
-      <div class="summary-title">
-
-        REPORT SUMMARY
-
-      </div>
-
-
-      <div class="summary-grid">
-
-
-        <div class="summary-item">
-
-          <div class="summary-number">
-            ${counts.checked}
-          </div>
-
-          <div class="summary-label">
-            Checked
-          </div>
-
-        </div>
-
-
-        <div class="summary-item">
-
-          <div class="summary-number">
-            ${counts.comments}
-          </div>
-
-          <div class="summary-label">
-            Comments
-          </div>
-
-        </div>
-
-
-        <div class="summary-item">
-
-          <div class="summary-number">
-            ${counts.photos}
-          </div>
-
-          <div class="summary-label">
-            Photos
-          </div>
-
-        </div>
-
-
-        <div class="summary-item">
-
-          <div class="summary-number">
-            ${counts.followUps}
-          </div>
-
-          <div class="summary-label">
-            Follow-Ups
-          </div>
-
-        </div>
-
-
-      </div>
-
-
-      ${
-        counts.followUps > 0
-          ? `
-
-            <div
-              style="
-                margin-top:8px;
-                color:${
-                  counts.completedFollowUps ===
-                  counts.followUps
-                    ? '#008A52'
-                    : '#2463B8'
-                };
-                font-size:9px;
-                font-weight:800;
-              "
-            >
-
-              Follow-Ups Completed:
-              ${counts.completedFollowUps}/${counts.followUps}
-
-            </div>
-
-          `
-          : ''
-      }
-
-    </div>
-
-
-    <div class="intro">
-
-      The report below contains only the checklist
-      points that were checked during the ship visit,
-      together with reviewer comments, attached photos,
-      follow-up requirements and ship responses.
-
-    </div>
-
-
-    ${
-      groups.length === 0
-
-        ? `
-
-          <div
-            style="
-              padding:20px;
-              text-align:center;
-              color:#CC0000;
-              font-size:11px;
-              font-weight:800;
-            "
-          >
-
-            No checklist points were checked.
-
-          </div>
-
-        `
-
-        : groups
-            .map(
-              group => `
-
-                <div>
-
-                  <div class="section-title">
-
-                    ${escapeHtml(
-                      group.section
-                    )}
-
-                  </div>
-
-
-                  ${
-                    group.points
-                      .map(
-                        point => `
-
-                          <div class="point">
-
-                            <div class="point-title">
-
-                              <div class="check">
-                                ✓
-                              </div>
-
-
-                              <div class="point-text">
-
-                                ${escapeHtml(
-                                  point.text
-                                )}
-
-                              </div>
-
-                            </div>
-
-
-                            ${
-                              point.followUpNeeded
-                                ? `
-
-                                  <span
-                                    class="status ${
-                                      point.shipComments.length
-                                        ? 'green'
-                                        : 'blue'
-                                    }"
-                                  >
-
-                                    ${
-                                      point.shipComments.length
-                                        ? 'SHIP FOLLOW-UP COMPLETED'
-                                        : 'FOLLOW-UP NEEDED FROM SHIP'
-                                    }
-
-                                  </span>
-
-                                `
-                                : `
-
-                                  <span
-                                    class="status blue"
-                                  >
-
-                                    CHECKED
-
-                                  </span>
-
-                                `
-                            }
-
-
-                            ${
-                              point.comments.length
-                                ? `
-
-                                  <div class="label">
-
-                                    REVIEWER COMMENTS
-
-                                  </div>
-
-
-                                  ${
-                                    point.comments
-                                      .map(
-                                        comment => `
-
-                                          <div class="comment">
-
-                                            <strong>
-
-                                              ${escapeHtml(
-                                                comment.name ||
-                                                'Reviewer'
-                                              )}:
-
-                                            </strong>
-
-
-                                            ${escapeHtml(
-                                              comment.text ||
-                                              ''
-                                            )}
-
-                                          </div>
-
-                                        `
-                                      )
-                                      .join('')
-                                  }
-
-                                `
-                                : ''
-                            }
-
-
-                            ${
-                              point.photos.length
-                                ? `
-
-                                  <div class="label">
-
-                                    ATTACHED PHOTOS
-
-                                  </div>
-
-
-                                  <div class="photo-grid">
-
-                                    ${
-                                      point.photos
-                                        .map(
-                                          photo => `
-
-                                            <div class="photo">
-
-                                              <img
-                                                src="${photo}"
-                                                alt="Reviewer photo"
-                                              >
-
-                                            </div>
-
-                                          `
-                                        )
-                                        .join('')
-                                    }
-
-                                  </div>
-
-                                `
-                                : ''
-                            }
-
-
-                            ${
-                              point.followUpNeeded
-                                ? `
-
-                                  ${
-                                    point.shipComments.length
-                                      ? `
-
-                                        <div class="label">
-
-                                          SHIP COMMENTS / RESPONSES
-
-                                        </div>
-
-
-                                        ${
-                                          point.shipComments
-                                            .map(
-                                              comment => `
-
-                                                <div class="ship-comment">
-
-                                                  <strong>
-
-                                                    ${escapeHtml(
-                                                      comment.name ||
-                                                      'Ship'
-                                                    )}:
-
-                                                  </strong>
-
-
-                                                  ${escapeHtml(
-                                                    comment.text ||
-                                                    ''
-                                                  )}
-
-                                                </div>
-
-                                              `
-                                            )
-                                            .join('')
-                                        }
-
-                                      `
-                                      : `
-
-                                        <div
-                                          style="
-                                            margin-top:10px;
-                                            color:#CC0000;
-                                            font-size:9px;
-                                            font-weight:800;
-                                          "
-                                        >
-
-                                          NO SHIP RESPONSE YET
-
-                                        </div>
-
-                                      `
-                                  }
-
-                                `
-                                : ''
-                            }
-
-                          </div>
-
-                        `
-                      )
-                      .join('')
-                  }
-
-                </div>
-
-              `
-            )
-            .join('')
-    }
-
-
-    <div class="footer">
-
-      Virgin Voyages — Ship Visit Report
-
-      <br>
-
-      ${escapeHtml(
-        meta.ship || ''
-      )}
-
-      •
-
-      ${escapeHtml(
-        meta.dateOn || ''
-      )}
-
-    </div>
-
-
-  </div>
-
-</div>
-
-
-<script>
-
-window.onload = function(){
-
-  setTimeout(
-    function(){
-
-      window.print();
-
-    },
-    300
-  );
-
-};
-
-</script>
-
-
-</body>
-
-</html>
-
-  `);
-
-
-  reportWindow.document.close();
-
-
-  return true;
-
-}
-
-
-/* =========================================================
-   FOLLOW-UP PDF
-========================================================= */
+/* ============================================================
+   GENERATE FOLLOW-UP PDF
+============================================================ */
 
 export function generateFollowUpPDF(
   report
@@ -3181,13 +2196,11 @@ export function generateFollowUpPDF(
 
 
   const W =
-    doc.internal.pageSize
-      .getWidth();
+    doc.internal.pageSize.getWidth();
 
 
   const H =
-    doc.internal.pageSize
-      .getHeight();
+    doc.internal.pageSize.getHeight();
 
 
   const margin =
@@ -3197,10 +2210,6 @@ export function generateFollowUpPDF(
   const width =
     W -
     margin * 2;
-
-
-  let y =
-    105;
 
 
   const squid =
@@ -3215,18 +2224,23 @@ export function generateFollowUpPDF(
     [0,138,82];
 
 
+  const gray =
+    [95,95,95];
+
+
   const dark =
     [27,27,27];
 
 
-  const gray =
-    [95,95,95];
+  let y = 105;
 
 
   function header(){
 
     doc.setFillColor(
-      ...squid
+      squid[0],
+      squid[1],
+      squid[2]
     );
 
 
@@ -3272,7 +2286,7 @@ export function generateFollowUpPDF(
     doc.text(
       'Points To Follow Up',
       margin,
-      54
+      53
     );
 
   }
@@ -3281,7 +2295,9 @@ export function generateFollowUpPDF(
   function footer(){
 
     doc.setFillColor(
-      ...dark
+      dark[0],
+      dark[1],
+      dark[2]
     );
 
 
@@ -3308,19 +2324,21 @@ export function generateFollowUpPDF(
 
 
     doc.setFontSize(
-      7.5
+      7
     );
 
 
     doc.text(
-      'INTERNAL USE ONLY',
+      'Virgin Voyages — Ship Visit Report',
       margin,
       H - 9
     );
 
 
     doc.text(
-      `${meta.ship || ''} • ${meta.dateOn || ''}`,
+      safeText(
+        meta.ship
+      ),
       W - margin,
       H - 9,
       {
@@ -3345,7 +2363,7 @@ export function generateFollowUpPDF(
   }
 
 
-  function space(
+  function ensureSpace(
     height
   ){
 
@@ -3361,7 +2379,7 @@ export function generateFollowUpPDF(
   }
 
 
-  function text(
+  function addText(
     value,
     size = 9,
     color = gray,
@@ -3372,9 +2390,7 @@ export function generateFollowUpPDF(
 
     const lines =
       doc.splitTextToSize(
-        safeText(
-          value
-        ),
+        safeText(value),
         maxWidth
       );
 
@@ -3393,14 +2409,16 @@ export function generateFollowUpPDF(
 
 
     doc.setTextColor(
-      ...color
+      color[0],
+      color[1],
+      color[2]
     );
 
 
     lines.forEach(
       line => {
 
-        space(
+        ensureSpace(
           size + 4
         );
 
@@ -3424,7 +2442,7 @@ export function generateFollowUpPDF(
   header();
 
 
-  text(
+  addText(
     `Ship: ${meta.ship}`,
     11,
     dark,
@@ -3434,21 +2452,21 @@ export function generateFollowUpPDF(
   );
 
 
-  text(
+  addText(
     `Visit: ${meta.dateOn}` +
     (
       meta.dateOff
         ? ` → ${meta.dateOff}`
         : ''
     ),
-    9.5,
+    9,
     gray
   );
 
 
-  text(
+  addText(
     `Reviewer: ${meta.reviewer}`,
-    9.5,
+    9,
     gray
   );
 
@@ -3457,7 +2475,7 @@ export function generateFollowUpPDF(
     8;
 
 
-  text(
+  addText(
     `FOLLOW-UP POINTS: ${points.length}`,
     10,
     red,
@@ -3474,31 +2492,14 @@ export function generateFollowUpPDF(
   points.forEach(
     point => {
 
-      space(
-        50
+      ensureSpace(
+        65
       );
 
 
-      doc.setDrawColor(
-        ...red
-      );
-
-
-      doc.line(
-        margin,
-        y,
-        margin + 40,
-        y
-      );
-
-
-      y +=
-        13;
-
-
-      text(
+      addText(
         point.section,
-        10,
+        9,
         squid,
         margin,
         width,
@@ -3506,7 +2507,7 @@ export function generateFollowUpPDF(
       );
 
 
-      text(
+      addText(
         point.text,
         10,
         dark,
@@ -3516,16 +2517,12 @@ export function generateFollowUpPDF(
       );
 
 
-      y +=
-        2;
-
-
-      text(
-        point.shipComments.length
+      addText(
+        point.shipComments.length > 0
           ? 'FOLLOW-UP COMPLETED'
           : 'FOLLOW-UP NEEDED FROM SHIP',
-        8.5,
-        point.shipComments.length
+        8,
+        point.shipComments.length > 0
           ? green
           : red,
         margin,
@@ -3535,16 +2532,16 @@ export function generateFollowUpPDF(
 
 
       if(
-        point.comments.length
+        point.comments.length > 0
       ){
 
         y +=
           4;
 
 
-        text(
+        addText(
           'REVIEWER COMMENTS',
-          8,
+          7.5,
           squid,
           margin,
           width,
@@ -3555,9 +2552,9 @@ export function generateFollowUpPDF(
         point.comments.forEach(
           comment => {
 
-            text(
+            addText(
               `${comment.name || 'Reviewer'}: ${comment.text || ''}`,
-              9,
+              8.5,
               gray,
               margin + 7,
               width - 7
@@ -3570,16 +2567,16 @@ export function generateFollowUpPDF(
 
 
       if(
-        point.photos.length
+        point.photos.length > 0
       ){
 
         y +=
           4;
 
 
-        text(
+        addText(
           'REVIEWER PHOTOS',
-          8,
+          7.5,
           squid,
           margin,
           width,
@@ -3590,13 +2587,13 @@ export function generateFollowUpPDF(
         point.photos.forEach(
           photo => {
 
-            space(
-              150
+            ensureSpace(
+              155
             );
 
 
             const image =
-              addPdfImage(
+              addImageToPDF(
                 doc,
                 photo,
                 margin + 7,
@@ -3607,7 +2604,7 @@ export function generateFollowUpPDF(
 
 
             if(
-              image.height
+              image.height > 0
             ){
 
               y +=
@@ -3622,17 +2619,13 @@ export function generateFollowUpPDF(
       }
 
 
-      y +=
-        4;
-
-
       if(
-        point.shipComments.length
+        point.shipComments.length > 0
       ){
 
-        text(
+        addText(
           'SHIP COMMENTS / RESPONSES',
-          8,
+          7.5,
           green,
           margin,
           width,
@@ -3643,9 +2636,9 @@ export function generateFollowUpPDF(
         point.shipComments.forEach(
           comment => {
 
-            text(
+            addText(
               `${comment.name || 'Ship'}: ${comment.text || ''}`,
-              9,
+              8.5,
               green,
               margin + 7,
               width - 7
@@ -3656,12 +2649,13 @@ export function generateFollowUpPDF(
 
       }else{
 
-        text(
+        addText(
           'No ship response yet.',
-          9,
+          8.5,
           red,
           margin + 7,
-          width - 7
+          width - 7,
+          true
         );
 
       }
@@ -3677,24 +2671,15 @@ export function generateFollowUpPDF(
   footer();
 
 
-  const safeShip =
-    safeText(
-      meta.ship ||
-      'Ship'
-    )
-      .trim()
-      .replace(
-        /\s+/g,
-        '_'
-      )
-      .replace(
-        /[^a-zA-Z0-9_-]/g,
-        ''
-      );
+  const names =
+    makeFileName(
+      meta.ship,
+      meta.dateOn
+    );
 
 
   doc.save(
-    `Ship_Visit_Follow_Up_${safeShip}_${meta.dateOn || 'date'}.pdf`
+    names.followup
   );
 
 
@@ -3703,20 +2688,1468 @@ export function generateFollowUpPDF(
 }
 
 
-/* =========================================================
-   PRINT FOLLOW-UP
-========================================================= */
+/* ============================================================
+   PRINT REPORT
+============================================================ */
 
-export function printFollowUp(){
+export function printReport(){
 
-  window.print();
+  const meta =
+    getMeta() || {};
+
+
+  const state =
+    getState() || {};
+
+
+  const reviewer =
+    getReviewer() ||
+    meta.reviewer ||
+    'Reviewer';
+
+
+  const points =
+    getCheckedPoints(
+      state
+    );
+
+
+  const counts =
+    getReportCounts(
+      points
+    );
+
+
+  /*
+    Group points by section.
+  */
+
+  const groups = [];
+
+
+  points.forEach(
+    point => {
+
+      let group =
+        groups.find(
+          item =>
+            item.section ===
+            point.section
+        );
+
+
+      if(
+        !group
+      ){
+
+        group = {
+
+          section:
+            point.section,
+
+          points:[]
+
+        };
+
+
+        groups.push(
+          group
+        );
+
+      }
+
+
+      group.points.push(
+        point
+      );
+
+    }
+  );
+
+
+  /*
+    Open a dedicated print window.
+  */
+
+  const printWindow =
+    window.open(
+      '',
+      '_blank',
+      'width=1000,height=1000'
+    );
+
+
+  if(
+    !printWindow
+  ){
+
+    alert(
+      'Please allow pop-ups to print the report.'
+    );
+
+
+    return false;
+
+  }
+
+
+  const html =
+`
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+
+<title>
+  ${escapeHtml(
+    meta.ship || 'Ship Visit Report'
+  )}
+</title>
+
+
+<style>
+
+  * {
+    box-sizing:border-box;
+  }
+
+
+  html,
+  body {
+    margin:0;
+    padding:0;
+  }
+
+
+  body {
+    background:#F8F6F9;
+    color:#333333;
+    font-family:Arial,Calibri,sans-serif;
+  }
+
+
+  .report {
+    width:100%;
+    max-width:900px;
+    margin:20px auto;
+    background:#FFFFFF;
+  }
+
+
+  /* ================================================
+     HEADER
+  ================================================ */
+
+  .header {
+    position:relative;
+    padding:28px 32px;
+    overflow:hidden;
+    background:#3C1053;
+    color:#FFFFFF;
+  }
+
+
+  .header::after {
+    content:'';
+    position:absolute;
+    inset:-120px;
+    background:
+      repeating-linear-gradient(
+        45deg,
+        transparent 0,
+        transparent 36px,
+        rgba(255,255,255,.055) 36px,
+        rgba(255,255,255,.055) 38px
+      );
+    pointer-events:none;
+  }
+
+
+  .header-content {
+    position:relative;
+    z-index:2;
+  }
+
+
+  .eyebrow {
+    font-size:11px;
+    line-height:1.2;
+    font-weight:800;
+    letter-spacing:.08em;
+  }
+
+
+  .header h1 {
+    margin:7px 0 0;
+    font-size:29px;
+    line-height:1.1;
+    font-weight:800;
+  }
+
+
+  /* ================================================
+     BODY
+  ================================================ */
+
+  .body {
+    padding:28px 32px 38px;
+  }
+
+
+  /* ================================================
+     INFORMATION
+  ================================================ */
+
+  .info-title {
+    margin-bottom:10px;
+    color:#3C1053;
+    font-size:15px;
+    font-weight:800;
+  }
+
+
+  .info-grid {
+    display:grid;
+    grid-template-columns:
+      repeat(3,minmax(0,1fr));
+    gap:10px;
+    margin-bottom:23px;
+  }
+
+
+  .info-box {
+    padding:11px;
+    border:1px solid #E7E1EA;
+    border-radius:7px;
+    background:#F8F6F9;
+  }
+
+
+  .info-label {
+    margin-bottom:4px;
+    color:#3C1053;
+    font-size:8px;
+    font-weight:800;
+    letter-spacing:.05em;
+    text-transform:uppercase;
+  }
+
+
+  .info-value {
+    color:#333333;
+    font-size:11px;
+    line-height:1.4;
+    font-weight:600;
+  }
+
+
+  /* ================================================
+     SUMMARY
+  ================================================ */
+
+  .summary {
+    margin-bottom:25px;
+    padding:15px;
+    border-left:4px solid #E10A0A;
+    border-radius:7px;
+    background:#F8F6F9;
+  }
+
+
+  .summary-title {
+    margin-bottom:10px;
+    color:#3C1053;
+    font-size:14px;
+    font-weight:800;
+  }
+
+
+  .summary-grid {
+    display:grid;
+    grid-template-columns:
+      repeat(4,minmax(0,1fr));
+    gap:8px;
+  }
+
+
+  .summary-item {
+    padding:8px;
+    border:1px solid #E7E1EA;
+    border-radius:5px;
+    background:#FFFFFF;
+    text-align:center;
+  }
+
+
+  .summary-number {
+    color:#3C1053;
+    font-size:17px;
+    font-weight:800;
+  }
+
+
+  .summary-label {
+    margin-top:2px;
+    color:#8A8A8A;
+    font-size:7px;
+    font-weight:800;
+    text-transform:uppercase;
+  }
+
+
+  .followup-summary {
+    margin-top:8px;
+    font-size:9px;
+    font-weight:800;
+  }
+
+
+  /* ================================================
+     INTRO
+  ================================================ */
+
+  .intro {
+    margin-bottom:20px;
+    color:#8A8A8A;
+    font-size:10px;
+    line-height:1.5;
+  }
+
+
+  /* ================================================
+     SECTION
+  ================================================ */
+
+  .section-title {
+    margin-top:22px;
+    margin-bottom:12px;
+    padding-bottom:7px;
+    border-bottom:2px solid #E10A0A;
+    color:#3C1053;
+    font-size:17px;
+    font-weight:800;
+    page-break-after:avoid;
+  }
+
+
+  /* ================================================
+     POINT
+  ================================================ */
+
+  .point {
+    margin-bottom:14px;
+    padding:14px;
+    border:1px solid #E7E1EA;
+    border-left:4px solid #3C1053;
+    border-radius:8px;
+    background:#FFFFFF;
+    page-break-inside:avoid;
+  }
+
+
+  .point-title {
+    display:flex;
+    align-items:flex-start;
+    gap:9px;
+  }
+
+
+  .check {
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:22px;
+    height:22px;
+    flex:0 0 22px;
+    border-radius:50%;
+    background:#E10A0A;
+    color:#FFFFFF;
+    font-size:12px;
+    font-weight:800;
+  }
+
+
+  .point-text {
+    color:#333333;
+    font-size:12px;
+    line-height:1.45;
+    font-weight:700;
+  }
+
+
+  .status {
+    display:inline-block;
+    margin-top:8px;
+    padding:5px 8px;
+    border-radius:999px;
+    font-size:8px;
+    line-height:1;
+    font-weight:800;
+  }
+
+
+  .status.blue {
+    color:#2463B8;
+    background:#EEF5FF;
+  }
+
+
+  .status.green {
+    color:#008A52;
+    background:#EAF8F0;
+  }
+
+
+  .status.red {
+    color:#CC0000;
+    background:#FFF1F1;
+  }
+
+
+  .label {
+    margin-top:12px;
+    margin-bottom:5px;
+    color:#3C1053;
+    font-size:8px;
+    font-weight:800;
+    letter-spacing:.04em;
+  }
+
+
+  .comment {
+    margin-top:5px;
+    padding:8px 10px;
+    border-left:3px solid #3C1053;
+    border-radius:5px;
+    background:#F8F5FA;
+    font-size:10px;
+    line-height:1.5;
+  }
+
+
+  .photo-grid {
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+  }
+
+
+  .photo {
+    width:145px;
+    max-height:145px;
+    overflow:hidden;
+    border:1px solid #E7E1EA;
+    border-radius:6px;
+  }
+
+
+  .photo img {
+    display:block;
+    width:100%;
+    height:auto;
+    max-height:145px;
+    object-fit:contain;
+  }
+
+
+  .ship-comment {
+    margin-top:5px;
+    padding:8px 10px;
+    border-left:3px solid #008A52;
+    border-radius:5px;
+    background:#EAF8F0;
+    font-size:10px;
+    line-height:1.5;
+  }
+
+
+  .no-response {
+    margin-top:7px;
+    color:#CC0000;
+    font-size:9px;
+    font-weight:800;
+  }
+
+
+  /* ================================================
+     FOOTER
+  ================================================ */
+
+  .footer {
+    margin-top:25px;
+    padding-top:10px;
+    border-top:1px solid #E7E1EA;
+    color:#8A8A8A;
+    font-size:8px;
+    line-height:1.4;
+    text-align:center;
+  }
+
+
+  /* ================================================
+     PRINT
+  ================================================ */
+
+  @media print {
+
+    @page {
+      size:A4;
+      margin:12mm;
+    }
+
+
+    body {
+      background:#FFFFFF;
+    }
+
+
+    .report {
+      width:100%;
+      max-width:none;
+      margin:0;
+    }
+
+
+    .header {
+      print-color-adjust:exact;
+      -webkit-print-color-adjust:exact;
+    }
+
+
+    .summary,
+    .status,
+    .check,
+    .comment,
+    .ship-comment {
+      print-color-adjust:exact;
+      -webkit-print-color-adjust:exact;
+    }
+
+  }
+
+
+</style>
+
+</head>
+
+
+<body>
+
+
+<div class="report">
+
+
+  <!-- ==================================================
+       HEADER
+  =================================================== -->
+
+  <div class="header">
+
+    <div class="header-content">
+
+      <div class="eyebrow">
+        — VIRGIN VOYAGES
+      </div>
+
+
+      <h1>
+        Ship Visit Report
+      </h1>
+
+    </div>
+
+  </div>
+
+
+  <!-- ==================================================
+       BODY
+  =================================================== -->
+
+  <div class="body">
+
+
+    <!-- REPORT INFORMATION -->
+
+    <div class="info-title">
+      REPORT INFORMATION
+    </div>
+
+
+    <div class="info-grid">
+
+
+      <div class="info-box">
+
+        <div class="info-label">
+          Ship
+        </div>
+
+        <div class="info-value">
+
+          ${escapeHtml(
+            meta.ship || ''
+          )}
+
+        </div>
+
+      </div>
+
+
+      <div class="info-box">
+
+        <div class="info-label">
+          Visit Dates
+        </div>
+
+        <div class="info-value">
+
+          ${escapeHtml(
+            meta.dateOn || ''
+          )}
+
+          ${
+            meta.dateOff
+              ? ` → ${escapeHtml(
+                  meta.dateOff
+                )}`
+              : ''
+          }
+
+        </div>
+
+      </div>
+
+
+      <div class="info-box">
+
+        <div class="info-label">
+          Reviewer
+        </div>
+
+        <div class="info-value">
+
+          ${escapeHtml(
+            reviewer
+          )}
+
+        </div>
+
+      </div>
+
+
+    </div>
+
+
+    <!-- SUMMARY -->
+
+    <div class="summary">
+
+      <div class="summary-title">
+        REPORT SUMMARY
+      </div>
+
+
+      <div class="summary-grid">
+
+
+        <div class="summary-item">
+
+          <div class="summary-number">
+            ${counts.checked}
+          </div>
+
+          <div class="summary-label">
+            Checked
+          </div>
+
+        </div>
+
+
+        <div class="summary-item">
+
+          <div class="summary-number">
+            ${counts.comments}
+          </div>
+
+          <div class="summary-label">
+            Comments
+          </div>
+
+        </div>
+
+
+        <div class="summary-item">
+
+          <div class="summary-number">
+            ${counts.photos}
+          </div>
+
+          <div class="summary-label">
+            Photos
+          </div>
+
+        </div>
+
+
+        <div class="summary-item">
+
+          <div class="summary-number">
+            ${counts.followUps}
+          </div>
+
+          <div class="summary-label">
+            Follow-Ups
+          </div>
+
+        </div>
+
+
+      </div>
+
+
+      ${
+        counts.followUps > 0
+          ? `
+
+            <div
+              class="followup-summary"
+              style="
+                color:${
+                  counts.completedFollowUps ===
+                  counts.followUps
+                    ? '#008A52'
+                    : '#2463B8'
+                };
+              "
+            >
+
+              Follow-Ups Completed:
+              ${counts.completedFollowUps}/${counts.followUps}
+
+            </div>
+
+          `
+          : ''
+      }
+
+
+    </div>
+
+
+    <!-- DESCRIPTION -->
+
+    <div class="intro">
+
+      The report below contains only the checklist
+      points checked during the ship visit, together
+      with reviewer comments, attached photos,
+      follow-up requirements and ship responses.
+
+    </div>
+
+
+    <!-- CHECKED POINTS -->
+
+    ${
+      groups.length === 0
+
+        ? `
+
+          <div
+            style="
+              padding:20px;
+              color:#CC0000;
+              font-size:10px;
+              font-weight:800;
+              text-align:center;
+            "
+          >
+
+            No checklist points were checked.
+
+          </div>
+
+        `
+
+        : groups
+          .map(
+            group => `
+
+              <div>
+
+                <div class="section-title">
+
+                  ${escapeHtml(
+                    group.section
+                  )}
+
+                </div>
+
+
+                ${
+                  group.points
+                    .map(
+                      point => `
+
+                        <div class="point">
+
+
+                          <div class="point-title">
+
+                            <div class="check">
+                              ✓
+                            </div>
+
+
+                            <div class="point-text">
+
+                              ${escapeHtml(
+                                point.text
+                              )}
+
+                            </div>
+
+                          </div>
+
+
+                          ${
+                            point.followUpNeeded
+
+                              ? `
+
+                                <span
+                                  class="status ${
+                                    point.shipComments.length
+                                      ? 'green'
+                                      : 'blue'
+                                  }"
+                                >
+
+                                  ${
+                                    point.shipComments.length
+                                      ? 'SHIP FOLLOW-UP COMPLETED'
+                                      : 'FOLLOW-UP NEEDED FROM SHIP'
+                                  }
+
+                                </span>
+
+                              `
+
+                              : `
+
+                                <span
+                                  class="status blue"
+                                >
+
+                                  CHECKED
+
+                                </span>
+
+                              `
+                          }
+
+
+                          ${
+                            point.comments.length
+
+                              ? `
+
+                                <div class="label">
+
+                                  REVIEWER COMMENTS
+
+                                </div>
+
+
+                                ${
+                                  point.comments
+                                    .map(
+                                      comment => `
+
+                                        <div class="comment">
+
+                                          <strong>
+
+                                            ${escapeHtml(
+                                              comment.name ||
+                                              'Reviewer'
+                                            )}:
+
+                                          </strong>
+
+
+                                          <div>
+
+                                            ${escapeHtml(
+                                              comment.text ||
+                                              ''
+                                            )}
+
+                                          </div>
+
+                                        </div>
+
+                                      `
+                                    )
+                                    .join('')
+                                }
+
+                              `
+
+                              : ''
+
+                          }
+
+
+                          ${
+                            point.photos.length
+
+                              ? `
+
+                                <div class="label">
+
+                                  ATTACHED PHOTOS
+
+                                </div>
+
+
+                                <div class="photo-grid">
+
+                                  ${
+                                    point.photos
+                                      .map(
+                                        photo => `
+
+                                          <div class="photo">
+
+                                            <img
+                                              src="${photo}"
+                                              alt="Reviewer photo"
+                                            >
+
+                                          </div>
+
+                                        `
+                                      )
+                                      .join('')
+                                  }
+
+                                </div>
+
+                              `
+
+                              : ''
+
+                          }
+
+
+                          ${
+                            point.followUpNeeded
+
+                              ? (
+
+                                  point.shipComments.length
+
+                                    ? `
+
+                                      <div class="label">
+
+                                        SHIP COMMENTS / RESPONSES
+
+                                      </div>
+
+
+                                      ${
+                                        point.shipComments
+                                          .map(
+                                            comment => `
+
+                                              <div class="ship-comment">
+
+                                                <strong>
+
+                                                  ${escapeHtml(
+                                                    comment.name ||
+                                                    'Ship'
+                                                  )}:
+
+                                                </strong>
+
+
+                                                ${escapeHtml(
+                                                  comment.text ||
+                                                  ''
+                                                )}
+
+                                              </div>
+
+                                            `
+                                          )
+                                          .join('')
+                                      }
+
+                                    `
+
+                                    : `
+
+                                      <div class="no-response">
+
+                                        NO SHIP RESPONSE YET
+
+                                      </div>
+
+                                    `
+
+                                )
+
+                              : ''
+
+                          }
+
+
+                        </div>
+
+                      `
+                    )
+                    .join('')
+                }
+
+
+              </div>
+
+            `
+          )
+          .join('')
+    }
+
+
+    <!-- FOOTER -->
+
+    <div class="footer">
+
+      Virgin Voyages — Ship Visit Report
+
+      <br>
+
+      ${escapeHtml(
+        meta.ship || ''
+      )}
+
+      •
+      
+      ${escapeHtml(
+        meta.dateOn || ''
+      )}
+
+    </div>
+
+
+  </div>
+
+
+</div>
+
+
+<script>
+
+window.addEventListener(
+  'load',
+  function(){
+
+    setTimeout(
+      function(){
+
+        window.print();
+
+      },
+      300
+    );
+
+  }
+);
+
+</script>
+
+
+</body>
+
+</html>
+`;
+
+
+  /*
+    IMPORTANT:
+
+    The groups used in the print HTML
+    are created here.
+  */
+
+  const printGroups =
+    [];
+
+
+  points.forEach(
+    point => {
+
+      let group =
+        printGroups.find(
+          item =>
+            item.section ===
+            point.section
+        );
+
+
+      if(
+        !group
+      ){
+
+        group = {
+
+          section:
+            point.section,
+
+          points:[]
+
+        };
+
+
+        printGroups.push(
+          group
+        );
+
+      }
+
+
+      group.points.push(
+        point
+      );
+
+    }
+  );
+
+
+  /*
+    Insert actual groups into the
+    print HTML.
+
+    The template above uses "groups",
+    so replace it before writing.
+  */
+
+  const finalHtml =
+    html.replace(
+      /\$\{\s*groups\.length === 0[\s\S]*?\}/,
+      groupsPlaceholder(
+        printGroups
+      )
+    );
+
+
+  printWindow.document.open();
+
+
+  printWindow.document.write(
+    finalHtml
+  );
+
+
+  printWindow.document.close();
+
+
+  return true;
 
 }
 
 
-/* =========================================================
+/* ============================================================
+   PRINT GROUP GENERATOR
+============================================================ */
+
+function groupsPlaceholder(
+  groups
+){
+
+  if(
+    !groups ||
+    groups.length === 0
+  ){
+
+    return `
+
+      <div
+        style="
+          padding:20px;
+          color:#CC0000;
+          font-size:10px;
+          font-weight:800;
+          text-align:center;
+        "
+      >
+
+        No checklist points were checked.
+
+      </div>
+
+    `;
+
+  }
+
+
+  return groups
+    .map(
+      group => `
+
+        <div>
+
+          <div class="section-title">
+
+            ${escapeHtml(
+              group.section
+            )}
+
+          </div>
+
+
+          ${
+            group.points
+              .map(
+                point => `
+
+                  <div class="point">
+
+
+                    <div class="point-title">
+
+                      <div class="check">
+                        ✓
+                      </div>
+
+
+                      <div class="point-text">
+
+                        ${escapeHtml(
+                          point.text
+                        )}
+
+                      </div>
+
+                    </div>
+
+
+                    ${
+                      point.followUpNeeded
+
+                        ? `
+
+                          <span
+                            class="status ${
+                              point.shipComments.length
+                                ? 'green'
+                                : 'blue'
+                            }"
+                          >
+
+                            ${
+                              point.shipComments.length
+                                ? 'SHIP FOLLOW-UP COMPLETED'
+                                : 'FOLLOW-UP NEEDED FROM SHIP'
+                            }
+
+                          </span>
+
+                        `
+
+                        : `
+
+                          <span class="status blue">
+                            CHECKED
+                          </span>
+
+                        `
+                    }
+
+
+                    ${
+                      point.comments.length
+
+                        ? `
+
+                          <div class="label">
+
+                            REVIEWER COMMENTS
+
+                          </div>
+
+
+                          ${
+                            point.comments
+                              .map(
+                                comment => `
+
+                                  <div class="comment">
+
+                                    <strong>
+
+                                      ${escapeHtml(
+                                        comment.name ||
+                                        'Reviewer'
+                                      )}:
+
+                                    </strong>
+
+
+                                    <div>
+
+                                      ${escapeHtml(
+                                        comment.text ||
+                                        ''
+                                      )}
+
+                                    </div>
+
+                                  </div>
+
+                                `
+                              )
+                              .join('')
+                          }
+
+                        `
+
+                        : ''
+
+                    }
+
+
+                    ${
+                      point.photos.length
+
+                        ? `
+
+                          <div class="label">
+
+                            ATTACHED PHOTOS
+
+                          </div>
+
+
+                          <div class="photo-grid">
+
+                            ${
+                              point.photos
+                                .map(
+                                  photo => `
+
+                                    <div class="photo">
+
+                                      <img
+                                        src="${photo}"
+                                        alt="Reviewer photo"
+                                      >
+
+                                    </div>
+
+                                  `
+                                )
+                                .join('')
+                            }
+
+                          </div>
+
+                        `
+
+                        : ''
+
+                    }
+
+
+                    ${
+                      point.followUpNeeded
+
+                        ? (
+
+                            point.shipComments.length
+
+                              ? `
+
+                                <div class="label">
+
+                                  SHIP COMMENTS / RESPONSES
+
+                                </div>
+
+
+                                ${
+                                  point.shipComments
+                                    .map(
+                                      comment => `
+
+                                        <div class="ship-comment">
+
+                                          <strong>
+
+                                            ${escapeHtml(
+                                              comment.name ||
+                                              'Ship'
+                                            )}:
+
+                                          </strong>
+
+
+                                          ${escapeHtml(
+                                            comment.text ||
+                                            ''
+                                          )}
+
+                                        </div>
+
+                                      `
+                                    )
+                                    .join('')
+                                }
+
+                              `
+
+                              : `
+
+                                <div class="no-response">
+
+                                  NO SHIP RESPONSE YET
+
+                                </div>
+
+                              `
+
+                          )
+
+                        : ''
+
+                    }
+
+
+                  </div>
+
+                `
+              )
+              .join('')
+          }
+
+
+        </div>
+
+      `
+    )
+    .join('');
+
+}
+
+
+/* ============================================================
    DEFAULT EXPORT
-========================================================= */
+============================================================ */
 
 export default {
 
@@ -3724,8 +4157,6 @@ export default {
 
   generateFollowUpPDF,
 
-  printReport,
-
-  printFollowUp
+  printReport
 
 };
