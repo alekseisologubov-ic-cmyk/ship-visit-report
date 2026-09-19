@@ -5,22 +5,39 @@
   checklist.js
   ============================================================
 
-  CLEAN DEPARTMENT NAVIGATION
+  CHECKLIST FLOW
 
-  Main screen:
-    - Report overview
-    - Department cards
+    CHECKLIST HOME
+        |
+        +-- CULINARY
+        +-- BAR
+        +-- RESTAURANT
+        +-- PROCUREMENT
+        +-- SANITATION
 
-  Department screen:
-    - Checklist points
-    - Circle check
-    - Comment
-    - Photo
-    - Follow-up
+    Click department
+        |
+        v
+    Department checklist
+        |
+        v
+    Back to Departments
 
-  Compatible with current main.js
+  Features:
+    - Department navigation
+    - Checklist circle
+    - Reviewer comments
+    - Photos
+    - Follow-up flag
+    - Ship comments display
+    - Supabase saving
+    - Progress tracking
 */
 
+
+/* ============================================================
+   IMPORTS
+============================================================ */
 
 import {
   SECTIONS
@@ -54,7 +71,7 @@ let currentDepartment = null;
 
 
 /* ============================================================
-   CALLBACK
+   OPTIONAL CALLBACK
 ============================================================ */
 
 let checklistChangedCallback = null;
@@ -73,7 +90,7 @@ export function setChecklistChangedCallback(
 
 
 /* ============================================================
-   ESCAPE HTML
+   HTML ESCAPE
 ============================================================ */
 
 function escapeHtml(
@@ -84,7 +101,7 @@ function escapeHtml(
     value ?? ''
   ).replace(
     /[&<>"']/g,
-    character => {
+    function(character){
 
       const map = {
 
@@ -105,7 +122,22 @@ function escapeHtml(
 
 
 /* ============================================================
-   SAVE
+   GET ELEMENT
+============================================================ */
+
+function getElement(
+  id
+){
+
+  return document.getElementById(
+    id
+  );
+
+}
+
+
+/* ============================================================
+   SAVE CURRENT REPORT
 ============================================================ */
 
 async function saveCurrentReport(){
@@ -117,6 +149,11 @@ async function saveCurrentReport(){
   if(
     !reportId
   ){
+
+    /*
+      New report may not have a database
+      ID yet.
+    */
 
     return false;
 
@@ -145,7 +182,7 @@ async function saveCurrentReport(){
     ){
 
       console.error(
-        'Save report failed:',
+        'Could not save report:',
         result?.error
       );
 
@@ -160,9 +197,20 @@ async function saveCurrentReport(){
       'function'
     ){
 
-      await checklistChangedCallback(
-        result.data
-      );
+      try{
+
+        await checklistChangedCallback(
+          result.data
+        );
+
+      }catch(error){
+
+        console.error(
+          'Checklist callback failed:',
+          error
+        );
+
+      }
 
     }
 
@@ -172,7 +220,7 @@ async function saveCurrentReport(){
   }catch(error){
 
     console.error(
-      'saveCurrentReport:',
+      'saveCurrentReport error:',
       error
     );
 
@@ -185,7 +233,7 @@ async function saveCurrentReport(){
 
 
 /* ============================================================
-   TOTAL COUNTS
+   GLOBAL CHECKLIST COUNTS
 ============================================================ */
 
 export function getChecklistCounts(){
@@ -342,6 +390,14 @@ function getDepartmentCount(
   let checked = 0;
 
 
+  const total =
+    Array.isArray(
+      section.items
+    )
+      ? section.items.length
+      : 0;
+
+
   section.items.forEach(
     (
       _text,
@@ -368,8 +424,7 @@ function getDepartmentCount(
 
     checked,
 
-    total:
-      section.items.length
+    total
 
   };
 
@@ -377,44 +432,13 @@ function getDepartmentCount(
 
 
 /* ============================================================
-   DEPARTMENT ICON
-============================================================ */
-
-function getDepartmentIcon(
-  id
-){
-
-  const icons = {
-
-    culinary:'🍴',
-
-    bar:'🍸',
-
-    restaurant:'🍽',
-
-    procurement:'📦',
-
-    sanitation:'🧼'
-
-  };
-
-
-  return (
-    icons[id] ||
-    '✓'
-  );
-
-}
-
-
-/* ============================================================
-   MAIN RENDER
+   MAIN CHECKLIST RENDER
 ============================================================ */
 
 export function renderChecklist(){
 
   const container =
-    document.getElementById(
+    getElement(
       'sections'
     );
 
@@ -424,7 +448,7 @@ export function renderChecklist(){
   ){
 
     console.error(
-      'Checklist container #sections not found.'
+      'Checklist container #sections was not found.'
     );
 
 
@@ -449,7 +473,7 @@ export function renderChecklist(){
 function renderDepartmentHome(){
 
   const container =
-    document.getElementById(
+    getElement(
       'sections'
     );
 
@@ -472,69 +496,109 @@ function renderDepartmentHome(){
     <div class="department-home">
 
 
-      <div class="department-overview">
+      <!-- ================================================
+           REPORT OVERVIEW
+      ================================================= -->
 
-        <div class="department-overview-title">
+      <div
+        class="department-overview"
+      >
+
+        <div
+          class="department-overview-title"
+        >
 
           REPORT OVERVIEW
 
         </div>
 
 
-        <div class="department-overview-grid">
+        <div
+          class="department-overview-grid"
+        >
 
 
-          <div class="department-overview-card">
+          <div
+            class="department-overview-card"
+          >
 
             <strong>
+
               ${counts.checked}
+
             </strong>
 
             <span>
+
               of ${counts.total}
+
             </span>
 
+
             <small>
+
               POINTS CHECKED
+
             </small>
 
           </div>
 
 
-          <div class="department-overview-card">
+          <div
+            class="department-overview-card"
+          >
 
             <strong>
+
               ${counts.comments}
+
             </strong>
 
+
             <small>
+
               COMMENTS
+
             </small>
 
           </div>
 
 
-          <div class="department-overview-card">
+          <div
+            class="department-overview-card"
+          >
 
             <strong>
+
               ${counts.photos}
+
             </strong>
 
+
             <small>
+
               PHOTOS
+
             </small>
 
           </div>
 
 
-          <div class="department-overview-card">
+          <div
+            class="department-overview-card"
+          >
 
             <strong>
+
               ${counts.followUps}
+
             </strong>
 
+
             <small>
+
               FOLLOW-UPS
+
             </small>
 
           </div>
@@ -545,14 +609,22 @@ function renderDepartmentHome(){
       </div>
 
 
-      <div class="department-heading">
+      <!-- ================================================
+           DEPARTMENTS
+      ================================================= -->
+
+      <div
+        class="department-heading"
+      >
 
         DEPARTMENTS
 
       </div>
 
 
-      <div class="department-grid">
+      <div
+        class="department-grid"
+      >
 
         ${
           SECTIONS
@@ -568,10 +640,11 @@ function renderDepartmentHome(){
       </div>
 
 
-      <div class="department-help">
+      <div
+        class="department-help"
+      >
 
-        Select a department to open
-        its checklist.
+        Select a department to open its checklist.
 
       </div>
 
@@ -588,6 +661,7 @@ function renderDepartmentHome(){
 
 /* ============================================================
    DEPARTMENT CARD
+   NO ICONS / NO PICTURES
 ============================================================ */
 
 function renderDepartmentCard(
@@ -619,20 +693,9 @@ function renderDepartmentCard(
       )}"
     >
 
-      <div class="department-icon">
-
-        <span>
-
-          ${getDepartmentIcon(
-            section.id
-          )}
-
-        </span>
-
-      </div>
-
-
-      <div class="department-card-name">
+      <div
+        class="department-card-name"
+      >
 
         ${escapeHtml(
           section.title
@@ -641,14 +704,18 @@ function renderDepartmentCard(
       </div>
 
 
-      <div class="department-card-count">
+      <div
+        class="department-card-count"
+      >
 
         ${count.checked}/${count.total}
 
       </div>
 
 
-      <div class="department-card-label">
+      <div
+        class="department-card-label"
+      >
 
         ${
           complete
@@ -666,7 +733,7 @@ function renderDepartmentCard(
 
 
 /* ============================================================
-   DEPARTMENT BUTTONS
+   DEPARTMENT BUTTON EVENTS
 ============================================================ */
 
 function bindDepartmentButtons(){
@@ -684,8 +751,12 @@ function bindDepartmentButtons(){
         'click',
         function(){
 
+          const departmentId =
+            button.dataset.department;
+
+
           openDepartment(
-            button.dataset.department
+            departmentId
           );
 
         }
@@ -746,7 +817,7 @@ export function openDepartment(
 
 
 /* ============================================================
-   CLOSE DEPARTMENT
+   BACK TO DEPARTMENTS
 ============================================================ */
 
 export function closeDepartment(){
@@ -767,7 +838,7 @@ export function closeDepartment(){
 
 
 /* ============================================================
-   DEPARTMENT PAGE
+   DEPARTMENT CHECKLIST
 ============================================================ */
 
 function renderDepartment(
@@ -775,7 +846,7 @@ function renderDepartment(
 ){
 
   const container =
-    document.getElementById(
+    getElement(
       'sections'
     );
 
@@ -797,10 +868,18 @@ function renderDepartment(
 
   container.innerHTML = `
 
-    <div class="department-checklist">
+    <div
+      class="department-checklist"
+    >
 
 
-      <div class="department-checklist-top">
+      <!-- ==============================================
+           DEPARTMENT HEADER
+      =============================================== -->
+
+      <div
+        class="department-checklist-top"
+      >
 
 
         <button
@@ -814,25 +893,15 @@ function renderDepartment(
         </button>
 
 
-        <div class="department-checklist-title">
-
-
-          <div class="department-checklist-icon">
-
-            <span>
-
-              ${getDepartmentIcon(
-                section.id
-              )}
-
-            </span>
-
-          </div>
-
+        <div
+          class="department-checklist-title"
+        >
 
           <div>
 
-            <div class="department-checklist-name">
+            <div
+              class="department-checklist-name"
+            >
 
               ${escapeHtml(
                 section.title
@@ -853,12 +922,15 @@ function renderDepartment(
 
           </div>
 
-
         </div>
 
 
       </div>
 
+
+      <!-- ==============================================
+           CHECKLIST POINTS
+      =============================================== -->
 
       <div
         id="departmentPoints"
@@ -872,7 +944,7 @@ function renderDepartment(
 
 
   const back =
-    document.getElementById(
+    getElement(
       'departmentBackBtn'
     );
 
@@ -897,7 +969,7 @@ function renderDepartment(
 
 
 /* ============================================================
-   DEPARTMENT POINTS
+   RENDER DEPARTMENT POINTS
 ============================================================ */
 
 function renderDepartmentPoints(
@@ -905,7 +977,7 @@ function renderDepartmentPoints(
 ){
 
   const container =
-    document.getElementById(
+    getElement(
       'departmentPoints'
     );
 
@@ -919,14 +991,18 @@ function renderDepartmentPoints(
   }
 
 
+  container.innerHTML =
+    '';
+
+
   section.items.forEach(
     (
       text,
       index
     ) => {
 
-      const item =
-        createPoint(
+      const point =
+        createChecklistPoint(
           section,
           text,
           index
@@ -934,7 +1010,7 @@ function renderDepartmentPoints(
 
 
       container.appendChild(
-        item
+        point
       );
 
     }
@@ -947,10 +1023,10 @@ function renderDepartmentPoints(
 
 
 /* ============================================================
-   CREATE POINT
+   CREATE CHECKLIST POINT
 ============================================================ */
 
-function createPoint(
+function createChecklistPoint(
   section,
   text,
   index
@@ -982,8 +1058,12 @@ function createPoint(
 
   wrapper.innerHTML = `
 
-    <div class="item-row">
+    <div
+      class="item-row"
+    >
 
+
+      <!-- CHECK CIRCLE -->
 
       <button
         type="button"
@@ -995,6 +1075,7 @@ function createPoint(
         data-key="${escapeHtml(
           key
         )}"
+        aria-label="Mark checklist point reviewed"
       >
 
         ${
@@ -1006,7 +1087,11 @@ function createPoint(
       </button>
 
 
-      <div class="item-text">
+      <!-- POINT -->
+
+      <div
+        class="item-text"
+      >
 
         ${escapeHtml(
           text
@@ -1015,7 +1100,11 @@ function createPoint(
       </div>
 
 
-      <div class="item-actions">
+      <!-- ACTIONS -->
+
+      <div
+        class="item-actions"
+      >
 
 
         <button
@@ -1050,6 +1139,10 @@ function createPoint(
     </div>
 
 
+    <!-- ==============================================
+         DETAILS
+    =============================================== -->
+
     <div
       class="extra ${
         hasDetails(item)
@@ -1062,12 +1155,17 @@ function createPoint(
     >
 
 
+      <!-- REVIEWER COMMENTS -->
+
       <div
         id="comments-${escapeHtml(
           key
         )}"
+        class="comments-list"
       ></div>
 
+
+      <!-- ADD COMMENT -->
 
       <div
         class="comment-row"
@@ -1098,6 +1196,8 @@ function createPoint(
       </div>
 
 
+      <!-- PHOTOS -->
+
       <div
         id="photos-${escapeHtml(
           key
@@ -1105,6 +1205,8 @@ function createPoint(
         class="photos"
       ></div>
 
+
+      <!-- FOLLOW-UP -->
 
       <div
         class="followup-row"
@@ -1142,6 +1244,8 @@ function createPoint(
       </div>
 
 
+      <!-- SHIP RESPONSES -->
+
       <div
         id="ship-comments-${escapeHtml(
           key
@@ -1149,18 +1253,21 @@ function createPoint(
       ></div>
 
 
+      <!-- PHOTO INPUT -->
+
       <input
         type="file"
-        class="photo-input hidden"
         id="photo-input-${escapeHtml(
           key
         )}"
+        class="photo-input hidden"
         data-key="${escapeHtml(
           key
         )}"
         accept="image/*"
         capture="environment"
       >
+
 
     </div>
 
@@ -1194,7 +1301,7 @@ function createPoint(
 
 
 /* ============================================================
-   DETAILS
+   CHECK IF ITEM HAS DETAILS
 ============================================================ */
 
 function hasDetails(
@@ -1257,7 +1364,7 @@ function bindPointEvents(
   key
 ){
 
-  const check =
+  const checkButton =
     element.querySelector(
       '.check-btn'
     );
@@ -1275,13 +1382,13 @@ function bindPointEvents(
     );
 
 
-  const addComment =
+  const addCommentButton =
     element.querySelector(
       '.add-comment'
     );
 
 
-  const followup =
+  const followUp =
     element.querySelector(
       '.followup-check'
     );
@@ -1293,15 +1400,15 @@ function bindPointEvents(
     );
 
 
-  /*
-    CHECK
-  */
+  /* ==========================================================
+     CHECK
+  ========================================================== */
 
   if(
-    check
+    checkButton
   ){
 
-    check.addEventListener(
+    checkButton.addEventListener(
       'click',
       async function(
         event
@@ -1316,13 +1423,13 @@ function bindPointEvents(
           );
 
 
-        check.classList.toggle(
+        checkButton.classList.toggle(
           'checked',
           checked
         );
 
 
-        check.textContent =
+        checkButton.textContent =
           checked
             ? '✓'
             : '';
@@ -1339,9 +1446,9 @@ function bindPointEvents(
   }
 
 
-  /*
-    COMMENT
-  */
+  /* ==========================================================
+     COMMENT
+  ========================================================== */
 
   if(
     commentButton
@@ -1362,7 +1469,7 @@ function bindPointEvents(
 
 
         const input =
-          document.getElementById(
+          getElement(
             `comment-input-${key}`
           );
 
@@ -1381,9 +1488,9 @@ function bindPointEvents(
   }
 
 
-  /*
-    PHOTO
-  */
+  /* ==========================================================
+     PHOTO
+  ========================================================== */
 
   if(
     photoButton
@@ -1417,15 +1524,15 @@ function bindPointEvents(
   }
 
 
-  /*
-    ADD COMMENT
-  */
+  /* ==========================================================
+     ADD COMMENT
+  ========================================================== */
 
   if(
-    addComment
+    addCommentButton
   ){
 
-    addComment.addEventListener(
+    addCommentButton.addEventListener(
       'click',
       async function(
         event
@@ -1435,7 +1542,7 @@ function bindPointEvents(
 
 
         const input =
-          document.getElementById(
+          getElement(
             `comment-input-${key}`
           );
 
@@ -1493,15 +1600,15 @@ function bindPointEvents(
   }
 
 
-  /*
-    FOLLOW-UP
-  */
+  /* ==========================================================
+     FOLLOW-UP
+  ========================================================== */
 
   if(
-    followup
+    followUp
   ){
 
-    followup.addEventListener(
+    followUp.addEventListener(
       'change',
       async function(
         event
@@ -1512,7 +1619,7 @@ function bindPointEvents(
 
         setFollowUp(
           key,
-          followup.checked
+          followUp.checked
         );
 
 
@@ -1529,9 +1636,9 @@ function bindPointEvents(
   }
 
 
-  /*
-    PHOTO INPUT
-  */
+  /* ==========================================================
+     PHOTO INPUT
+  ========================================================== */
 
   if(
     photoInput
@@ -1560,7 +1667,7 @@ function bindPointEvents(
         try{
 
           const photo =
-            await readImage(
+            await readAndResizeImage(
               file
             );
 
@@ -1592,7 +1699,7 @@ function bindPointEvents(
 
 
           alert(
-            'Could not add photo.'
+            'Could not add the photo.'
           );
 
         }
@@ -1618,7 +1725,7 @@ function openDetails(
 ){
 
   const extra =
-    document.getElementById(
+    getElement(
       `extra-${key}`
     );
 
@@ -1637,7 +1744,7 @@ function openDetails(
 
 
 /* ============================================================
-   COMMENTS
+   REVIEWER COMMENTS
 ============================================================ */
 
 function renderComments(
@@ -1645,7 +1752,7 @@ function renderComments(
 ){
 
   const container =
-    document.getElementById(
+    getElement(
       `comments-${key}`
     );
 
@@ -1695,6 +1802,7 @@ function renderComments(
         color:var(--vv-squid);
         font-size:9px;
         font-weight:800;
+        letter-spacing:.04em;
       "
     >
 
@@ -1708,7 +1816,9 @@ function renderComments(
         .map(
           comment => `
 
-            <div class="comment">
+            <div
+              class="comment"
+            >
 
               <strong>
 
@@ -1721,10 +1831,18 @@ function renderComments(
               </strong>
 
 
-              ${escapeHtml(
-                comment.text ||
-                ''
-              )}
+              <div
+                style="
+                  margin-top:3px;
+                "
+              >
+
+                ${escapeHtml(
+                  comment.text ||
+                  ''
+                )}
+
+              </div>
 
             </div>
 
@@ -1747,7 +1865,7 @@ function renderPhotos(
 ){
 
   const container =
-    document.getElementById(
+    getElement(
       `photos-${key}`
     );
 
@@ -1781,7 +1899,7 @@ function renderPhotos(
 
   photos.forEach(
     (
-      photo,
+      source,
       index
     ) => {
 
@@ -1802,7 +1920,7 @@ function renderPhotos(
 
 
       image.src =
-        photo;
+        source;
 
 
       image.alt =
@@ -1830,6 +1948,12 @@ function renderPhotos(
 
       remove.textContent =
         '×';
+
+
+      remove.setAttribute(
+        'aria-label',
+        'Remove photo'
+      );
 
 
       remove.addEventListener(
@@ -1882,7 +2006,7 @@ function renderShipComments(
 ){
 
   const container =
-    document.getElementById(
+    getElement(
       `ship-comments-${key}`
     );
 
@@ -1928,9 +2052,11 @@ function renderShipComments(
     <div
       style="
         margin-top:10px;
+        margin-bottom:5px;
         color:var(--vv-squid);
         font-size:9px;
         font-weight:800;
+        letter-spacing:.04em;
       "
     >
 
@@ -1958,10 +2084,18 @@ function renderShipComments(
               </strong>
 
 
-              ${escapeHtml(
-                comment.text ||
-                ''
-              )}
+              <div
+                style="
+                  margin-top:3px;
+                "
+              >
+
+                ${escapeHtml(
+                  comment.text ||
+                  ''
+                )}
+
+              </div>
 
             </div>
 
@@ -1976,18 +2110,18 @@ function renderShipComments(
 
 
 /* ============================================================
-   READ IMAGE
+   IMAGE RESIZE
 ============================================================ */
 
-function readImage(
+function readAndResizeImage(
   file
 ){
 
   return new Promise(
-    (
+    function(
       resolve,
       reject
-    ) => {
+    ){
 
       const reader =
         new FileReader();
@@ -2016,16 +2150,22 @@ function readImage(
 
 
               const width =
-                Math.round(
-                  image.width *
-                  ratio
+                Math.max(
+                  1,
+                  Math.round(
+                    image.width *
+                    ratio
+                  )
                 );
 
 
               const height =
-                Math.round(
-                  image.height *
-                  ratio
+                Math.max(
+                  1,
+                  Math.round(
+                    image.height *
+                    ratio
+                  )
                 );
 
 
@@ -2055,7 +2195,7 @@ function readImage(
 
                 reject(
                   new Error(
-                    'Could not create canvas.'
+                    'Could not create image canvas.'
                   )
                 );
 
@@ -2125,7 +2265,7 @@ function readImage(
 
 
 /* ============================================================
-   REFRESH UI
+   REFRESH CHECKLIST UI
 ============================================================ */
 
 export function refreshChecklistUI(){
@@ -2144,6 +2284,17 @@ export function refreshChecklistUI(){
 
   SECTIONS.forEach(
     section => {
+
+      if(
+        !Array.isArray(
+          section.items
+        )
+      ){
+
+        return;
+
+      }
+
 
       section.items.forEach(
         (
@@ -2173,7 +2324,7 @@ export function refreshChecklistUI(){
 
           const button =
             document.querySelector(
-              `[data-key="${key}"].check-btn`
+              `.check-btn[data-key="${key}"]`
             );
 
 
@@ -2208,17 +2359,17 @@ export function refreshChecklistUI(){
 
 
   /*
-    Progress.
+    GLOBAL PROGRESS
   */
 
   const progress =
-    document.getElementById(
+    getElement(
       'progress'
     );
 
 
   const fill =
-    document.getElementById(
+    getElement(
       'fill'
     );
 
@@ -2254,7 +2405,7 @@ export function refreshChecklistUI(){
 
 
   /*
-    Department count.
+    CURRENT DEPARTMENT COUNT
   */
 
   if(
@@ -2280,7 +2431,7 @@ export function refreshChecklistUI(){
 
 
       const element =
-        document.getElementById(
+        getElement(
           'departmentCurrentCount'
         );
 
@@ -2293,6 +2444,59 @@ export function refreshChecklistUI(){
           `${count.checked}/${count.total} checked`;
 
       }
+
+    }
+
+  }
+
+
+  /*
+    Refresh details for currently
+    displayed points.
+  */
+
+  if(
+    currentDepartment
+  ){
+
+    const section =
+      SECTIONS.find(
+        item =>
+          item.id ===
+          currentDepartment
+      );
+
+
+    if(
+      section
+    ){
+
+      section.items.forEach(
+        (
+          _text,
+          index
+        ) => {
+
+          const key =
+            `${section.id}__${index}`;
+
+
+          renderComments(
+            key
+          );
+
+
+          renderPhotos(
+            key
+          );
+
+
+          renderShipComments(
+            key
+          );
+
+        }
+      );
 
     }
 
@@ -2313,19 +2517,19 @@ export function updateChecklistHeader(){
 
 
   const ship =
-    document.getElementById(
+    getElement(
       'hdrShip'
     );
 
 
   const reviewer =
-    document.getElementById(
+    getElement(
       'hdrReviewer'
     );
 
 
   const visit =
-    document.getElementById(
+    getElement(
       'visitMeta'
     );
 
@@ -2463,7 +2667,7 @@ export function getChecklistFollowUps(){
 
 
 /* ============================================================
-   ALL POINTS
+   ALL CHECKLIST POINTS
 ============================================================ */
 
 export function getAllChecklistPoints(){
@@ -2560,13 +2764,13 @@ export async function saveChecklist(){
 
 
 /* ============================================================
-   CLEAR UI
+   CLEAR CHECKLIST UI
 ============================================================ */
 
 export function clearChecklistUI(){
 
   const container =
-    document.getElementById(
+    getElement(
       'sections'
     );
 
@@ -2586,7 +2790,7 @@ export function clearChecklistUI(){
 
 
   const progress =
-    document.getElementById(
+    getElement(
       'progress'
     );
 
@@ -2602,7 +2806,7 @@ export function clearChecklistUI(){
 
 
   const fill =
-    document.getElementById(
+    getElement(
       'fill'
     );
 
@@ -2620,7 +2824,7 @@ export function clearChecklistUI(){
 
 
 /* ============================================================
-   DEFAULT
+   EXPORT
 ============================================================ */
 
 export default {
