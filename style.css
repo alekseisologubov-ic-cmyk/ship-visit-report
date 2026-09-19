@@ -55,11 +55,10 @@
 html,
 body {
 
-  margin:0;
-  padding:0;
-
   width:100%;
   min-height:100%;
+  margin:0;
+  padding:0;
 
   overflow-x:hidden;
 
@@ -122,14 +121,39 @@ img {
 #app {
 
   width:100%;
-
   min-height:100vh;
 
 }
 
 
 /* ============================================================
-   HEADER
+   GENERAL
+============================================================ */
+
+section {
+
+  width:100%;
+
+}
+
+
+.app {
+
+  width:100%;
+  min-height:100vh;
+
+}
+
+
+.no-print {
+
+  /* kept for print handling */
+
+}
+
+
+/* ============================================================
+   HEADER / PURPLE BAND
 ============================================================ */
 
 .band {
@@ -137,7 +161,6 @@ img {
   position:relative;
 
   width:100%;
-
   max-width:1200px;
 
   margin:0 auto;
@@ -163,7 +186,6 @@ img {
 .band.compact {
 
   padding-top:16px;
-
   padding-bottom:18px;
 
 }
@@ -188,8 +210,7 @@ img {
 
   margin:0;
 
-  color:
-    rgba(255,255,255,.92);
+  color:rgba(255,255,255,.92);
 
   font-size:12px;
 
@@ -200,8 +221,7 @@ img {
 
 .eyebrow {
 
-  color:
-    rgba(255,255,255,.92);
+  color:rgba(255,255,255,.92);
 
   font-size:11px;
 
@@ -262,7 +282,6 @@ img {
 .home {
 
   width:100%;
-
   max-width:1200px;
 
   margin:0 auto;
@@ -276,9 +295,10 @@ img {
 
   display:grid;
 
-  grid-template-columns:1fr;
+  grid-template-columns:
+    repeat(2,minmax(0,1fr));
 
-  gap:10px;
+  gap:12px;
 
 }
 
@@ -289,9 +309,9 @@ img {
 
   width:100%;
 
-  min-height:125px;
+  min-height:150px;
 
-  padding:21px;
+  padding:22px;
 
   text-align:left;
 
@@ -303,12 +323,32 @@ img {
 
   color:var(--vv-body);
 
+  transition:
+    box-shadow .15s ease,
+    transform .15s ease,
+    border-color .15s ease;
+
+}
+
+
+.home-card:hover {
+
+  border-color:
+    rgba(60,16,83,.35);
+
+  box-shadow:
+    0 6px 20px
+    rgba(60,16,83,.08);
+
+  transform:
+    translateY(-1px);
+
 }
 
 
 .home-card h2 {
 
-  margin:0 0 9px;
+  margin:0 0 10px;
 
   color:var(--vv-squid);
 
@@ -359,20 +399,47 @@ img {
 }
 
 
+.admin-button:hover {
+
+  background:
+    rgba(60,16,83,.04);
+
+}
+
+
 /* ============================================================
-   PAGE
+   PAGE WRAPPERS
 ============================================================ */
 
 .page-pad,
-.summary {
+.summary,
+.reports {
 
   width:100%;
-
   max-width:1200px;
 
   margin:0 auto;
 
-  padding:17px 12px 90px;
+}
+
+
+.page-pad {
+
+  padding:18px 12px 90px;
+
+}
+
+
+.summary {
+
+  padding:18px 12px 90px;
+
+}
+
+
+.reports {
+
+  padding:18px 12px 90px;
 
 }
 
@@ -384,7 +451,6 @@ img {
 .meta {
 
   width:100%;
-
   max-width:1200px;
 
   margin:0 auto;
@@ -410,7 +476,69 @@ img {
 
 
 /* ============================================================
-   FORM FIELDS
+   REVIEWER
+============================================================ */
+
+.reviewer-row {
+
+  display:flex;
+
+  flex-direction:column;
+
+  align-items:flex-start;
+
+  gap:6px;
+
+  margin-top:10px;
+
+}
+
+
+.reviewer-row label {
+
+  color:rgba(255,255,255,.85);
+
+  font-size:9px;
+
+  font-weight:800;
+
+}
+
+
+.reviewer-row input {
+
+  width:100%;
+
+  max-width:360px;
+
+  min-height:40px;
+
+  padding:8px 10px;
+
+  border:1px solid rgba(255,255,255,.28);
+
+  border-radius:6px;
+
+  background:rgba(255,255,255,.10);
+
+  color:#FFFFFF;
+
+  outline:none;
+
+  font-size:12px;
+
+}
+
+
+.reviewer-row input::placeholder {
+
+  color:rgba(255,255,255,.65);
+
+}
+
+
+/* ============================================================
+   FORM
 ============================================================ */
 
 .field {
@@ -489,71 +617,7 @@ img {
 
 
 /* ============================================================
-   REVIEWER
-============================================================ */
-
-.reviewer-row {
-
-  display:flex;
-
-  flex-direction:column;
-
-  align-items:stretch;
-
-  gap:6px;
-
-  margin-top:10px;
-
-}
-
-
-.reviewer-row label {
-
-  color:
-    rgba(255,255,255,.85);
-
-  font-size:9px;
-
-  font-weight:800;
-
-}
-
-
-.reviewer-row input {
-
-  width:100%;
-
-  min-height:40px;
-
-  padding:8px 10px;
-
-  border:1px solid
-    rgba(255,255,255,.28);
-
-  border-radius:6px;
-
-  background:
-    rgba(255,255,255,.10);
-
-  color:#FFFFFF;
-
-  outline:none;
-
-  font-size:12px;
-
-}
-
-
-.reviewer-row input::placeholder {
-
-  color:
-    rgba(255,255,255,.65);
-
-}
-
-
-/* ============================================================
-   PRIMARY / SECONDARY BUTTON
+   BUTTONS
 ============================================================ */
 
 .btn-primary,
@@ -574,6 +638,8 @@ img {
   border-radius:8px;
 
   font-size:13px;
+
+  line-height:1.2;
 
   font-weight:800;
 
@@ -620,14 +686,15 @@ img {
 
 
 /* ============================================================
-   TWO BUTTONS
+   GRID 2
 ============================================================ */
 
 .grid2 {
 
   display:grid;
 
-  grid-template-columns:1fr;
+  grid-template-columns:
+    repeat(2,minmax(0,1fr));
 
   gap:8px;
 
@@ -641,7 +708,6 @@ img {
 .footer {
 
   width:100%;
-
   max-width:1200px;
 
   margin:0 auto;
@@ -662,7 +728,6 @@ img {
 .progress-wrap {
 
   width:100%;
-
   max-width:1200px;
 
   margin:0 auto;
@@ -701,7 +766,8 @@ img {
 
   background:var(--vv-red);
 
-  transition:width .2s ease;
+  transition:
+    width .2s ease;
 
 }
 
@@ -718,17 +784,1044 @@ img {
 
 
 /* ============================================================
-   CHECKLIST
-   THESE MATCH THE ACTUAL checklist.js CLASSES
+   NEW DEPARTMENT HOME
 ============================================================ */
 
+.department-home {
 
-/* Main section */
+  width:100%;
+
+  max-width:1200px;
+
+  margin:0 auto;
+
+  padding:18px 12px 35px;
+
+}
+
+
+/* ============================================================
+   OVERVIEW
+============================================================ */
+
+.department-overview {
+
+  margin-bottom:18px;
+
+  padding:15px;
+
+  border:1px solid var(--vv-line);
+
+  border-radius:10px;
+
+  background:#FFFFFF;
+
+}
+
+
+.department-overview-title {
+
+  margin-bottom:11px;
+
+  color:var(--vv-squid);
+
+  font-size:12px;
+
+  line-height:1.2;
+
+  font-weight:800;
+
+  letter-spacing:.05em;
+
+}
+
+
+.department-overview-grid {
+
+  display:grid;
+
+  grid-template-columns:
+    repeat(4,minmax(0,1fr));
+
+  gap:8px;
+
+}
+
+
+.department-overview-card {
+
+  padding:11px;
+
+  border:1px solid var(--vv-line);
+
+  border-radius:7px;
+
+  background:var(--vv-bg);
+
+}
+
+
+.department-overview-card strong {
+
+  display:inline-block;
+
+  color:var(--vv-squid);
+
+  font-size:19px;
+
+  line-height:1;
+
+  font-weight:800;
+
+}
+
+
+.department-overview-card span {
+
+  color:var(--vv-gray);
+
+  font-size:9px;
+
+}
+
+
+.department-overview-card small {
+
+  display:block;
+
+  margin-top:5px;
+
+  color:var(--vv-gray);
+
+  font-size:7px;
+
+  line-height:1.2;
+
+  font-weight:800;
+
+  letter-spacing:.04em;
+
+}
+
+
+/* ============================================================
+   DEPARTMENT HEADING
+============================================================ */
+
+.department-heading {
+
+  margin-bottom:10px;
+
+  color:var(--vv-squid);
+
+  font-size:14px;
+
+  line-height:1.2;
+
+  font-weight:800;
+
+  letter-spacing:.04em;
+
+}
+
+
+/* ============================================================
+   DEPARTMENT GRID
+============================================================ */
+
+.department-grid {
+
+  display:grid;
+
+  grid-template-columns:
+    repeat(3,minmax(0,1fr));
+
+  gap:13px;
+
+}
+
+
+/* ============================================================
+   DEPARTMENT CARD
+============================================================ */
+
+.department-card {
+
+  position:relative;
+
+  display:flex;
+
+  flex-direction:column;
+
+  align-items:center;
+
+  justify-content:center;
+
+  width:100%;
+
+  min-height:175px;
+
+  padding:18px 12px;
+
+  border:1px solid var(--vv-line);
+
+  border-radius:12px;
+
+  background:#FFFFFF;
+
+  color:var(--vv-squid);
+
+  text-align:center;
+
+  cursor:pointer;
+
+  outline:none;
+
+  transition:
+    transform .12s ease,
+    box-shadow .12s ease,
+    border-color .12s ease;
+
+}
+
+
+.department-card:hover {
+
+  border-color:
+    rgba(60,16,83,.35);
+
+  box-shadow:
+    0 6px 20px
+    rgba(60,16,83,.08);
+
+  transform:
+    translateY(-1px);
+
+}
+
+
+.department-card:active {
+
+  transform:
+    scale(.985);
+
+}
+
+
+.department-card:focus-visible {
+
+  box-shadow:
+    0 0 0 3px
+    rgba(60,16,83,.16);
+
+}
+
+
+.department-card.complete {
+
+  border-color:
+    rgba(0,138,82,.35);
+
+}
+
+
+/* ============================================================
+   DEPARTMENT ICON
+============================================================ */
+
+.department-icon {
+
+  display:flex;
+
+  align-items:center;
+
+  justify-content:center;
+
+  width:62px;
+
+  height:62px;
+
+  margin-bottom:11px;
+
+  border-radius:50%;
+
+  background:var(--vv-squid);
+
+  color:#FFFFFF;
+
+}
+
+
+.department-card.complete
+.department-icon {
+
+  background:var(--status-green);
+
+}
+
+
+.department-icon span {
+
+  display:flex;
+
+  align-items:center;
+
+  justify-content:center;
+
+  font-size:30px;
+
+  line-height:1;
+
+}
+
+
+.department-icon svg {
+
+  width:31px;
+
+  height:31px;
+
+}
+
+
+/* ============================================================
+   DEPARTMENT TEXT
+============================================================ */
+
+.department-card-name {
+
+  color:var(--vv-squid);
+
+  font-size:14px;
+
+  line-height:1.2;
+
+  font-weight:800;
+
+  letter-spacing:.03em;
+
+}
+
+
+.department-card-count {
+
+  margin-top:8px;
+
+  color:var(--vv-squid);
+
+  font-size:20px;
+
+  line-height:1;
+
+  font-weight:800;
+
+}
+
+
+.department-card-label {
+
+  margin-top:5px;
+
+  color:var(--vv-gray);
+
+  font-size:7px;
+
+  line-height:1.2;
+
+  font-weight:800;
+
+  letter-spacing:.05em;
+
+}
+
+
+.department-card.complete
+.department-card-label {
+
+  color:var(--status-green);
+
+}
+
+
+.department-help {
+
+  margin-top:13px;
+
+  color:var(--vv-gray);
+
+  font-size:9px;
+
+  line-height:1.4;
+
+  text-align:center;
+
+}
+
+
+/* ============================================================
+   DEPARTMENT CHECKLIST
+============================================================ */
+
+.department-checklist {
+
+  width:100%;
+
+  background:#FFFFFF;
+
+}
+
+
+.department-checklist-top {
+
+  display:flex;
+
+  align-items:center;
+
+  gap:10px;
+
+  width:100%;
+
+  padding:10px 12px;
+
+  border-bottom:1px solid var(--vv-line);
+
+  background:#FFFFFF;
+
+}
+
+
+.department-back {
+
+  display:inline-flex;
+
+  align-items:center;
+
+  justify-content:center;
+
+  flex:0 0 auto;
+
+  min-height:38px;
+
+  padding:7px 12px;
+
+  border:0;
+
+  border-radius:7px;
+
+  background:var(--vv-red);
+
+  color:#FFFFFF;
+
+  font-size:10px;
+
+  line-height:1;
+
+  font-weight:800;
+
+}
+
+
+.department-back:hover {
+
+  background:var(--vv-red-dark);
+
+}
+
+
+.department-checklist-title {
+
+  display:flex;
+
+  align-items:center;
+
+  min-width:0;
+
+  gap:9px;
+
+}
+
+
+.department-checklist-icon {
+
+  display:flex;
+
+  align-items:center;
+
+  justify-content:center;
+
+  width:40px;
+
+  height:40px;
+
+  flex:0 0 40px;
+
+  border-radius:50%;
+
+  background:var(--vv-squid);
+
+  color:#FFFFFF;
+
+}
+
+
+.department-checklist-icon span {
+
+  font-size:20px;
+
+  line-height:1;
+
+}
+
+
+.department-checklist-name {
+
+  color:var(--vv-squid);
+
+  font-size:15px;
+
+  line-height:1.2;
+
+  font-weight:800;
+
+}
+
+
+.department-checklist-count {
+
+  margin-top:2px;
+
+  color:var(--vv-gray);
+
+  font-size:9px;
+
+  line-height:1.2;
+
+}
+
+
+/* ============================================================
+   DEPARTMENT POINT LIST
+============================================================ */
+
+.department-point-list {
+
+  width:100%;
+
+}
+
+
+/* ============================================================
+   CHECKLIST ITEM
+============================================================ */
+
+.department-point-list .item {
+
+  width:100%;
+
+  margin:0;
+
+  border-bottom:1px solid var(--vv-line);
+
+  background:#FFFFFF;
+
+}
+
+
+.department-point-list .item-row {
+
+  display:grid;
+
+  grid-template-columns:
+    30px
+    minmax(0,1fr)
+    auto;
+
+  align-items:center;
+
+  gap:9px;
+
+  width:100%;
+
+  min-height:62px;
+
+  padding:10px 12px;
+
+}
+
+
+/* ============================================================
+   CHECK CIRCLE
+============================================================ */
+
+.department-point-list
+.check-btn {
+
+  position:relative;
+
+  display:flex;
+
+  align-items:center;
+
+  justify-content:center;
+
+  width:28px;
+
+  height:28px;
+
+  min-width:28px;
+
+  min-height:28px;
+
+  padding:0;
+
+  border:2px solid #999999;
+
+  border-radius:50%;
+
+  background:#FFFFFF;
+
+  color:#FFFFFF;
+
+  appearance:none;
+
+  -webkit-appearance:none;
+
+}
+
+
+.department-point-list
+.check-btn:hover {
+
+  border-color:var(--vv-red);
+
+}
+
+
+.department-point-list
+.check-btn.checked {
+
+  border-color:var(--vv-red);
+
+  background:var(--vv-red);
+
+  color:#FFFFFF;
+
+}
+
+
+.department-point-list
+.check-btn.checked::after {
+
+  content:'✓';
+
+  display:block;
+
+  color:#FFFFFF;
+
+  font-size:13px;
+
+  line-height:1;
+
+  font-weight:800;
+
+}
+
+
+/* ============================================================
+   POINT TEXT
+============================================================ */
+
+.department-point-list
+.item-text {
+
+  min-width:0;
+
+  color:var(--vv-body);
+
+  font-size:13px;
+
+  line-height:1.4;
+
+  font-weight:500;
+
+  overflow-wrap:anywhere;
+
+}
+
+
+/* ============================================================
+   ACTIONS
+============================================================ */
+
+.department-point-list
+.item-actions {
+
+  display:flex;
+
+  align-items:center;
+
+  gap:5px;
+
+}
+
+
+.department-point-list
+.item-actions .action {
+
+  display:inline-flex;
+
+  align-items:center;
+
+  justify-content:center;
+
+  min-width:55px;
+
+  min-height:34px;
+
+  padding:6px 8px;
+
+  border:1px solid var(--vv-line);
+
+  border-radius:6px;
+
+  background:#FFFFFF;
+
+  color:var(--vv-squid);
+
+  font-size:8px;
+
+  line-height:1;
+
+  font-weight:800;
+
+}
+
+
+.department-point-list
+.item-actions .action:hover {
+
+  border-color:var(--vv-squid);
+
+}
+
+
+/* ============================================================
+   DETAILS
+============================================================ */
+
+.department-point-list
+.extra {
+
+  padding:
+    0 12px 14px 50px;
+
+  background:#FFFFFF;
+
+}
+
+
+/* ============================================================
+   COMMENT ROW
+============================================================ */
+
+.department-point-list
+.comment-row {
+
+  display:flex;
+
+  align-items:flex-end;
+
+  gap:7px;
+
+  margin-top:8px;
+
+}
+
+
+.department-point-list
+.comment-row textarea {
+
+  flex:1;
+
+  min-width:0;
+
+  min-height:68px;
+
+  padding:8px 9px;
+
+  border:1px solid var(--vv-line);
+
+  border-radius:7px;
+
+  background:#FFFFFF;
+
+  color:var(--vv-body);
+
+  outline:none;
+
+  font-size:11px;
+
+  line-height:1.4;
+
+  resize:vertical;
+
+}
+
+
+.department-point-list
+.comment-row textarea:focus {
+
+  border-color:var(--vv-squid);
+
+  box-shadow:
+    0 0 0 2px
+    rgba(60,16,83,.07);
+
+}
+
+
+.department-point-list
+.add-comment {
+
+  width:55px;
+
+  min-height:39px;
+
+  padding:6px;
+
+  border:1px solid var(--vv-squid);
+
+  border-radius:6px;
+
+  background:var(--vv-squid);
+
+  color:#FFFFFF;
+
+  font-size:8px;
+
+  font-weight:800;
+
+}
+
+
+.department-point-list
+.add-comment:hover {
+
+  background:var(--vv-squid-dark);
+
+}
+
+
+/* ============================================================
+   COMMENT DISPLAY
+============================================================ */
+
+.comment {
+
+  margin-top:6px;
+
+  padding:9px 10px;
+
+  border-left:3px solid var(--vv-squid);
+
+  border-radius:6px;
+
+  background:#F8F5FA;
+
+  color:var(--vv-body);
+
+  font-size:10px;
+
+  line-height:1.45;
+
+}
+
+
+.comment strong {
+
+  color:var(--vv-squid);
+
+}
+
+
+/* ============================================================
+   PHOTOS
+============================================================ */
+
+.department-point-list
+.photos {
+
+  display:flex;
+
+  flex-wrap:wrap;
+
+  gap:7px;
+
+  margin-top:9px;
+
+}
+
+
+.department-point-list
+.photo {
+
+  position:relative;
+
+  width:82px;
+
+  height:82px;
+
+  overflow:hidden;
+
+  border:1px solid var(--vv-line);
+
+  border-radius:7px;
+
+  background:#F4F2F5;
+
+}
+
+
+.department-point-list
+.photo img {
+
+  width:100%;
+
+  height:100%;
+
+  object-fit:cover;
+
+}
+
+
+.department-point-list
+.photo-remove {
+
+  position:absolute;
+
+  top:3px;
+
+  right:3px;
+
+  display:flex;
+
+  align-items:center;
+
+  justify-content:center;
+
+  width:21px;
+
+  height:21px;
+
+  padding:0;
+
+  border:0;
+
+  border-radius:50%;
+
+  background:rgba(204,0,0,.92);
+
+  color:#FFFFFF;
+
+  font-size:15px;
+
+  line-height:1;
+
+}
+
+
+/* ============================================================
+   FOLLOW-UP
+============================================================ */
+
+.department-point-list
+.followup-row {
+
+  display:flex;
+
+  align-items:center;
+
+  gap:7px;
+
+  margin-top:10px;
+
+  padding:9px;
+
+  border-radius:7px;
+
+  background:var(--status-blue-bg);
+
+}
+
+
+.department-point-list
+.followup-check {
+
+  width:19px;
+
+  height:19px;
+
+  flex:0 0 19px;
+
+  accent-color:var(--vv-red);
+
+}
+
+
+.department-point-list
+.followup-row label {
+
+  color:var(--status-blue);
+
+  font-size:9px;
+
+  line-height:1.3;
+
+  font-weight:800;
+
+}
+
+
+/* ============================================================
+   SHIP RESPONSE DISPLAY
+============================================================ */
+
+.ship-response-display {
+
+  margin-top:6px;
+
+  padding:9px 10px;
+
+  border-left:3px solid var(--status-green);
+
+  border-radius:6px;
+
+  background:var(--status-green-bg);
+
+  color:var(--vv-body);
+
+  font-size:10px;
+
+  line-height:1.45;
+
+}
+
+
+.ship-response-display strong {
+
+  color:var(--status-green);
+
+}
+
+
+/* ============================================================
+   EXISTING / LEGACY CHECKLIST SECTION SUPPORT
+   Kept so old screens don't break.
+============================================================ */
 
 .section {
 
   width:100%;
-
   max-width:1200px;
 
   margin:0 auto;
@@ -737,8 +1830,6 @@ img {
 
 }
 
-
-/* Section header */
 
 .section-head {
 
@@ -759,8 +1850,6 @@ img {
   background:#FFFFFF;
 
   cursor:pointer;
-
-  user-select:none;
 
 }
 
@@ -797,8 +1886,6 @@ img {
 
   font-size:10px;
 
-  font-weight:600;
-
 }
 
 
@@ -812,44 +1899,17 @@ img {
 
   border-bottom:2px solid var(--vv-squid);
 
-  transform:
-    rotate(45deg);
-
-  transition:
-    transform .15s ease;
+  transform:rotate(45deg);
 
 }
 
-
-.section.open
-.chevron {
-
-  transform:
-    rotate(225deg);
-
-}
-
-
-/* Section body */
 
 .section-body {
-
-  display:none;
 
   width:100%;
 
 }
 
-
-.section.open
-.section-body {
-
-  display:block;
-
-}
-
-
-/* Section note */
 
 .section-note {
 
@@ -869,119 +1929,249 @@ img {
 
 
 /* ============================================================
-   CHECKLIST ITEM
-
-   One horizontal line:
-   circle | point text | Comment | Photo
+   REPORT CARDS
 ============================================================ */
 
-.item {
+.report-card {
 
   width:100%;
 
-  margin:0;
+  margin-bottom:14px;
 
-  padding:0;
+  padding:18px;
+
+  border:1px solid var(--vv-line);
+
+  border-radius:10px;
 
   background:#FFFFFF;
-
-  border-bottom:1px solid var(--vv-line);
 
 }
 
 
-/* Main point line */
+.report-card:hover {
 
-.item-row {
+  box-shadow:
+    0 4px 14px
+    rgba(60,16,83,.05);
 
-  display:grid;
+}
 
-  grid-template-columns:
-    28px
-    minmax(0,1fr)
-    auto;
 
-  align-items:center;
+.report-card h2,
+.report-card h3 {
 
-  gap:9px;
+  margin:0 0 8px;
 
-  width:100%;
+  color:var(--vv-squid);
 
-  min-height:58px;
+  font-weight:800;
 
-  padding:10px 12px;
+}
+
+
+.report-card p {
+
+  margin:4px 0;
+
+  color:var(--vv-gray);
+
+  font-size:11px;
+
+  line-height:1.45;
 
 }
 
 
 /* ============================================================
-   CHECK CIRCLE
-
-   Actual class from checklist.js:
-   .check-btn
+   REPORT LIST GRID
 ============================================================ */
 
-.check-btn {
+.report-list,
+#reportList,
+#openList,
+#responseList {
 
-  position:relative;
+  width:100%;
 
-  width:27px;
+}
 
-  height:27px;
 
-  min-width:27px;
+/* ============================================================
+   SUBMITTED REPORT CARDS
+============================================================ */
 
-  min-height:27px;
+#reportList {
 
-  padding:0;
+  display:grid;
 
-  border:2px solid #999999;
+  grid-template-columns:
+    repeat(3,minmax(0,1fr));
 
-  border-radius:50%;
+  gap:14px;
+
+  align-items:start;
+
+}
+
+
+#reportList > * {
+
+  min-width:0;
+
+}
+
+
+.submitted-card,
+.report-list-card {
+
+  width:100%;
+
+  padding:16px;
+
+  border:1px solid #A9DCC4;
+
+  border-radius:10px;
 
   background:#FFFFFF;
 
-  appearance:none;
+}
 
-  -webkit-appearance:none;
 
-  outline:none;
+.submitted-card h2,
+.report-list-card h2 {
+
+  margin:0 0 10px;
+
+  color:var(--vv-squid);
+
+  font-size:15px;
+
+  font-weight:800;
 
 }
 
 
-.check-btn:hover {
+.submitted-card .submitted-status,
+.report-list-card .submitted-status {
 
-  border-color:var(--vv-red);
+  display:inline-flex;
+
+  padding:5px 8px;
+
+  border-radius:999px;
+
+  background:var(--status-green-bg);
+
+  color:var(--status-green);
+
+  font-size:7px;
+
+  font-weight:800;
 
 }
 
 
-.check-btn.checked {
+/* ============================================================
+   REPORT ACTION BUTTONS
+============================================================ */
 
-  border-color:var(--vv-red);
+.report-actions {
 
-  background:var(--vv-red);
+  display:grid;
+
+  grid-template-columns:
+    repeat(2,minmax(0,1fr));
+
+  gap:8px;
+
+  margin-top:14px;
 
 }
 
 
-.check-btn.checked::after {
+.report-actions .btn-primary,
+.report-actions .btn-secondary {
 
-  content:'✓';
+  min-height:42px;
 
-  position:absolute;
+  font-size:10px;
 
-  top:50%;
+}
 
-  left:50%;
 
-  transform:
-    translate(-50%,-53%);
+/* ============================================================
+   OPEN / RESPONSE CARDS
+============================================================ */
 
-  color:#FFFFFF;
+#openList,
+#responseList {
 
-  font-size:14px;
+  display:grid;
+
+  grid-template-columns:
+    repeat(2,minmax(0,1fr));
+
+  gap:12px;
+
+}
+
+
+#responseList > *,
+#openList > * {
+
+  min-width:0;
+
+}
+
+
+/* ============================================================
+   SHIP RESPONSE CARD SUPPORT
+============================================================ */
+
+.response-card {
+
+  width:100%;
+
+  padding:16px;
+
+  border:1px solid #BCD0F2;
+
+  border-radius:10px;
+
+  background:#FFFFFF;
+
+}
+
+
+.response-card h2 {
+
+  margin:0 0 7px;
+
+  color:var(--vv-squid);
+
+  font-size:15px;
+
+  font-weight:800;
+
+}
+
+
+.response-status {
+
+  display:inline-block;
+
+  margin-top:3px;
+
+  padding:5px 8px;
+
+  border-radius:999px;
+
+  background:var(--status-blue-bg);
+
+  color:var(--status-blue);
+
+  font-size:7px;
 
   line-height:1;
 
@@ -991,70 +2181,127 @@ img {
 
 
 /* ============================================================
-   POINT TEXT
+   REPORT SUMMARY CONTENT
 ============================================================ */
 
-.item-text {
+#report-overall-content {
 
-  min-width:0;
-
-  color:var(--vv-body);
-
-  font-size:13px;
-
-  line-height:1.4;
-
-  font-weight:500;
-
-  overflow-wrap:anywhere;
+  width:100%;
 
 }
 
 
-/* ============================================================
-   COMMENT / PHOTO ACTIONS
+.summary-section {
 
-   Actual checklist.js:
-   .item-actions
-   .action
-   .note-button
-   .photo-button
-============================================================ */
+  width:100%;
 
-.item-actions {
+}
+
+
+.summary-section-title {
+
+  margin:22px 0 10px;
+
+  padding-bottom:7px;
+
+  border-bottom:2px solid var(--vv-red);
+
+  color:var(--vv-squid);
+
+  font-size:16px;
+
+  font-weight:800;
+
+}
+
+
+.summary-point {
+
+  margin-bottom:10px;
+
+  padding:13px;
+
+  border-left:4px solid var(--vv-squid);
+
+  border-top:1px solid var(--vv-line);
+
+  border-right:1px solid var(--vv-line);
+
+  border-bottom:1px solid var(--vv-line);
+
+  border-radius:7px;
+
+  background:#FFFFFF;
+
+}
+
+
+.summary-point-title {
+
+  display:flex;
+
+  align-items:flex-start;
+
+  gap:9px;
+
+}
+
+
+.summary-check {
 
   display:flex;
 
   align-items:center;
 
-  gap:5px;
+  justify-content:center;
+
+  width:25px;
+
+  height:25px;
+
+  flex:0 0 25px;
+
+  border-radius:50%;
+
+  background:var(--vv-red);
+
+  color:#FFFFFF;
+
+  font-size:12px;
+
+  font-weight:800;
 
 }
 
 
-.item-actions .action {
+.summary-point-text {
+
+  color:var(--vv-body);
+
+  font-size:12px;
+
+  line-height:1.4;
+
+  font-weight:700;
+
+}
+
+
+/* ============================================================
+   SUMMARY STATUS
+============================================================ */
+
+.status-pill {
 
   display:inline-flex;
 
-  align-items:center;
+  margin-top:8px;
 
-  justify-content:center;
+  padding:5px 8px;
 
-  min-width:54px;
+  border-radius:999px;
 
-  min-height:34px;
-
-  padding:6px 8px;
-
-  border:1px solid var(--vv-line);
-
-  border-radius:6px;
-
-  background:#FFFFFF;
-
-  color:var(--vv-squid);
-
-  font-size:9px;
+  font-size:7px;
 
   line-height:1;
 
@@ -1063,67 +2310,46 @@ img {
 }
 
 
-.item-actions .action:hover {
+.status-pill.blue {
 
-  border-color:var(--vv-squid);
+  background:var(--status-blue-bg);
 
-  background:
-    rgba(60,16,83,.04);
-
-}
-
-
-.item-actions .note-button.active {
-
-  background:var(--vv-squid);
-
-  border-color:var(--vv-squid);
-
-  color:#FFFFFF;
+  color:var(--status-blue);
 
 }
 
 
-/* ============================================================
-   ITEM EXTRA DETAIL AREA
-============================================================ */
+.status-pill.green {
 
-.extra {
+  background:var(--status-green-bg);
 
-  width:100%;
+  color:var(--status-green);
 
-  padding:0 12px 13px 48px;
+}
 
-  background:#FFFFFF;
+
+.status-pill.red {
+
+  background:var(--status-red-bg);
+
+  color:var(--status-red);
 
 }
 
 
 /* ============================================================
-   COMMENTS
+   SUMMARY COMMENT
 ============================================================ */
 
-.comments-list {
+.summary-comment {
 
-  width:100%;
+  margin-top:8px;
 
-}
-
-
-.comments-list .comment {
-
-  margin-top:7px;
-
-}
-
-
-.comment {
-
-  padding:8px 9px;
+  padding:9px 10px;
 
   border-left:3px solid var(--vv-squid);
 
-  border-radius:5px;
+  border-radius:6px;
 
   background:#F8F5FA;
 
@@ -1136,113 +2362,35 @@ img {
 }
 
 
-.comment b {
+.summary-comment strong {
 
   color:var(--vv-squid);
 
 }
 
 
-/* Comment input row */
+/* ============================================================
+   SUMMARY PHOTO
+============================================================ */
 
-.comment-row {
+.summary-photo-grid {
 
   display:flex;
 
-  align-items:stretch;
+  flex-wrap:wrap;
 
-  gap:7px;
+  gap:8px;
 
   margin-top:8px;
 
 }
 
 
-.comment-row textarea {
+.summary-photo {
 
-  flex:1;
+  width:110px;
 
-  min-width:0;
-
-  min-height:65px;
-
-  padding:8px 9px;
-
-  border:1px solid var(--vv-line);
-
-  border-radius:6px;
-
-  background:#FFFFFF;
-
-  color:var(--vv-body);
-
-  outline:none;
-
-  font-size:11px;
-
-  line-height:1.4;
-
-  resize:vertical;
-
-}
-
-
-.comment-row textarea:focus {
-
-  border-color:var(--vv-squid);
-
-}
-
-
-.add-comment {
-
-  width:55px;
-
-  min-height:38px;
-
-  align-self:flex-end;
-
-  padding:6px;
-
-  border:1px solid var(--vv-squid);
-
-  border-radius:6px;
-
-  background:var(--vv-squid);
-
-  color:#FFFFFF;
-
-  font-size:9px;
-
-  font-weight:800;
-
-}
-
-
-/* ============================================================
-   PHOTOS
-============================================================ */
-
-.photos {
-
-  display:flex;
-
-  flex-wrap:wrap;
-
-  gap:7px;
-
-  margin-top:9px;
-
-}
-
-
-.photo {
-
-  position:relative;
-
-  width:78px;
-
-  height:78px;
+  height:110px;
 
   overflow:hidden;
 
@@ -1255,7 +2403,7 @@ img {
 }
 
 
-.photo img {
+.summary-photo img {
 
   width:100%;
 
@@ -1266,578 +2414,32 @@ img {
 }
 
 
-.photo-remove {
-
-  position:absolute;
-
-  top:3px;
-
-  right:3px;
-
-  display:flex;
-
-  align-items:center;
-
-  justify-content:center;
-
-  width:22px;
-
-  height:22px;
-
-  padding:0;
-
-  border:0;
-
-  border-radius:50%;
-
-  background:
-    rgba(204,0,0,.90);
-
-  color:#FFFFFF;
-
-  font-size:16px;
-
-  line-height:1;
-
-}
-
-
 /* ============================================================
-   FOLLOW UP
+   SHIP RESPONSE
 ============================================================ */
 
-.followup-row {
+.ship-comment-box {
 
-  display:flex;
+  margin-top:9px;
 
-  align-items:center;
+  padding:9px 10px;
 
-  gap:8px;
-
-  margin-top:10px;
-
-  padding:8px 10px;
+  border-left:3px solid var(--status-green);
 
   border-radius:6px;
-
-  background:var(--vv-blue-bg);
-
-}
-
-
-.followup-check {
-
-  width:20px;
-
-  height:20px;
-
-  flex:0 0 20px;
-
-  accent-color:var(--vv-red);
-
-}
-
-
-.followup-row label {
-
-  color:var(--status-blue);
-
-  font-size:10px;
-
-  line-height:1.3;
-
-  font-weight:800;
-
-}
-
-
-.followup-row
-label.followup-complete {
-
-  color:var(--status-green);
-
-}
-
-
-/* ============================================================
-   SHIP COMMENTS ON CHECKLIST
-============================================================ */
-
-.ship-comments {
-
-  width:100%;
-
-}
-
-
-/* ============================================================
-   STATUS
-============================================================ */
-
-.status {
-
-  display:inline-block;
-
-  padding:5px 8px;
-
-  border-radius:999px;
-
-  font-size:8px;
-
-  line-height:1;
-
-  font-weight:800;
-
-  letter-spacing:.03em;
-
-}
-
-
-.status.red {
-
-  color:var(--status-red);
-
-  background:var(--status-red-bg);
-
-}
-
-
-.status.blue {
-
-  color:var(--status-blue);
-
-  background:var(--status-blue-bg);
-
-}
-
-
-.status.green {
-
-  color:var(--status-green);
 
   background:var(--status-green-bg);
 
-}
-
-
-/* ============================================================
-   REPORT LISTS
-============================================================ */
-
-.reports {
-
-  width:100%;
-
-  max-width:1200px;
-
-  margin:0 auto;
-
-  padding:13px 10px 85px;
-
-}
-
-
-#openList,
-#reportList,
-#responseList {
-
-  width:100%;
-
-  display:grid;
-
-  grid-template-columns:1fr;
-
-  gap:9px;
-
-  align-items:start;
-
-}
-
-
-/* ============================================================
-   REPORT CARD
-============================================================ */
-
-.report-card {
-
-  width:100%;
-
-  min-width:0;
-
-  padding:13px;
-
-  margin:0;
-
-  border:1px solid var(--vv-line);
-
-  border-radius:9px;
-
-  background:#FFFFFF;
-
-}
-
-
-.report-card.red {
-
-  border-color:
-    rgba(225,10,10,.30);
-
-}
-
-
-.report-card.blue {
-
-  border-color:
-    rgba(36,99,184,.30);
-
-}
-
-
-.report-card.green {
-
-  border-color:
-    rgba(0,138,82,.30);
-
-}
-
-
-.report-card h3 {
-
-  margin:0 0 8px;
-
-  color:var(--vv-squid);
-
-  font-size:15px;
-
-  line-height:1.2;
-
-  font-weight:800;
-
-  overflow-wrap:anywhere;
-
-}
-
-
-.report-card .report-meta {
-
-  color:var(--vv-gray);
-
-  font-size:9.5px;
-
-  line-height:1.55;
-
-}
-
-
-.report-card .report-meta b {
-
-  color:var(--vv-squid);
-
-}
-
-
-/* ============================================================
-   REPORT BUTTONS
-============================================================ */
-
-.report-actions {
-
-  display:flex;
-
-  flex-direction:column;
-
-  width:100%;
-
-  gap:6px;
-
-  margin-top:9px;
-
-}
-
-
-.report-actions button {
-
-  width:100%;
-
-  min-height:38px;
-
-  padding:7px 9px;
-
-  border:1px solid var(--vv-squid);
-
-  border-radius:6px;
-
-  background:#FFFFFF;
-
-  color:var(--vv-squid);
-
-  font-size:9px;
-
-  font-weight:800;
-
-}
-
-
-.report-actions button.open {
-
-  background:var(--vv-squid);
-
-  color:#FFFFFF;
-
-}
-
-
-/* ============================================================
-   SUBMITTED REPORT
-============================================================ */
-
-.submitted-review-button {
-
-  display:flex !important;
-
-  align-items:center !important;
-
-  justify-content:center !important;
-
-  width:100% !important;
-
-  min-height:40px !important;
-
-  padding:8px 10px !important;
-
-  border:1px solid var(--vv-squid) !important;
-
-  border-radius:7px !important;
-
-  background:var(--vv-squid) !important;
-
-  color:#FFFFFF !important;
-
-  font-size:10px !important;
-
-  font-weight:800 !important;
-
-}
-
-
-/* ============================================================
-   BACK HOME
-============================================================ */
-
-#openHomeBtn,
-#reportsHomeBtn,
-#responsesHomeBtn {
-
-  display:flex;
-
-  align-items:center;
-
-  justify-content:center;
-
-  width:100%;
-
-  max-width:420px;
-
-  min-height:44px;
-
-  margin:18px auto 0;
-
-}
-
-
-/* ============================================================
-   EMPTY
-============================================================ */
-
-#openList .empty,
-#reportList .empty,
-#responseList .empty {
-
-  grid-column:1 / -1;
-
-  width:100%;
-
-}
-
-
-.empty {
-
-  width:100%;
-
-  padding:22px 13px;
-
-  border:1px dashed var(--vv-line);
-
-  border-radius:8px;
-
-  background:#FFFFFF;
-
-  color:var(--vv-gray);
-
-  font-size:12px;
-
-  line-height:1.5;
-
-  text-align:center;
-
-}
-
-
-/* ============================================================
-   SUMMARY
-============================================================ */
-
-.summary .report-card {
-
-  margin-bottom:11px;
-
-}
-
-
-/* ============================================================
-   RESPONSE
-============================================================ */
-
-.response-label {
-
-  margin-bottom:5px;
-
-  color:var(--vv-squid);
-
-  font-size:9px;
-
-  line-height:1.2;
-
-  font-weight:800;
-
-  letter-spacing:.04em;
-
-}
-
-
-.response-point {
-
-  margin-top:11px;
-
-  padding:11px 0;
-
-  border-top:1px solid var(--vv-line);
-
-}
-
-
-.response-point:first-child {
-
-  border-top:0;
-
-}
-
-
-.response-section {
-
-  color:var(--vv-squid);
-
-  font-size:9px;
-
-  line-height:1.2;
-
-  font-weight:800;
-
-  text-transform:uppercase;
-
-  letter-spacing:.04em;
-
-}
-
-
-.response-text {
-
-  margin-top:4px;
-
-  margin-bottom:8px;
-
   color:var(--vv-body);
 
-  font-size:14px;
+  font-size:10px;
 
   line-height:1.45;
 
-  font-weight:600;
-
 }
 
 
-/* ============================================================
-   RESPONSE PHOTOS
-============================================================ */
-
-.response-photos {
-
-  display:flex;
-
-  flex-wrap:wrap;
-
-  gap:8px;
-
-}
-
-
-.response-photo {
-
-  width:88px;
-
-  height:88px;
-
-  overflow:hidden;
-
-  border:1px solid var(--vv-line);
-
-  border-radius:7px;
-
-  background:#F4F2F5;
-
-}
-
-
-.response-photo img {
-
-  width:100%;
-
-  height:100%;
-
-  object-fit:cover;
-
-}
-
-
-/* ============================================================
-   SHIP RESPONSE DISPLAY
-============================================================ */
-
-.ship-response-display {
-
-  margin-top:6px;
-
-  padding:8px 9px;
-
-  border-left:3px solid
-    var(--status-green);
-
-  border-radius:5px;
-
-  background:
-    var(--status-green-bg);
-
-  color:var(--vv-body);
-
-  font-size:11px;
-
-  line-height:1.5;
-
-}
-
-
-.ship-response-display strong {
+.ship-comment-box strong {
 
   color:var(--status-green);
 
@@ -1845,98 +2447,175 @@ label.followup-complete {
 
 
 /* ============================================================
-   SHIP RESPONSE INPUT
+   MODAL
 ============================================================ */
 
-.ship-response-input {
+.modal-backdrop {
+
+  position:fixed;
+
+  inset:0;
+
+  z-index:10000;
+
+  display:flex;
+
+  align-items:center;
+
+  justify-content:center;
+
+  padding:16px;
+
+  background:
+    rgba(27,27,27,.52);
+
+}
+
+
+.modal {
 
   width:100%;
 
-  min-height:105px;
+  max-width:560px;
 
-  padding:10px 11px;
+  max-height:90vh;
 
-  border:1px solid var(--vv-line);
+  overflow:auto;
 
-  border-radius:7px;
+  padding:20px;
+
+  border-radius:12px;
 
   background:#FFFFFF;
 
-  color:var(--vv-body);
-
-  font-size:13px;
-
-  line-height:1.45;
-
-  resize:vertical;
-
-  outline:none;
-
-}
-
-
-.ship-response-input:focus {
-
-  border-color:var(--vv-squid);
-
   box-shadow:
-    0 0 0 2px
-    rgba(60,16,83,.08);
+    0 15px 50px
+    rgba(0,0,0,.25);
 
 }
 
 
-/* ============================================================
-   STATS
-============================================================ */
+.modal h2 {
 
-#stats {
+  margin:0 0 14px;
 
-  display:grid;
+  color:var(--vv-squid);
 
-  grid-template-columns:
-    repeat(2,minmax(0,1fr));
+  font-size:18px;
 
-  gap:8px;
-
-  margin-bottom:15px;
+  font-weight:800;
 
 }
 
 
-.stat {
+.modal textarea {
+
+  width:100%;
+
+  min-height:130px;
 
   padding:10px;
 
   border:1px solid var(--vv-line);
 
-  border-radius:7px;
+  border-radius:8px;
 
-  background:#FFFFFF;
-
-  text-align:center;
+  resize:vertical;
 
 }
 
 
-.stat-number {
+/* ============================================================
+   TOAST
+============================================================ */
+
+#ship-visit-toast {
+
+  position:fixed;
+
+  left:50%;
+
+  bottom:25px;
+
+  z-index:99999;
+
+  transform:
+    translateX(-50%);
+
+  max-width:
+    calc(100vw - 30px);
+
+  padding:10px 15px;
+
+  border-radius:8px;
+
+  background:var(--vv-near-black);
+
+  color:#FFFFFF;
+
+  font-size:12px;
+
+  line-height:1.4;
+
+  box-shadow:
+    0 4px 14px
+    rgba(0,0,0,.25);
+
+}
+
+
+/* ============================================================
+   ADMIN TABLE / LIST
+============================================================ */
+
+.admin-list {
+
+  width:100%;
+
+}
+
+
+.admin-row {
+
+  display:grid;
+
+  grid-template-columns:
+    minmax(0,1fr)
+    auto;
+
+  align-items:center;
+
+  gap:10px;
+
+  padding:12px 0;
+
+  border-bottom:1px solid var(--vv-line);
+
+}
+
+
+.admin-row strong {
 
   color:var(--vv-squid);
 
-  font-size:17px;
-
-  font-weight:800;
-
 }
 
 
-.stat-label {
+.admin-delete {
 
-  margin-top:3px;
+  min-height:36px;
 
-  color:var(--vv-gray);
+  padding:7px 11px;
 
-  font-size:7px;
+  border:0;
+
+  border-radius:6px;
+
+  background:var(--vv-red);
+
+  color:#FFFFFF;
+
+  font-size:9px;
 
   font-weight:800;
 
@@ -1947,68 +2626,33 @@ label.followup-complete {
    DESKTOP
 ============================================================ */
 
-@media (min-width:621px) {
+@media (min-width:621px){
 
-  .band {
+  .band,
+  .meta,
+  .progress-wrap,
+  .footer {
 
-    padding:34px 42px;
-
-  }
-
-
-  .band.compact {
-
-    padding-top:22px;
-
-    padding-bottom:22px;
-
-  }
-
-
-  .band h1 {
-
-    font-size:30px;
-
-  }
-
-
-  .band .sub {
-
-    font-size:14px;
+    max-width:1200px;
 
   }
 
 
   .home {
 
-    padding:36px 34px;
-
-  }
-
-
-  .home-grid {
-
-    grid-template-columns:
-      repeat(2,minmax(0,1fr));
-
-    gap:18px;
+    padding:
+      30px 24px 40px;
 
   }
 
 
   .page-pad,
-  .summary {
+  .summary,
+  .reports {
 
-    padding:
-      24px 34px 100px;
+    padding-left:24px;
 
-  }
-
-
-  .meta {
-
-    padding:
-      13px 34px;
+    padding-right:24px;
 
   }
 
@@ -2024,100 +2668,44 @@ label.followup-complete {
 
   .reviewer-row input {
 
-    width:220px;
+    width:360px;
 
   }
 
 
-  .grid2 {
+  .department-home {
 
-    grid-template-columns:
-      repeat(2,minmax(0,1fr));
-
-  }
-
-
-  .footer,
-  .progress-wrap {
-
-    padding-left:34px;
-
-    padding-right:34px;
+    padding:
+      24px 24px 35px;
 
   }
 
 
-  .section-head {
+  .department-checklist-top {
 
-    padding-left:34px;
+    padding-left:24px;
 
-    padding-right:34px;
+    padding-right:24px;
 
   }
 
 
+  .department-point-list
   .item-row {
 
-    padding-left:34px;
+    padding-left:24px;
 
-    padding-right:34px;
+    padding-right:24px;
 
   }
 
 
+  .department-point-list
   .extra {
 
-    padding-left:70px;
+    padding-left:66px;
 
-    padding-right:34px;
-
-  }
-
-
-  /*
-    REPORTS:
-    3 across on desktop.
-  */
-
-  #openList,
-  #reportList,
-  #responseList {
-
-    grid-template-columns:
-      repeat(3,minmax(0,1fr));
-
-    gap:14px;
-
-  }
-
-
-  .report-actions {
-
-    flex-direction:row;
-
-  }
-
-
-  .report-actions button {
-
-    flex:1;
-
-  }
-
-
-  .response-photo {
-
-    width:105px;
-
-    height:105px;
-
-  }
-
-
-  #stats {
-
-    grid-template-columns:
-      repeat(4,minmax(0,1fr));
+    padding-right:24px;
 
   }
 
@@ -2128,79 +2716,29 @@ label.followup-complete {
    TABLET
 ============================================================ */
 
-@media (min-width:621px)
-and
-(max-width:950px) {
+@media (min-width:621px) and (max-width:900px){
 
-  .home {
-
-    padding:
-      25px 22px;
-
-  }
-
-
-  .page-pad,
-  .summary,
-  .footer,
-  .progress-wrap {
-
-    padding-left:22px;
-
-    padding-right:22px;
-
-  }
-
-
-  .meta {
-
-    padding-left:22px;
-
-    padding-right:22px;
-
-  }
-
-
-  .section-head {
-
-    padding-left:22px;
-
-    padding-right:22px;
-
-  }
-
-
-  .item-row {
-
-    padding-left:22px;
-
-    padding-right:22px;
-
-  }
-
-
-  .extra {
-
-    padding-left:58px;
-
-    padding-right:22px;
-
-  }
-
-
-  /*
-    Tablet:
-    2 reports across.
-  */
-
-  #openList,
-  #reportList,
-  #responseList {
+  .department-grid {
 
     grid-template-columns:
       repeat(2,minmax(0,1fr));
 
-    gap:10px;
+  }
+
+
+  #reportList {
+
+    grid-template-columns:
+      repeat(2,minmax(0,1fr));
+
+  }
+
+
+  #openList,
+  #responseList {
+
+    grid-template-columns:
+      1fr;
 
   }
 
@@ -2211,226 +2749,19 @@ and
    MOBILE
 ============================================================ */
 
-@media (max-width:620px) {
+@media (max-width:620px){
 
-  /*
-    Compact checklist rows.
-    Keep everything on one horizontal line.
-  */
-
-  .item-row {
-
-    grid-template-columns:
-      27px
-      minmax(0,1fr)
-      auto;
-
-    gap:7px;
-
-    min-height:56px;
-
-    padding:
-      9px 10px;
-
-  }
-
-
-  .check-btn {
-
-    width:27px;
-
-    height:27px;
-
-    min-width:27px;
-
-    min-height:27px;
-
-  }
-
-
-  .check-btn.checked::after {
+  body {
 
     font-size:13px;
 
   }
 
-
-  .item-text {
-
-    font-size:13px;
-
-    line-height:1.35;
-
-  }
-
-
-  .item-actions {
-
-    gap:4px;
-
-  }
-
-
-  .item-actions .action {
-
-    min-width:45px;
-
-    min-height:32px;
-
-    padding:5px 6px;
-
-    font-size:8px;
-
-  }
-
-
-  /*
-    Detail information appears
-    underneath the checklist line.
-  */
-
-  .extra {
-
-    padding:
-      0 10px 12px 44px;
-
-  }
-
-
-  .comment-row {
-
-    flex-direction:column;
-
-  }
-
-
-  .comment-row textarea {
-
-    width:100%;
-
-  }
-
-
-  .add-comment {
-
-    width:100%;
-
-    min-height:38px;
-
-  }
-
-
-  .followup-row {
-
-    padding:8px;
-
-  }
-
-
-  .followup-row label {
-
-    font-size:9px;
-
-  }
-
-
-  /*
-    Mobile reports:
-    one report per row.
-  */
-
-  #openList,
-  #reportList,
-  #responseList {
-
-    grid-template-columns:1fr;
-
-    gap:9px;
-
-  }
-
-
-  .reports {
-
-    padding:
-      12px 10px 80px;
-
-  }
-
-
-  .report-card {
-
-    padding:12px;
-
-  }
-
-
-  .report-card h3 {
-
-    font-size:14px;
-
-  }
-
-
-  .report-card .report-meta {
-
-    font-size:9px;
-
-  }
-
-
-  /*
-    Mobile home.
-  */
-
-  .home {
-
-    padding:
-      18px 12px 35px;
-
-  }
-
-
-  .home-grid {
-
-    grid-template-columns:1fr;
-
-    gap:10px;
-
-  }
-
-
-  .home-card {
-
-    min-height:125px;
-
-    padding:20px;
-
-  }
-
-
-  .home-card h2 {
-
-    font-size:16px;
-
-  }
-
-
-  .home-card p {
-
-    font-size:12px;
-
-  }
-
-
-  /*
-    Mobile header.
-  */
 
   .band {
 
     padding:
-      23px 18px;
+      18px 12px;
 
   }
 
@@ -2438,135 +2769,7 @@ and
   .band.compact {
 
     padding:
-      16px 18px 18px;
-
-  }
-
-
-  .band h1 {
-
-    font-size:24px;
-
-  }
-
-
-  .band .sub {
-
-    font-size:12px;
-
-  }
-
-
-  /*
-    Mobile page areas.
-  */
-
-  .page-pad,
-  .summary,
-  .footer,
-  .progress-wrap {
-
-    padding-left:12px;
-
-    padding-right:12px;
-
-  }
-
-
-  .meta {
-
-    padding-left:12px;
-
-    padding-right:12px;
-
-  }
-
-
-  /*
-    Mobile footer buttons.
-  */
-
-  .grid2 {
-
-    grid-template-columns:1fr;
-
-  }
-
-
-  /*
-    Mobile response images.
-  */
-
-  .response-photo {
-
-    width:90px;
-
-    height:90px;
-
-  }
-
-}
-
-
-/* ============================================================
-   VERY SMALL PHONES
-============================================================ */
-
-@media (max-width:390px) {
-
-  .item-row {
-
-    grid-template-columns:
-      25px
-      minmax(0,1fr)
-      auto;
-
-    gap:5px;
-
-    padding:
-      8px;
-
-  }
-
-
-  .check-btn {
-
-    width:25px;
-
-    height:25px;
-
-    min-width:25px;
-
-    min-height:25px;
-
-  }
-
-
-  .item-text {
-
-    font-size:12px;
-
-  }
-
-
-  .item-actions .action {
-
-    min-width:40px;
-
-    min-height:30px;
-
-    padding:4px 5px;
-
-    font-size:7px;
-
-  }
-
-
-  .extra {
-
-    padding-left:38px;
-
-    padding-right:8px;
+      10px 12px 14px;
 
   }
 
@@ -2577,11 +2780,546 @@ and
 
   }
 
+
+  .band .sub {
+
+    font-size:11px;
+
+  }
+
+
+  .header-back {
+
+    min-height:36px;
+
+    margin-bottom:7px;
+
+    padding:
+      7px 11px;
+
+    font-size:10px;
+
+  }
+
+
+  .home-grid {
+
+    grid-template-columns:
+      1fr;
+
+    gap:8px;
+
+  }
+
+
+  .home-card {
+
+    min-height:115px;
+
+    padding:17px;
+
+  }
+
+
+  .home-card h2 {
+
+    font-size:15px;
+
+  }
+
+
+  .home-card p {
+
+    font-size:11px;
+
+  }
+
+
+  .grid2 {
+
+    grid-template-columns:
+      1fr;
+
+  }
+
+
+  .page-pad,
+  .summary,
+  .reports {
+
+    padding:
+      12px 10px 70px;
+
+  }
+
+
+  .meta {
+
+    padding:
+      9px 10px;
+
+    font-size:10px;
+
+  }
+
+
+  .progress-wrap {
+
+    padding:
+      10px;
+
+  }
+
+
+  .footer {
+
+    padding:
+      10px 10px 15px;
+
+  }
+
+
+  /* ======================================================
+     DEPARTMENT HOME
+  ====================================================== */
+
+  .department-home {
+
+    padding:
+      10px 8px 20px;
+
+  }
+
+
+  .department-overview {
+
+    padding:
+      10px;
+
+    margin-bottom:13px;
+
+  }
+
+
+  .department-overview-grid {
+
+    grid-template-columns:
+      repeat(2,minmax(0,1fr));
+
+    gap:6px;
+
+  }
+
+
+  .department-overview-card {
+
+    padding:8px;
+
+  }
+
+
+  .department-overview-card strong {
+
+    font-size:16px;
+
+  }
+
+
+  .department-overview-card small {
+
+    font-size:6px;
+
+  }
+
+
+  .department-heading {
+
+    font-size:12px;
+
+  }
+
+
+  .department-grid {
+
+    grid-template-columns:
+      repeat(2,minmax(0,1fr));
+
+    gap:7px;
+
+  }
+
+
+  .department-card {
+
+    min-height:140px;
+
+    padding:
+      13px 6px;
+
+    border-radius:9px;
+
+  }
+
+
+  .department-icon {
+
+    width:47px;
+
+    height:47px;
+
+    margin-bottom:8px;
+
+  }
+
+
+  .department-icon span {
+
+    font-size:23px;
+
+  }
+
+
+  .department-card-name {
+
+    font-size:10px;
+
+  }
+
+
+  .department-card-count {
+
+    margin-top:6px;
+
+    font-size:16px;
+
+  }
+
+
+  .department-card-label {
+
+    font-size:6px;
+
+  }
+
+
+  /* ======================================================
+     DEPARTMENT CHECKLIST
+  ====================================================== */
+
+  .department-checklist-top {
+
+    padding:
+      8px 8px;
+
+    gap:7px;
+
+  }
+
+
+  .department-back {
+
+    min-height:35px;
+
+    padding:
+      6px 9px;
+
+    font-size:8px;
+
+  }
+
+
+  .department-checklist-icon {
+
+    width:37px;
+
+    height:37px;
+
+    flex-basis:37px;
+
+  }
+
+
+  .department-checklist-icon span {
+
+    font-size:18px;
+
+  }
+
+
+  .department-checklist-name {
+
+    font-size:13px;
+
+  }
+
+
+  .department-checklist-count {
+
+    font-size:8px;
+
+  }
+
+
+  .department-point-list
+  .item-row {
+
+    grid-template-columns:
+      27px
+      minmax(0,1fr)
+      auto;
+
+    gap:5px;
+
+    min-height:57px;
+
+    padding:
+      8px;
+
+  }
+
+
+  .department-point-list
+  .check-btn {
+
+    width:26px;
+
+    height:26px;
+
+    min-width:26px;
+
+    min-height:26px;
+
+  }
+
+
+  .department-point-list
+  .item-text {
+
+    font-size:11px;
+
+    line-height:1.35;
+
+  }
+
+
+  .department-point-list
+  .item-actions {
+
+    gap:3px;
+
+  }
+
+
+  .department-point-list
+  .item-actions .action {
+
+    min-width:40px;
+
+    min-height:29px;
+
+    padding:
+      5px 4px;
+
+    font-size:6.5px;
+
+  }
+
+
+  .department-point-list
+  .extra {
+
+    padding:
+      0 8px 12px 39px;
+
+  }
+
+
+  .department-point-list
+  .comment-row {
+
+    flex-direction:column;
+
+    align-items:stretch;
+
+  }
+
+
+  .department-point-list
+  .comment-row textarea {
+
+    min-height:70px;
+
+  }
+
+
+  .department-point-list
+  .add-comment {
+
+    width:100%;
+
+  }
+
+
+  .department-point-list
+  .photo {
+
+    width:72px;
+
+    height:72px;
+
+  }
+
+
+  /* ======================================================
+     REPORT LISTS
+  ====================================================== */
+
+  #reportList {
+
+    grid-template-columns:
+      1fr;
+
+    gap:8px;
+
+  }
+
+
+  #openList,
+  #responseList {
+
+    grid-template-columns:
+      1fr;
+
+    gap:8px;
+
+  }
+
+
+  .report-card {
+
+    padding:13px;
+
+  }
+
+
+  .report-actions {
+
+    grid-template-columns:
+      1fr;
+
+  }
+
+
 }
 
 
 /* ============================================================
-   PRINT
+   VERY SMALL PHONE
+============================================================ */
+
+@media (max-width:390px){
+
+  .department-grid {
+
+    gap:5px;
+
+  }
+
+
+  .department-card {
+
+    min-height:132px;
+
+    padding:
+      11px 5px;
+
+  }
+
+
+  .department-icon {
+
+    width:43px;
+
+    height:43px;
+
+  }
+
+
+  .department-icon span {
+
+    font-size:21px;
+
+  }
+
+
+  .department-card-name {
+
+    font-size:9px;
+
+  }
+
+
+  .department-card-count {
+
+    font-size:15px;
+
+  }
+
+
+  .department-point-list
+  .item-row {
+
+    grid-template-columns:
+      25px
+      minmax(0,1fr)
+      auto;
+
+    gap:4px;
+
+    padding:
+      7px;
+
+  }
+
+
+  .department-point-list
+  .check-btn {
+
+    width:24px;
+
+    height:24px;
+
+    min-width:24px;
+
+    min-height:24px;
+
+  }
+
+
+  .department-point-list
+  .item-text {
+
+    font-size:10px;
+
+  }
+
+
+  .department-point-list
+  .item-actions .action {
+
+    min-width:37px;
+
+    min-height:27px;
+
+    font-size:6px;
+
+  }
+
+}
+
+
+/* ============================================================
+   PRINT SAFETY
 ============================================================ */
 
 @media print {
@@ -2593,11 +3331,17 @@ and
   }
 
 
-  .no-print,
-  #home,
-  #open,
-  #submitted,
-  #responses {
+  .no-print {
+
+    display:none !important;
+
+  }
+
+
+  .header-back,
+  .department-back,
+  .footer,
+  .progress-wrap {
 
     display:none !important;
 
@@ -2608,28 +3352,9 @@ and
 
     max-width:none;
 
-    background:
-      var(--vv-squid) !important;
-
     print-color-adjust:exact;
 
     -webkit-print-color-adjust:exact;
-
-  }
-
-
-  .summary {
-
-    max-width:none;
-
-    padding:15px;
-
-  }
-
-
-  .report-card {
-
-    break-inside:avoid;
 
   }
 
