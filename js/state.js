@@ -1,99 +1,731 @@
 /*
+  ============================================================
+  VIRGIN VOYAGES
+  SHIP VISIT REPORT
   state.js
+  ============================================================
 
-  Controls the current Ship Visit Report.
+  Central state manager.
 
-  This module keeps:
-  - current report ID
-  - ship
-  - dates
-  - reviewer
-  - checklist state
-  - report status
-  - ship response information
+  Keeps together:
+
+  - Report ID
+  - Ship
+  - Visit dates
+  - Reviewer
+  - Checklist state
+  - Reviewer comments
+  - Photos
+  - Follow-up flags
+  - Ship comments
+  - Report status
+  - Submission date
 */
 
 
-import { emptyState } from './data.js';
+import {
+  emptyState
+} from './data.js';
 
 
-/* =========================================================
+/* ============================================================
    CURRENT REPORT
-========================================================= */
+============================================================ */
 
 let reportId = null;
 
 
 let meta = {
+
   ship: '',
+
   dateOn: '',
+
   dateOff: '',
+
   reviewer: ''
+
 };
 
 
 let currentReviewer = '';
 
 
-let state = emptyState();
+let state =
+  emptyState();
 
 
-let reportStatus = 'open';
+let reportStatus =
+  'open';
 
 
-let submittedAt = null;
+let submittedAt =
+  null;
 
 
-/* =========================================================
-   REPORT ID
-========================================================= */
+/* ============================================================
+   BASIC HELPERS
+============================================================ */
 
-export function getReportId() {
-  return reportId;
+function cleanText(
+  value
+){
+
+  return String(
+    value ?? ''
+  ).trim();
+
 }
 
 
-export function setReportId(id) {
-  reportId = id || null;
+function safeArray(
+  value
+){
+
+  if(
+    Array.isArray(value)
+  ){
+
+    return value;
+
+  }
+
+
+  /*
+    Support JSON strings from
+    older/saved report records.
+  */
+
+  if(
+    typeof value === 'string'
+  ){
+
+    const text =
+      value.trim();
+
+
+    if(
+      !text
+    ){
+
+      return [];
+
+    }
+
+
+    try{
+
+      const parsed =
+        JSON.parse(
+          text
+        );
+
+
+      return Array.isArray(
+        parsed
+      )
+        ? parsed
+        : [];
+
+    }catch(error){
+
+      return [];
+
+    }
+
+  }
+
+
+  return [];
+
 }
 
 
-/* =========================================================
-   META
-========================================================= */
+/* ============================================================
+   NORMALIZE REVIEWER COMMENTS
+============================================================ */
 
-export function getMeta() {
+function normalizeReviewerComments(
+  comments,
+  reviewerName=''
+){
+
+  const source =
+    safeArray(
+      comments
+    );
+
+
+  return source
+    .map(
+      comment => {
+
+        /*
+          Older format may have been
+          saved as a plain string.
+        */
+
+        if(
+          typeof comment === 'string'
+        ){
+
+          const text =
+            cleanText(
+              comment
+            );
+
+
+          if(
+            !text
+          ){
+
+            return null;
+
+          }
+
+
+          return {
+
+            name:
+              reviewerName ||
+              'Reviewer',
+
+            text,
+
+            timestamp:
+              null
+
+          };
+
+        }
+
+
+        if(
+          !comment ||
+          typeof comment !== 'object'
+        ){
+
+          return null;
+
+        }
+
+
+        const text =
+          cleanText(
+            comment.text ??
+            comment.comment ??
+            comment.message ??
+            comment.value ??
+            ''
+          );
+
+
+        if(
+          !text
+        ){
+
+          return null;
+
+        }
+
+
+        return {
+
+          name:
+            cleanText(
+              comment.name ??
+              comment.reviewer ??
+              comment.author ??
+              reviewerName ??
+              'Reviewer'
+            ) ||
+            'Reviewer',
+
+          text,
+
+          timestamp:
+            comment.timestamp ??
+            comment.createdAt ??
+            null
+
+        };
+
+      }
+    )
+    .filter(
+      Boolean
+    );
+
+}
+
+
+/* ============================================================
+   NORMALIZE SHIP COMMENTS
+============================================================ */
+
+function normalizeShipComments(
+  comments
+){
+
+  const source =
+    safeArray(
+      comments
+    );
+
+
+  return source
+    .map(
+      comment => {
+
+        if(
+          typeof comment === 'string'
+        ){
+
+          const text =
+            cleanText(
+              comment
+            );
+
+
+          if(
+            !text
+          ){
+
+            return null;
+
+          }
+
+
+          return {
+
+            name:'Ship',
+
+            text,
+
+            timestamp:null
+
+          };
+
+        }
+
+
+        if(
+          !comment ||
+          typeof comment !== 'object'
+        ){
+
+          return null;
+
+        }
+
+
+        const text =
+          cleanText(
+            comment.text ??
+            comment.comment ??
+            comment.message ??
+            comment.value ??
+            ''
+          );
+
+
+        if(
+          !text
+        ){
+
+          return null;
+
+        }
+
+
+        return {
+
+          name:
+            cleanText(
+              comment.name ??
+              comment.ship ??
+              'Ship'
+            ) ||
+            'Ship',
+
+          text,
+
+          timestamp:
+            comment.timestamp ??
+            comment.createdAt ??
+            null
+
+        };
+
+      }
+    )
+    .filter(
+      Boolean
+    );
+
+}
+
+
+/* ============================================================
+   NORMALIZE PHOTOS
+============================================================ */
+
+function normalizePhotos(
+  photos
+){
+
+  const source =
+    safeArray(
+      photos
+    );
+
+
+  return source
+    .map(
+      photo => {
+
+        if(
+          typeof photo === 'string'
+        ){
+
+          return cleanText(
+            photo
+          );
+
+        }
+
+
+        if(
+          photo &&
+          typeof photo === 'object'
+        ){
+
+          return (
+            photo.url ||
+            photo.src ||
+            photo.data ||
+            photo.image ||
+            ''
+          );
+
+        }
+
+
+        return '';
+
+      }
+    )
+    .map(
+      cleanText
+    )
+    .filter(
+      Boolean
+    );
+
+}
+
+
+/* ============================================================
+   NORMALIZE ONE CHECKLIST ITEM
+============================================================ */
+
+function normalizeItem(
+  saved,
+  reviewerName=''
+){
+
+  const item =
+    (
+      saved &&
+      typeof saved === 'object'
+    )
+      ? saved
+      : {};
+
+
   return {
-    ...meta
+
+    /*
+      Preserve checked state.
+    */
+
+    checked:
+      Boolean(
+        item.checked
+      ),
+
+
+    /*
+      Preserve reviewer comments.
+    */
+
+    comments:
+      normalizeReviewerComments(
+        item.comments ??
+        item.reviewerComments ??
+        item.reviewer_comments ??
+        item.reviewComments ??
+        [],
+        reviewerName
+      ),
+
+
+    /*
+      Preserve photos.
+    */
+
+    photos:
+      normalizePhotos(
+        item.photos ??
+        item.photo ??
+        []
+      ),
+
+
+    /*
+      Preserve follow-up.
+    */
+
+    followUpNeeded:
+      Boolean(
+        item.followUpNeeded ??
+        item.follow_up_needed ??
+        false
+      ),
+
+
+    /*
+      Preserve ship responses.
+    */
+
+    shipComments:
+      normalizeShipComments(
+        item.shipComments ??
+        item.ship_comments ??
+        item.shipComment ??
+        []
+      )
+
   };
+
 }
 
 
-export function setMeta(newMeta) {
+/* ============================================================
+   NORMALIZE COMPLETE STATE
+============================================================ */
+
+function normalizeState(
+  savedState,
+  reviewerName=''
+){
+
+  const initial =
+    emptyState();
+
+
+  const saved =
+    (
+      savedState &&
+      typeof savedState === 'object'
+    )
+      ? savedState
+      : {};
+
+
+  Object.keys(
+    initial
+  )
+  .forEach(
+    key => {
+
+      initial[key] =
+        normalizeItem(
+          saved[key],
+          reviewerName
+        );
+
+    }
+  );
+
+
+  /*
+    Preserve only valid checklist keys.
+  */
+
+  Object.keys(
+    saved
+  )
+  .forEach(
+    key => {
+
+      if(
+        !initial[key]
+      ){
+
+        return;
+
+      }
+
+
+      /*
+        If the saved item contains additional
+        application properties, preserve them
+        while making sure our core fields are
+        normalized.
+      */
+
+      initial[key] = {
+
+        ...initial[key],
+
+        ...(
+          saved[key] &&
+          typeof saved[key] === 'object'
+            ? saved[key]
+            : {}
+        ),
+
+        checked:
+          Boolean(
+            saved[key]?.checked
+          ),
+
+        comments:
+          normalizeReviewerComments(
+            saved[key]?.comments ??
+            saved[key]?.reviewerComments ??
+            saved[key]?.reviewer_comments ??
+            saved[key]?.reviewComments ??
+            [],
+            reviewerName
+          ),
+
+        photos:
+          normalizePhotos(
+            saved[key]?.photos ??
+            saved[key]?.photo ??
+            []
+          ),
+
+        followUpNeeded:
+          Boolean(
+            saved[key]?.followUpNeeded ??
+            saved[key]?.follow_up_needed ??
+            false
+          ),
+
+        shipComments:
+          normalizeShipComments(
+            saved[key]?.shipComments ??
+            saved[key]?.ship_comments ??
+            saved[key]?.shipComment ??
+            []
+          )
+
+      };
+
+    }
+  );
+
+
+  return initial;
+
+}
+
+
+/* ============================================================
+   REPORT ID
+============================================================ */
+
+export function getReportId(){
+
+  return reportId;
+
+}
+
+
+export function setReportId(
+  id
+){
+
+  reportId =
+    id ||
+    null;
+
+}
+
+
+/* ============================================================
+   META
+============================================================ */
+
+export function getMeta(){
+
+  return {
+
+    ...meta
+
+  };
+
+}
+
+
+export function setMeta(
+  newMeta
+){
 
   meta = {
-    ship: newMeta?.ship || '',
-    dateOn: newMeta?.dateOn || '',
-    dateOff: newMeta?.dateOff || '',
-    reviewer: newMeta?.reviewer || ''
+
+    ship:
+      cleanText(
+        newMeta?.ship
+      ),
+
+    dateOn:
+      cleanText(
+        newMeta?.dateOn
+      ),
+
+    dateOff:
+      cleanText(
+        newMeta?.dateOff
+      ),
+
+    reviewer:
+      cleanText(
+        newMeta?.reviewer
+      )
+
   };
 
-}
-
-
-/* =========================================================
-   REVIEWER
-========================================================= */
-
-export function getReviewer() {
-  return currentReviewer;
-}
-
-
-export function setReviewer(name) {
 
   currentReviewer =
-    String(name || '').trim();
+    meta.reviewer;
+
+}
+
+
+/* ============================================================
+   REVIEWER
+============================================================ */
+
+export function getReviewer(){
+
+  return currentReviewer;
+
+}
+
+
+export function setReviewer(
+  name
+){
+
+  currentReviewer =
+    cleanText(
+      name
+    );
+
 
   meta.reviewer =
     currentReviewer;
@@ -101,101 +733,71 @@ export function setReviewer(name) {
 }
 
 
-/* =========================================================
-   CHECKLIST STATE
-========================================================= */
+/* ============================================================
+   STATE
+============================================================ */
 
-export function getState() {
+export function getState(){
 
   return state;
 
 }
 
 
-export function getStateCopy() {
+export function getStateCopy(){
 
   return JSON.parse(
-    JSON.stringify(state)
+    JSON.stringify(
+      state
+    )
   );
 
 }
 
 
-export function setState(newState) {
-
-  const initial =
-    emptyState();
-
-
-  Object.keys(newState || {})
-    .forEach(key => {
-
-      if (!initial[key]) {
-        return;
-      }
-
-
-      const saved =
-        newState[key];
-
-
-      initial[key] = {
-
-        ...initial[key],
-
-        ...saved,
-
-        comments:
-          Array.isArray(saved.comments)
-            ? saved.comments
-            : [],
-
-        photos:
-          Array.isArray(saved.photos)
-            ? saved.photos
-            : [],
-
-        followUpNeeded:
-          Boolean(
-            saved.followUpNeeded
-          ),
-
-        shipComments:
-          Array.isArray(
-            saved.shipComments
-          )
-            ? saved.shipComments
-            : []
-
-      };
-
-    });
-
+export function setState(
+  newState
+){
 
   state =
-    initial;
+    normalizeState(
+      newState,
+      currentReviewer ||
+      meta.reviewer ||
+      'Reviewer'
+    );
 
 }
 
 
-/* =========================================================
-   INDIVIDUAL CHECKLIST ITEM
-========================================================= */
+/* ============================================================
+   GET ITEM
+============================================================ */
 
-export function getItem(key) {
+export function getItem(
+  key
+){
 
   return state[key];
 
 }
 
 
+/* ============================================================
+   UPDATE ITEM
+============================================================ */
+
 export function updateItem(
   key,
   changes
-) {
+){
 
-  if (!state[key]) {
+  if(
+    !state[key]
+  ){
+
     return;
+
   }
 
 
@@ -203,21 +805,41 @@ export function updateItem(
 
     ...state[key],
 
-    ...changes
+    ...(changes || {})
 
   };
+
+
+  /*
+    Immediately normalize the
+    core data after an update.
+  */
+
+  state[key] =
+    normalizeItem(
+      state[key],
+      currentReviewer ||
+      meta.reviewer ||
+      'Reviewer'
+    );
 
 }
 
 
-/* =========================================================
+/* ============================================================
    CHECKED
-========================================================= */
+============================================================ */
 
-export function toggleChecked(key) {
+export function toggleChecked(
+  key
+){
 
-  if (!state[key]) {
+  if(
+    !state[key]
+  ){
+
     return false;
+
   }
 
 
@@ -230,7 +852,9 @@ export function toggleChecked(key) {
 }
 
 
-export function isChecked(key) {
+export function isChecked(
+  key
+){
 
   return Boolean(
     state[key]?.checked
@@ -239,26 +863,48 @@ export function isChecked(key) {
 }
 
 
-/* =========================================================
+/* ============================================================
    REVIEWER COMMENTS
-========================================================= */
+============================================================ */
 
 export function addReviewerComment(
   key,
   text
-) {
+){
 
-  if (!state[key]) {
+  if(
+    !state[key]
+  ){
+
     return;
+
   }
 
 
-  const cleanText =
-    String(text || '').trim();
+  const clean =
+    cleanText(
+      text
+    );
 
 
-  if (!cleanText) {
+  if(
+    !clean
+  ){
+
     return;
+
+  }
+
+
+  if(
+    !Array.isArray(
+      state[key].comments
+    )
+  ){
+
+    state[key].comments =
+      [];
+
   }
 
 
@@ -270,7 +916,7 @@ export function addReviewerComment(
       'Reviewer',
 
     text:
-      cleanText,
+      clean,
 
     timestamp:
       new Date().toISOString()
@@ -280,27 +926,82 @@ export function addReviewerComment(
 }
 
 
-/* =========================================================
+/* ============================================================
+   REPLACE REVIEWER COMMENTS
+============================================================ */
+
+export function setReviewerComments(
+  key,
+  comments
+){
+
+  if(
+    !state[key]
+  ){
+
+    return;
+
+  }
+
+
+  state[key].comments =
+    normalizeReviewerComments(
+      comments,
+      currentReviewer ||
+      meta.reviewer ||
+      'Reviewer'
+    );
+
+}
+
+
+/* ============================================================
    PHOTOS
-========================================================= */
+============================================================ */
 
 export function addPhoto(
   key,
   photo
-) {
+){
 
-  if (!state[key]) {
+  if(
+    !state[key]
+  ){
+
     return;
+
   }
 
 
-  if (!photo) {
+  const clean =
+    cleanText(
+      photo
+    );
+
+
+  if(
+    !clean
+  ){
+
     return;
+
+  }
+
+
+  if(
+    !Array.isArray(
+      state[key].photos
+    )
+  ){
+
+    state[key].photos =
+      [];
+
   }
 
 
   state[key].photos.push(
-    photo
+    clean
   );
 
 }
@@ -309,17 +1010,33 @@ export function addPhoto(
 export function removePhoto(
   key,
   index
-) {
+){
 
-  if (!state[key]) {
+  if(
+    !state[key]
+  ){
+
     return;
+
   }
 
 
-  if (
+  if(
+    !Array.isArray(
+      state[key].photos
+    )
+  ){
+
+    return;
+
+  }
+
+
+  if(
     index < 0 ||
-    index >= state[key].photos.length
-  ) {
+    index >=
+      state[key].photos.length
+  ){
 
     return;
 
@@ -334,31 +1051,38 @@ export function removePhoto(
 }
 
 
-/* =========================================================
-   FOLLOW UP
-========================================================= */
+/* ============================================================
+   FOLLOW-UP
+============================================================ */
 
 export function setFollowUp(
   key,
   needed
-) {
+){
 
-  if (!state[key]) {
+  if(
+    !state[key]
+  ){
+
     return;
+
   }
 
 
   state[key].followUpNeeded =
-    Boolean(needed);
+    Boolean(
+      needed
+    );
 
 
   /*
-    If follow-up is removed,
-    clear the pending ship comments
-    and response display.
+    When follow-up is removed,
+    ship responses are cleared.
   */
 
-  if (!needed) {
+  if(
+    !state[key].followUpNeeded
+  ){
 
     state[key].shipComments =
       [];
@@ -368,36 +1092,57 @@ export function setFollowUp(
 }
 
 
-/* =========================================================
+/* ============================================================
    SHIP COMMENTS
-========================================================= */
+============================================================ */
 
 export function addShipComment(
   key,
   text
-) {
+){
 
-  if (!state[key]) {
+  if(
+    !state[key]
+  ){
+
     return;
+
   }
 
 
-  const cleanText =
-    String(text || '').trim();
+  const clean =
+    cleanText(
+      text
+    );
 
 
-  if (!cleanText) {
+  if(
+    !clean
+  ){
+
     return;
+
+  }
+
+
+  if(
+    !Array.isArray(
+      state[key].shipComments
+    )
+  ){
+
+    state[key].shipComments =
+      [];
+
   }
 
 
   state[key].shipComments.push({
 
-    name:
-      'Ship',
+    name:'Ship',
 
     text:
-      cleanText,
+      clean,
 
     timestamp:
       new Date().toISOString()
@@ -407,56 +1152,67 @@ export function addShipComment(
 }
 
 
-/* =========================================================
-   SHIP RESPONSE HELPERS
-========================================================= */
+/* ============================================================
+   REPLACE SHIP COMMENTS
+============================================================ */
 
 export function setShipComments(
   key,
   comments
-) {
+){
 
-  if (!state[key]) {
+  if(
+    !state[key]
+  ){
+
     return;
+
   }
 
 
   state[key].shipComments =
-    Array.isArray(comments)
-      ? comments
-      : [];
+    normalizeShipComments(
+      comments
+    );
 
 }
 
 
-/* =========================================================
+/* ============================================================
    REPORT STATUS
-========================================================= */
+============================================================ */
 
-export function getReportStatus() {
+export function getReportStatus(){
+
   return reportStatus;
+
 }
 
 
 export function setReportStatus(
   status
-) {
+){
 
-  const validStatuses = [
+  const allowed = [
+
     'open',
+
     'submitted'
+
   ];
 
 
   reportStatus =
-    validStatuses.includes(status)
+    allowed.includes(
+      status
+    )
       ? status
       : 'open';
 
 }
 
 
-export function isOpenReport() {
+export function isOpenReport(){
 
   return (
     reportStatus ===
@@ -466,7 +1222,7 @@ export function isOpenReport() {
 }
 
 
-export function isSubmittedReport() {
+export function isSubmittedReport(){
 
   return (
     reportStatus ===
@@ -476,11 +1232,11 @@ export function isSubmittedReport() {
 }
 
 
-/* =========================================================
+/* ============================================================
    SUBMITTED DATE
-========================================================= */
+============================================================ */
 
-export function getSubmittedAt() {
+export function getSubmittedAt(){
 
   return submittedAt;
 
@@ -489,19 +1245,20 @@ export function getSubmittedAt() {
 
 export function setSubmittedAt(
   value
-) {
+){
 
   submittedAt =
-    value || null;
+    value ||
+    null;
 
 }
 
 
-/* =========================================================
-   FOLLOW-UP COUNTS
-========================================================= */
+/* ============================================================
+   FOLLOW-UP COUNT
+============================================================ */
 
-export function getFollowUpCount() {
+export function getFollowUpCount(){
 
   return Object.values(
     state
@@ -516,7 +1273,7 @@ export function getFollowUpCount() {
 }
 
 
-export function getCompletedFollowUpCount() {
+export function getCompletedFollowUpCount(){
 
   return Object.values(
     state
@@ -535,16 +1292,17 @@ export function getCompletedFollowUpCount() {
 }
 
 
-export function hasFollowUps() {
+export function hasFollowUps(){
 
   return (
-    getFollowUpCount() > 0
+    getFollowUpCount() >
+    0
   );
 
 }
 
 
-export function areAllFollowUpsComplete() {
+export function areAllFollowUpsComplete(){
 
   const followUps =
     Object.values(
@@ -558,12 +1316,13 @@ export function areAllFollowUpsComplete() {
 
 
   /*
-    If there are no follow-up
-    points, there is nothing
-    waiting for a ship response.
+    No follow-ups means the report
+    is already complete.
   */
 
-  if (!followUps.length) {
+  if(
+    followUps.length === 0
+  ){
 
     return true;
 
@@ -572,36 +1331,35 @@ export function areAllFollowUpsComplete() {
 
   return followUps.every(
     item =>
-
       Array.isArray(
         item.shipComments
       ) &&
-
-      item.shipComments.length > 0
+      item.shipComments.length >
+        0
   );
 
 }
 
 
-/* =========================================================
-   REPORT COLOR
-========================================================= */
+/* ============================================================
+   STATUS COLOR
+============================================================ */
 
-export function getStatusColor() {
+export function getStatusColor(){
 
-  if (
+  if(
     reportStatus ===
     'open'
-  ) {
+  ){
 
     return 'red';
 
   }
 
 
-  if (
+  if(
     areAllFollowUpsComplete()
-  ) {
+  ){
 
     return 'green';
 
@@ -613,11 +1371,11 @@ export function getStatusColor() {
 }
 
 
-/* =========================================================
-   RESET REPORT
-========================================================= */
+/* ============================================================
+   RESET
+============================================================ */
 
-export function resetReport() {
+export function resetReport(){
 
   reportId =
     null;
@@ -625,10 +1383,13 @@ export function resetReport() {
 
   meta = {
 
-    ship: '',
-    dateOn: '',
-    dateOff: '',
-    reviewer: ''
+    ship:'',
+
+    dateOn:'',
+
+    dateOff:'',
+
+    reviewer:''
 
   };
 
@@ -651,16 +1412,21 @@ export function resetReport() {
 }
 
 
-/* =========================================================
+/* ============================================================
    START NEW REPORT
-========================================================= */
+============================================================ */
 
 export function startNewReport({
+
   ship,
+
   dateOn,
+
   dateOff,
+
   reviewer
-}) {
+
+}){
 
   reportId =
     null;
@@ -669,16 +1435,24 @@ export function startNewReport({
   meta = {
 
     ship:
-      String(ship || '').trim(),
+      cleanText(
+        ship
+      ),
 
     dateOn:
-      String(dateOn || ''),
+      cleanText(
+        dateOn
+      ),
 
     dateOff:
-      String(dateOff || ''),
+      cleanText(
+        dateOff
+      ),
 
     reviewer:
-      String(reviewer || '').trim()
+      cleanText(
+        reviewer
+      )
 
   };
 
@@ -701,49 +1475,72 @@ export function startNewReport({
 }
 
 
-/* =========================================================
-   LOAD REPORT FROM SUPABASE
-========================================================= */
+/* ============================================================
+   LOAD REPORT
+============================================================ */
 
 export function loadReport(
   report
-) {
+){
 
-  if (!report) {
+  if(
+    !report
+  ){
 
     resetReport();
+
 
     return;
 
   }
 
 
+  /*
+    ID
+  */
+
   setReportId(
     report.id
   );
 
 
+  /*
+    Meta can exist both at the
+    top level and inside report_data.
+  */
+
+  const savedMeta =
+    report
+      ?.report_data
+      ?.meta ||
+    {};
+
+
   meta = {
 
     ship:
-      report.ship ||
-      report.report_data?.meta?.ship ||
-      '',
+      cleanText(
+        report.ship ??
+        savedMeta.ship
+      ),
 
     dateOn:
-      report.date_on ||
-      report.report_data?.meta?.dateOn ||
-      '',
+      cleanText(
+        report.date_on ??
+        savedMeta.dateOn
+      ),
 
     dateOff:
-      report.date_off ||
-      report.report_data?.meta?.dateOff ||
-      '',
+      cleanText(
+        report.date_off ??
+        savedMeta.dateOff
+      ),
 
     reviewer:
-      report.reviewer ||
-      report.report_data?.meta?.reviewer ||
-      ''
+      cleanText(
+        report.reviewer ??
+        savedMeta.reviewer
+      )
 
   };
 
@@ -752,17 +1549,44 @@ export function loadReport(
     meta.reviewer;
 
 
-  setState(
-    report.report_data?.state ||
-    {}
-  );
+  /*
+    IMPORTANT:
+    Normalize the complete report state
+    instead of simply spreading it.
 
+    This preserves reviewer comments,
+    photos, follow-ups and ship responses.
+  */
+
+  const savedState =
+    report
+      ?.report_data
+      ?.state ||
+    {};
+
+
+  state =
+    normalizeState(
+      savedState,
+      currentReviewer ||
+      meta.reviewer ||
+      'Reviewer'
+    );
+
+
+  /*
+    Status
+  */
 
   setReportStatus(
     report.status ||
     'open'
   );
 
+
+  /*
+    Submitted date
+  */
 
   setSubmittedAt(
     report.submitted_at ||
@@ -772,11 +1596,11 @@ export function loadReport(
 }
 
 
-/* =========================================================
-   EXPORT REPORT DATA
-========================================================= */
+/* ============================================================
+   REPORT DATA
+============================================================ */
 
-export function getReportData() {
+export function getReportData(){
 
   return {
 
@@ -791,11 +1615,11 @@ export function getReportData() {
 }
 
 
-/* =========================================================
+/* ============================================================
    COMPLETE SNAPSHOT
-========================================================= */
+============================================================ */
 
-export function getSnapshot() {
+export function getSnapshot(){
 
   return {
 
@@ -820,11 +1644,11 @@ export function getSnapshot() {
 }
 
 
-/* =========================================================
+/* ============================================================
    VALIDATION
-========================================================= */
+============================================================ */
 
-export function isValidReport() {
+export function isValidReport(){
 
   return Boolean(
 
@@ -836,12 +1660,15 @@ export function isValidReport() {
 }
 
 
-export function missingRequiredFields() {
+export function missingRequiredFields(){
 
-  const missing = [];
+  const missing =
+    [];
 
 
-  if (!meta.ship) {
+  if(
+    !meta.ship
+  ){
 
     missing.push(
       'Ship'
@@ -850,7 +1677,9 @@ export function missingRequiredFields() {
   }
 
 
-  if (!meta.reviewer) {
+  if(
+    !meta.reviewer
+  ){
 
     missing.push(
       'Reviewer'
@@ -864,26 +1693,31 @@ export function missingRequiredFields() {
 }
 
 
-/* =========================================================
+/* ============================================================
    SUMMARY COUNTS
-========================================================= */
+============================================================ */
 
-export function getSummaryCounts() {
+export function getSummaryCounts(){
 
   let total =
     0;
 
+
   let checked =
     0;
+
 
   let photos =
     0;
 
+
   let comments =
     0;
 
+
   let followUps =
     0;
+
 
   let shipResponses =
     0;
@@ -898,68 +1732,5 @@ export function getSummaryCounts() {
       total++;
 
 
-      if (
-        item.checked
-      ) {
-
-        checked++;
-
-      }
-
-
-      photos +=
-        Array.isArray(
-          item.photos
-        )
-          ? item.photos.length
-          : 0;
-
-
-      comments +=
-        Array.isArray(
-          item.comments
-        )
-          ? item.comments.length
-          : 0;
-
-
-      if (
-        item.followUpNeeded
-      ) {
-
-        followUps++;
-
-
-        shipResponses +=
-          Array.isArray(
-            item.shipComments
-          )
-            ? item.shipComments.length
-            : 0;
-
-      }
-
-    }
-  );
-
-
-  return {
-
-    total,
-
-    checked,
-
-    photos,
-
-    comments,
-
-    followUps,
-
-    shipResponses,
-
-    followUpsComplete:
-      getCompletedFollowUpCount()
-
-  };
-
-}
+      if(
+        item
