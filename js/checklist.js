@@ -5,30 +5,23 @@
   checklist.js
   ============================================================
 
-  NEW NAVIGATION:
+  MAIN FLOW
 
   CHECKLIST HOME
-        |
-        +-- CULINARY
-        |
-        +-- BAR
-        |
-        +-- RESTAURANT
-        |
-        +-- PROCUREMENT
-        |
-        +-- SANITATION
+      |
+      +-- CULINARY
+      +-- BAR
+      +-- RESTAURANT
+      +-- PROCUREMENT
+      +-- SANITATION
 
-  Clicking a department opens only that department's
-  checklist points.
-
-  Existing functionality preserved:
-  - Check / Uncheck
-  - Reviewer comments
-  - Photos
-  - Follow-Up Needed
-  - Ship comments
-  - Automatic Supabase saving
+  Click department
+      |
+      v
+  Department checklist
+      |
+      v
+  Back to Departments
 */
 
 
@@ -57,17 +50,18 @@ import {
 
 
 /* ============================================================
-   STATE
+   CURRENT DEPARTMENT
 ============================================================ */
 
 let currentDepartmentId = null;
-
-let checklistChangedCallback = null;
 
 
 /* ============================================================
    CALLBACK
 ============================================================ */
+
+let checklistChangedCallback = null;
+
 
 export function setChecklistChangedCallback(
   callback
@@ -82,7 +76,7 @@ export function setChecklistChangedCallback(
 
 
 /* ============================================================
-   HTML ESCAPE
+   HELPERS
 ============================================================ */
 
 function escapeHtml(
@@ -93,50 +87,39 @@ function escapeHtml(
     value ?? ''
   ).replace(
     /[&<>"']/g,
-    character => ({
+    function(
+      character
+    ){
 
-      '&':'&amp;',
-      '<':'&lt;',
-      '>':'&gt;',
-      '"':'&quot;',
-      "'":'&#39;'
+      return {
 
-    }[character])
+        '&':'&amp;',
+        '<':'&lt;',
+        '>':'&gt;',
+        '"':'&quot;',
+        "'":'&#39;'
+
+      }[character];
+
+    }
   );
 
 }
 
 
-/* ============================================================
-   MESSAGE
-============================================================ */
-
-function showMessage(
-  message
+function getElement(
+  id
 ){
 
-  if(
-    typeof window.showToast ===
-    'function'
-  ){
-
-    window.showToast(
-      message
-    );
-
-    return;
-
-  }
-
-  console.log(
-    message
+  return document.getElementById(
+    id
   );
 
 }
 
 
 /* ============================================================
-   SAVE CURRENT REPORT
+   SAVE
 ============================================================ */
 
 async function saveCurrentReport(){
@@ -148,10 +131,6 @@ async function saveCurrentReport(){
   if(
     !reportId
   ){
-
-    showMessage(
-      'Report ID is not available yet.'
-    );
 
     return false;
 
@@ -180,13 +159,8 @@ async function saveCurrentReport(){
     ){
 
       console.error(
-        'Checklist save failed:',
+        'Could not save report:',
         result?.error
-      );
-
-
-      showMessage(
-        'Could not save report.'
       );
 
 
@@ -196,7 +170,8 @@ async function saveCurrentReport(){
 
 
     if(
-      checklistChangedCallback
+      typeof checklistChangedCallback ===
+      'function'
     ){
 
       try{
@@ -208,7 +183,7 @@ async function saveCurrentReport(){
       }catch(error){
 
         console.error(
-          'Checklist callback failed:',
+          'Checklist callback error:',
           error
         );
 
@@ -222,13 +197,8 @@ async function saveCurrentReport(){
   }catch(error){
 
     console.error(
-      'saveCurrentReport:',
+      'saveCurrentReport error:',
       error
-    );
-
-
-    showMessage(
-      'Could not save report.'
     );
 
 
@@ -240,7 +210,7 @@ async function saveCurrentReport(){
 
 
 /* ============================================================
-   CHECKLIST COUNTS
+   GLOBAL COUNTS
 ============================================================ */
 
 export function getChecklistCounts(){
@@ -249,90 +219,108 @@ export function getChecklistCounts(){
     getState();
 
 
-  let total =
-    0;
+  let total = 0;
 
-  let checked =
-    0;
+  let checked = 0;
 
-  let comments =
-    0;
+  let comments = 0;
 
-  let photos =
-    0;
+  let photos = 0;
 
-  let followUps =
-    0;
+  let followUps = 0;
 
-  let shipComments =
-    0;
+  let shipComments = 0;
 
 
-  Object.values(
-    state
-  ).forEach(
-    item => {
+  SECTIONS.forEach(
+    section => {
 
-      total++;
-
-
-      if(
-        item &&
-        item.checked
-      ){
-
-        checked++;
-
-      }
-
-
-      if(
-        item &&
+      total +=
         Array.isArray(
-          item.comments
+          section.items
         )
-      ){
-
-        comments +=
-          item.comments.length;
-
-      }
+          ? section.items.length
+          : 0;
 
 
-      if(
-        item &&
-        Array.isArray(
-          item.photos
-        )
-      ){
+      section.items.forEach(
+        (
+          _text,
+          index
+        ) => {
 
-        photos +=
-          item.photos.length;
-
-      }
+          const key =
+            `${section.id}__${index}`;
 
 
-      if(
-        item &&
-        item.followUpNeeded
-      ){
-
-        followUps++;
-
-      }
+          const item =
+            state[key];
 
 
-      if(
-        item &&
-        Array.isArray(
-          item.shipComments
-        )
-      ){
+          if(
+            !item
+          ){
 
-        shipComments +=
-          item.shipComments.length;
+            return;
 
-      }
+          }
+
+
+          if(
+            item.checked
+          ){
+
+            checked++;
+
+          }
+
+
+          if(
+            Array.isArray(
+              item.comments
+            )
+          ){
+
+            comments +=
+              item.comments.length;
+
+          }
+
+
+          if(
+            Array.isArray(
+              item.photos
+            )
+          ){
+
+            photos +=
+              item.photos.length;
+
+          }
+
+
+          if(
+            item.followUpNeeded
+          ){
+
+            followUps++;
+
+          }
+
+
+          if(
+            Array.isArray(
+              item.shipComments
+            )
+          ){
+
+            shipComments +=
+              item.shipComments.length;
+
+          }
+
+        }
+      );
 
     }
   );
@@ -358,10 +346,10 @@ export function getChecklistCounts(){
 
 
 /* ============================================================
-   DEPARTMENT COUNT
+   DEPARTMENT COUNTS
 ============================================================ */
 
-function getDepartmentCount(
+function getDepartmentCounts(
   section
 ){
 
@@ -369,13 +357,20 @@ function getDepartmentCount(
     getState();
 
 
-  let checked =
-    0;
+  let checked = 0;
+
+
+  const total =
+    Array.isArray(
+      section.items
+    )
+      ? section.items.length
+      : 0;
 
 
   section.items.forEach(
     (
-      _,
+      _text,
       index
     ) => {
 
@@ -399,8 +394,7 @@ function getDepartmentCount(
 
     checked,
 
-    total:
-      section.items.length
+    total
 
   };
 
@@ -412,177 +406,40 @@ function getDepartmentCount(
 ============================================================ */
 
 function getDepartmentIcon(
-  section
+  id
 ){
 
   const icons = {
 
-    culinary: `
-      <svg
-        viewBox="0 0 64 64"
-        aria-hidden="true"
-      >
-        <path
-          d="M19 8v18c0 6 4 10 9 11v19"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="4"
-          stroke-linecap="round"
-        />
-        <path
-          d="M13 8v14M19 8v14M25 8v14"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="4"
-          stroke-linecap="round"
-        />
-        <path
-          d="M43 8v48"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="4"
-          stroke-linecap="round"
-        />
-        <path
-          d="M43 8c8 7 8 17 0 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="4"
-          stroke-linecap="round"
-        />
-      </svg>
-    `,
+    culinary: '🍴',
 
-    bar: `
-      <svg
-        viewBox="0 0 64 64"
-        aria-hidden="true"
-      >
-        <path
-          d="M14 10h36l-13 19v27"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="4"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        />
-        <path
-          d="M25 56h24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="4"
-          stroke-linecap="round"
-        />
-      </svg>
-    `,
+    bar: '🍸',
 
-    restaurant: `
-      <svg
-        viewBox="0 0 64 64"
-        aria-hidden="true"
-      >
-        <circle
-          cx="32"
-          cy="32"
-          r="21"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="4"
-        />
-        <path
-          d="M17 25h30M18 39h28"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="4"
-          stroke-linecap="round"
-        />
-        <path
-          d="M25 18v28M39 18v28"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="4"
-          stroke-linecap="round"
-        />
-      </svg>
-    `,
+    restaurant: '🍽',
 
-    procurement: `
-      <svg
-        viewBox="0 0 64 64"
-        aria-hidden="true"
-      >
-        <path
-          d="M10 22h44v34H10z"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="4"
-          stroke-linejoin="round"
-        />
-        <path
-          d="M20 22v-8h24v8"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="4"
-          stroke-linejoin="round"
-        />
-        <path
-          d="M10 31h44"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="4"
-        />
-      </svg>
-    `,
+    procurement: '📦',
 
-    sanitation: `
-      <svg
-        viewBox="0 0 64 64"
-        aria-hidden="true"
-      >
-        <path
-          d="M22 10h20"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="4"
-          stroke-linecap="round"
-        />
-        <path
-          d="M27 10v10L17 51c-1 4 2 7 6 7h18c4 0 7-3 6-7L37 20V10"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="4"
-          stroke-linejoin="round"
-        />
-        <path
-          d="M23 38h18"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="4"
-          stroke-linecap="round"
-        />
-      </svg>
-    `
+    sanitation: '🧼'
 
   };
 
 
   return (
-    icons[section.id] ||
-    icons.restaurant
+    icons[id] ||
+    '✓'
   );
 
 }
 
 
 /* ============================================================
-   RENDER CHECKLIST
-   DEFAULT = DEPARTMENT HOME
+   RENDER MAIN CHECKLIST
 ============================================================ */
 
 export function renderChecklist(){
 
   const container =
-    document.getElementById(
+    getElement(
       'sections'
     );
 
@@ -592,18 +449,14 @@ export function renderChecklist(){
   ){
 
     console.error(
-      'Checklist container #sections not found.'
+      '#sections not found'
     );
+
 
     return;
 
   }
 
-
-  /*
-    Always return to department home
-    whenever the main checklist is opened.
-  */
 
   currentDepartmentId =
     null;
@@ -621,7 +474,7 @@ export function renderChecklist(){
 function renderDepartmentHome(){
 
   const container =
-    document.getElementById(
+    getElement(
       'sections'
     );
 
@@ -646,7 +499,6 @@ function renderDepartmentHome(){
 
       <div class="department-overview">
 
-
         <div class="department-overview-title">
 
           REPORT OVERVIEW
@@ -657,87 +509,57 @@ function renderDepartmentHome(){
         <div class="department-overview-grid">
 
 
-          <div
-            class="department-overview-card"
-          >
+          <div class="department-overview-card">
 
             <strong>
-
               ${counts.checked}
-
             </strong>
 
             <span>
-
               of ${counts.total}
-
             </span>
 
-
             <small>
-
               POINTS CHECKED
-
             </small>
 
           </div>
 
 
-          <div
-            class="department-overview-card"
-          >
+          <div class="department-overview-card">
 
             <strong>
-
               ${counts.comments}
-
             </strong>
 
-
             <small>
-
               COMMENTS
-
             </small>
 
           </div>
 
 
-          <div
-            class="department-overview-card"
-          >
+          <div class="department-overview-card">
 
             <strong>
-
               ${counts.photos}
-
             </strong>
 
-
             <small>
-
               PHOTOS
-
             </small>
 
           </div>
 
 
-          <div
-            class="department-overview-card"
-          >
+          <div class="department-overview-card">
 
             <strong>
-
               ${counts.followUps}
-
             </strong>
 
-
             <small>
-
               FOLLOW-UPS
-
             </small>
 
           </div>
@@ -748,36 +570,100 @@ function renderDepartmentHome(){
       </div>
 
 
-      <div
-        class="department-heading"
-      >
+      <div class="department-heading">
 
         DEPARTMENTS
 
       </div>
 
 
-      <div
-        class="department-grid"
-      >
+      <div class="department-grid">
+
 
         ${
-          SECTIONS
-            .map(
-              section =>
-                renderDepartmentCard(
+          SECTIONS.map(
+            section => {
+
+              const departmentCounts =
+                getDepartmentCounts(
                   section
-                )
-            )
-            .join('')
+                );
+
+
+              const complete =
+                departmentCounts.checked ===
+                departmentCounts.total;
+
+
+              return `
+
+                <button
+                  type="button"
+                  class="department-card ${
+                    complete
+                      ? 'complete'
+                      : ''
+                  }"
+                  data-department="${escapeHtml(
+                    section.id
+                  )}"
+                >
+
+                  <div class="department-icon">
+
+                    <span
+                      aria-hidden="true"
+                    >
+
+                      ${getDepartmentIcon(
+                        section.id
+                      )}
+
+                    </span>
+
+                  </div>
+
+
+                  <div class="department-card-name">
+
+                    ${escapeHtml(
+                      section.title
+                    )}
+
+                  </div>
+
+
+                  <div class="department-card-count">
+
+                    ${departmentCounts.checked}/${departmentCounts.total}
+
+                  </div>
+
+
+                  <div class="department-card-label">
+
+                    ${
+                      complete
+                        ? 'COMPLETE'
+                        : 'OPEN CHECKLIST'
+                    }
+
+                  </div>
+
+
+                </button>
+
+              `;
+
+            }
+          ).join('')
         }
+
 
       </div>
 
 
-      <div
-        class="department-help"
-      >
+      <div class="department-help">
 
         Select a department to open
         its checklist points.
@@ -790,145 +676,32 @@ function renderDepartmentHome(){
   `;
 
 
-  bindDepartmentCards();
+  /*
+    Bind department buttons.
+  */
 
-}
-
-
-/* ============================================================
-   DEPARTMENT CARD
-============================================================ */
-
-function renderDepartmentCard(
-  section
-){
-
-  const count =
-    getDepartmentCount(
-      section
+  const buttons =
+    container.querySelectorAll(
+      '[data-department]'
     );
 
 
-  const complete =
-    count.checked ===
-    count.total;
+  buttons.forEach(
+    button => {
 
+      button.addEventListener(
+        'click',
+        function(){
 
-  return `
+          openDepartment(
+            button.dataset.department
+          );
 
-    <button
-      type="button"
-      class="department-card ${
-        complete
-          ? 'complete'
-          : ''
-      }"
-      data-department-id="${escapeHtml(
-        section.id
-      )}"
-    >
-
-      <div
-        class="department-icon"
-      >
-
-        ${getDepartmentIcon(
-          section
-        )}
-
-      </div>
-
-
-      <div
-        class="department-card-name"
-      >
-
-        ${escapeHtml(
-          section.title
-        )}
-
-      </div>
-
-
-      <div
-        class="department-card-count"
-      >
-
-        ${count.checked}
-
-        /
-
-        ${count.total}
-
-      </div>
-
-
-      <div
-        class="department-card-label"
-      >
-
-        ${
-          complete
-            ? 'COMPLETE'
-            : 'OPEN CHECKLIST'
         }
+      );
 
-      </div>
-
-
-      ${
-        section.note
-          ? `
-            <div
-              class="department-card-note"
-            >
-
-              ${escapeHtml(
-                section.note
-              )}
-
-            </div>
-          `
-          : ''
-      }
-
-    </button>
-
-  `;
-
-}
-
-
-/* ============================================================
-   BIND DEPARTMENT CARDS
-============================================================ */
-
-function bindDepartmentCards(){
-
-  document
-    .querySelectorAll(
-      '[data-department-id]'
-    )
-    .forEach(
-      card => {
-
-        card.addEventListener(
-          'click',
-          () => {
-
-            const departmentId =
-              card.dataset.departmentId;
-
-
-            openDepartment(
-              departmentId
-            );
-
-          }
-        );
-
-      }
-    );
+    }
+  );
 
 }
 
@@ -953,16 +726,22 @@ export function openDepartment(
     !section
   ){
 
+    console.error(
+      'Department not found:',
+      departmentId
+    );
+
+
     return;
 
   }
 
 
   currentDepartmentId =
-    section.id;
+    departmentId;
 
 
-  renderDepartmentChecklist(
+  renderDepartment(
     section
   );
 
@@ -976,7 +755,7 @@ export function openDepartment(
 
 
 /* ============================================================
-   CLOSE DEPARTMENT
+   BACK TO DEPARTMENTS
 ============================================================ */
 
 export function closeDepartment(){
@@ -997,15 +776,15 @@ export function closeDepartment(){
 
 
 /* ============================================================
-   DEPARTMENT CHECKLIST
+   RENDER DEPARTMENT
 ============================================================ */
 
-function renderDepartmentChecklist(
+function renderDepartment(
   section
 ){
 
   const container =
-    document.getElementById(
+    getElement(
       'sections'
     );
 
@@ -1019,30 +798,24 @@ function renderDepartmentChecklist(
   }
 
 
-  const count =
-    getDepartmentCount(
+  const counts =
+    getDepartmentCounts(
       section
     );
 
 
   container.innerHTML = `
 
-    <div
-      class="department-checklist"
-      data-current-department="${escapeHtml(
-        section.id
-      )}"
-    >
+    <div class="department-checklist">
 
 
-      <div
-        class="department-checklist-top"
-      >
+      <div class="department-checklist-top">
+
 
         <button
           type="button"
-          class="department-back"
           id="departmentBackBtn"
+          class="department-back"
         >
 
           ← Departments
@@ -1050,26 +823,25 @@ function renderDepartmentChecklist(
         </button>
 
 
-        <div
-          class="department-checklist-title"
-        >
+        <div class="department-checklist-title">
 
-          <div
-            class="department-checklist-icon"
-          >
 
-            ${getDepartmentIcon(
-              section
-            )}
+          <div class="department-checklist-icon">
+
+            <span>
+
+              ${getDepartmentIcon(
+                section.id
+              )}
+
+            </span>
 
           </div>
 
 
           <div>
 
-            <div
-              class="department-checklist-name"
-            >
+            <div class="department-checklist-name">
 
               ${escapeHtml(
                 section.title
@@ -1080,17 +852,19 @@ function renderDepartmentChecklist(
 
             <div
               class="department-checklist-count"
-              id="currentDepartmentCount"
+              id="departmentCurrentCount"
             >
 
-              ${count.checked}/${count.total}
+              ${counts.checked}/${counts.total}
               checked
 
             </div>
 
           </div>
 
+
         </div>
+
 
       </div>
 
@@ -1099,9 +873,7 @@ function renderDepartmentChecklist(
         section.note
           ? `
 
-            <div
-              class="department-note"
-            >
+            <div class="department-note">
 
               ${escapeHtml(
                 section.note
@@ -1115,8 +887,8 @@ function renderDepartmentChecklist(
 
 
       <div
+        id="departmentPoints"
         class="department-point-list"
-        id="departmentPointList"
       ></div>
 
 
@@ -1125,27 +897,27 @@ function renderDepartmentChecklist(
   `;
 
 
-  renderDepartmentPoints(
-    section
-  );
-
-
-  const back =
-    document.getElementById(
+  const backButton =
+    getElement(
       'departmentBackBtn'
     );
 
 
   if(
-    back
+    backButton
   ){
 
-    back.addEventListener(
+    backButton.addEventListener(
       'click',
       closeDepartment
     );
 
   }
+
+
+  renderDepartmentPoints(
+    section
+  );
 
 }
 
@@ -1159,8 +931,8 @@ function renderDepartmentPoints(
 ){
 
   const container =
-    document.getElementById(
-      'departmentPointList'
+    getElement(
+      'departmentPoints'
     );
 
 
@@ -1183,23 +955,17 @@ function renderDepartmentPoints(
       index
     ) => {
 
-      const element =
+      container.appendChild(
         createChecklistItem(
           section,
           text,
           index
-        );
-
-
-      container.appendChild(
-        element
+        )
       );
 
     }
   );
 
-
-  bindChecklistEvents();
 
   refreshChecklistUI();
 
@@ -1218,6 +984,12 @@ function createChecklistItem(
 
   const key =
     `${section.id}__${index}`;
+
+
+  const item =
+    getItem(
+      key
+    ) || {};
 
 
   const element =
@@ -1241,12 +1013,24 @@ function createChecklistItem(
 
       <button
         type="button"
-        class="check-btn"
+        class="check-btn ${
+          item.checked
+            ? 'checked'
+            : ''
+        }"
         data-key="${escapeHtml(
           key
         )}"
-        aria-label="Mark checklist point reviewed"
-      ></button>
+        aria-label="Mark point checked"
+      >
+
+        ${
+          item.checked
+            ? '✓'
+            : ''
+        }
+
+      </button>
 
 
       <div class="item-text">
@@ -1294,29 +1078,28 @@ function createChecklistItem(
 
 
     <div
-      class="extra hidden"
-      id="extra-${escapeHtml(
-        key
-      )}"
+      class="extra ${
+        hasDetails(
+          item
+        )
+          ? ''
+          : 'hidden'
+      }"
+      id="extra-${key}"
     >
 
 
       <div
+        id="comments-${key}"
         class="comments-list"
-        id="comments-${escapeHtml(
-          key
-        )}"
       ></div>
 
 
-      <div
-        class="comment-row"
-      >
+      <div class="comment-row">
+
 
         <textarea
-          id="comment-input-${escapeHtml(
-            key
-          )}"
+          id="comment-input-${key}"
           placeholder="Add a reviewer comment"
         ></textarea>
 
@@ -1333,37 +1116,36 @@ function createChecklistItem(
 
         </button>
 
+
       </div>
 
 
       <div
+        id="photos-${key}"
         class="photos"
-        id="photos-${escapeHtml(
-          key
-        )}"
       ></div>
 
 
-      <div
-        class="followup-row"
-      >
+      <div class="followup-row">
+
 
         <input
           type="checkbox"
           class="followup-check"
-          id="followup-${escapeHtml(
-            key
-          )}"
           data-key="${escapeHtml(
             key
           )}"
+          id="followup-${key}"
+          ${
+            item.followUpNeeded
+              ? 'checked'
+              : ''
+          }
         >
 
 
         <label
-          for="followup-${escapeHtml(
-            key
-          )}"
+          for="followup-${key}"
         >
 
           Follow-Up Needed from Ship
@@ -1375,10 +1157,8 @@ function createChecklistItem(
 
 
       <div
+        id="ship-comments-${key}"
         class="ship-comments"
-        id="ship-comments-${escapeHtml(
-          key
-        )}"
       ></div>
 
 
@@ -1387,18 +1167,37 @@ function createChecklistItem(
         accept="image/*"
         capture="environment"
         class="hidden photo-input"
+        id="photo-input-${key}"
         data-key="${escapeHtml(
           key
         )}"
-        id="photo-input-${escapeHtml(
-          key
-        )}"
-      />
+      >
 
 
     </div>
 
   `;
+
+
+  bindItemEvents(
+    element,
+    key
+  );
+
+
+  renderComments(
+    key
+  );
+
+
+  renderPhotos(
+    key
+  );
+
+
+  renderShipComments(
+    key
+  );
 
 
   return element;
@@ -1407,318 +1206,393 @@ function createChecklistItem(
 
 
 /* ============================================================
-   CHECKLIST EVENTS
+   HAS DETAILS
 ============================================================ */
 
-function bindChecklistEvents(){
+function hasDetails(
+  item
+){
 
-  /*
-    CHECK BUTTONS
-  */
+  if(
+    !item
+  ){
 
-  document
-    .querySelectorAll(
+    return false;
+
+  }
+
+
+  return (
+
+    (
+      Array.isArray(
+        item.comments
+      ) &&
+      item.comments.length > 0
+    )
+
+    ||
+
+    (
+      Array.isArray(
+        item.photos
+      ) &&
+      item.photos.length > 0
+    )
+
+    ||
+
+    Boolean(
+      item.followUpNeeded
+    )
+
+    ||
+
+    (
+      Array.isArray(
+        item.shipComments
+      ) &&
+      item.shipComments.length > 0
+    )
+
+  );
+
+}
+
+
+/* ============================================================
+   ITEM EVENTS
+============================================================ */
+
+function bindItemEvents(
+  element,
+  key
+){
+
+  const checkButton =
+    element.querySelector(
       '.check-btn'
-    )
-    .forEach(
-      button => {
-
-        button.addEventListener(
-          'click',
-          async event => {
-
-            event.stopPropagation();
-
-
-            const key =
-              button.dataset.key;
-
-
-            if(
-              !key
-            ){
-
-              return;
-
-            }
-
-
-            toggleChecked(
-              key
-            );
-
-
-            refreshChecklistUI();
-
-
-            await saveCurrentReport();
-
-          }
-        );
-
-      }
     );
 
 
-  /*
-    COMMENT BUTTONS
-  */
-
-  document
-    .querySelectorAll(
+  const noteButton =
+    element.querySelector(
       '.note-button'
-    )
-    .forEach(
-      button => {
-
-        button.addEventListener(
-          'click',
-          event => {
-
-            event.stopPropagation();
-
-
-            const key =
-              button.dataset.key;
-
-
-            openDetailArea(
-              key
-            );
-
-
-            const input =
-              document.getElementById(
-                `comment-input-${key}`
-              );
-
-
-            if(
-              input
-            ){
-
-              setTimeout(
-                () => {
-
-                  input.focus();
-
-                },
-                50
-              );
-
-            }
-
-          }
-        );
-
-      }
     );
 
 
-  /*
-    PHOTO BUTTONS
-  */
-
-  document
-    .querySelectorAll(
+  const photoButton =
+    element.querySelector(
       '.photo-button'
-    )
-    .forEach(
-      button => {
-
-        button.addEventListener(
-          'click',
-          event => {
-
-            event.stopPropagation();
-
-
-            const key =
-              button.dataset.key;
-
-
-            openDetailArea(
-              key
-            );
-
-
-            const input =
-              document.getElementById(
-                `photo-input-${key}`
-              );
-
-
-            if(
-              input
-            ){
-
-              input.click();
-
-            }
-
-          }
-        );
-
-      }
     );
 
 
-  /*
-    PHOTO INPUTS
-  */
-
-  document
-    .querySelectorAll(
-      '.photo-input'
-    )
-    .forEach(
-      input => {
-
-        input.addEventListener(
-          'change',
-          async event => {
-
-            const key =
-              input.dataset.key;
-
-
-            await handlePhoto(
-              event,
-              key
-            );
-
-          }
-        );
-
-      }
-    );
-
-
-  /*
-    ADD COMMENT
-  */
-
-  document
-    .querySelectorAll(
+  const addCommentButton =
+    element.querySelector(
       '.add-comment'
-    )
-    .forEach(
-      button => {
-
-        button.addEventListener(
-          'click',
-          async event => {
-
-            event.stopPropagation();
-
-
-            const key =
-              button.dataset.key;
-
-
-            const input =
-              document.getElementById(
-                `comment-input-${key}`
-              );
-
-
-            if(
-              !input
-            ){
-
-              return;
-
-            }
-
-
-            const text =
-              input.value.trim();
-
-
-            if(
-              !text
-            ){
-
-              input.focus();
-
-
-              return;
-
-            }
-
-
-            addReviewerComment(
-              key,
-              text
-            );
-
-
-            input.value =
-              '';
-
-
-            renderComments(
-              key
-            );
-
-
-            openDetailArea(
-              key
-            );
-
-
-            await saveCurrentReport();
-
-          }
-        );
-
-      }
     );
 
 
-  /*
-    FOLLOW-UP
-  */
-
-  document
-    .querySelectorAll(
+  const followUp =
+    element.querySelector(
       '.followup-check'
-    )
-    .forEach(
-      checkbox => {
-
-        checkbox.addEventListener(
-          'change',
-          async event => {
-
-            event.stopPropagation();
+    );
 
 
-            const key =
-              checkbox.dataset.key;
+  const photoInput =
+    element.querySelector(
+      '.photo-input'
+    );
 
 
-            setFollowUp(
-              key,
-              checkbox.checked
-            );
+  if(
+    checkButton
+  ){
+
+    checkButton.addEventListener(
+      'click',
+      async function(
+        event
+      ){
+
+        event.stopPropagation();
 
 
-            openDetailArea(
-              key
-            );
+        const checked =
+          toggleChecked(
+            key
+          );
 
 
-            refreshChecklistUI();
-
-
-            await saveCurrentReport();
-
-          }
+        checkButton.classList.toggle(
+          'checked',
+          checked
         );
+
+
+        checkButton.textContent =
+          checked
+            ? '✓'
+            : '';
+
+
+        refreshChecklistUI();
+
+
+        await saveCurrentReport();
 
       }
     );
+
+  }
+
+
+  if(
+    noteButton
+  ){
+
+    noteButton.addEventListener(
+      'click',
+      function(
+        event
+      ){
+
+        event.stopPropagation();
+
+
+        openDetails(
+          key
+        );
+
+
+        const input =
+          getElement(
+            `comment-input-${key}`
+          );
+
+
+        if(
+          input
+        ){
+
+          input.focus();
+
+        }
+
+      }
+    );
+
+  }
+
+
+  if(
+    photoButton
+  ){
+
+    photoButton.addEventListener(
+      'click',
+      function(
+        event
+      ){
+
+        event.stopPropagation();
+
+
+        openDetails(
+          key
+        );
+
+
+        if(
+          photoInput
+        ){
+
+          photoInput.click();
+
+        }
+
+      }
+    );
+
+  }
+
+
+  if(
+    addCommentButton
+  ){
+
+    addCommentButton.addEventListener(
+      'click',
+      async function(
+        event
+      ){
+
+        event.stopPropagation();
+
+
+        const input =
+          getElement(
+            `comment-input-${key}`
+          );
+
+
+        if(
+          !input
+        ){
+
+          return;
+
+        }
+
+
+        const text =
+          input.value.trim();
+
+
+        if(
+          !text
+        ){
+
+          input.focus();
+
+
+          return;
+
+        }
+
+
+        addReviewerComment(
+          key,
+          text
+        );
+
+
+        input.value =
+          '';
+
+
+        openDetails(
+          key
+        );
+
+
+        renderComments(
+          key
+        );
+
+
+        await saveCurrentReport();
+
+      }
+    );
+
+  }
+
+
+  if(
+    followUp
+  ){
+
+    followUp.addEventListener(
+      'change',
+      async function(
+        event
+      ){
+
+        event.stopPropagation();
+
+
+        setFollowUp(
+          key,
+          followUp.checked
+        );
+
+
+        openDetails(
+          key
+        );
+
+
+        await saveCurrentReport();
+
+      }
+    );
+
+  }
+
+
+  if(
+    photoInput
+  ){
+
+    photoInput.addEventListener(
+      'change',
+      async function(
+        event
+      ){
+
+        const file =
+          event.target.files &&
+          event.target.files[0];
+
+
+        if(
+          !file
+        ){
+
+          return;
+
+        }
+
+
+        try{
+
+          const data =
+            await readAndResizeImage(
+              file
+            );
+
+
+          addPhoto(
+            key,
+            data
+          );
+
+
+          openDetails(
+            key
+          );
+
+
+          renderPhotos(
+            key
+          );
+
+
+          await saveCurrentReport();
+
+        }catch(error){
+
+          console.error(
+            'Photo error:',
+            error
+          );
+
+
+          alert(
+            'Could not add the photo.'
+          );
+
+        }
+
+
+        photoInput.value =
+          '';
+
+      }
+    );
+
+  }
 
 }
 
@@ -1727,12 +1601,12 @@ function bindChecklistEvents(){
    OPEN DETAILS
 ============================================================ */
 
-function openDetailArea(
+function openDetails(
   key
 ){
 
   const extra =
-    document.getElementById(
+    getElement(
       `extra-${key}`
     );
 
@@ -1747,30 +1621,11 @@ function openDetailArea(
 
   }
 
-
-  const noteButton =
-    document.querySelector(
-      `.note-button[data-key="${CSS.escape(
-        key
-      )}"]`
-    );
-
-
-  if(
-    noteButton
-  ){
-
-    noteButton.classList.add(
-      'active'
-    );
-
-  }
-
 }
 
 
 /* ============================================================
-   RENDER COMMENTS
+   COMMENTS
 ============================================================ */
 
 function renderComments(
@@ -1778,7 +1633,7 @@ function renderComments(
 ){
 
   const container =
-    document.getElementById(
+    getElement(
       `comments-${key}`
     );
 
@@ -1798,18 +1653,9 @@ function renderComments(
     );
 
 
-  if(
-    !item
-  ){
-
-    return;
-
-  }
-
-
   const comments =
     Array.isArray(
-      item.comments
+      item?.comments
     )
       ? item.comments
       : [];
@@ -1847,9 +1693,7 @@ function renderComments(
         .map(
           comment => `
 
-            <div
-              class="comment"
-            >
+            <div class="comment">
 
               <strong>
 
@@ -1887,20 +1731,21 @@ function renderComments(
 
 
 /* ============================================================
-   HANDLE PHOTO
+   PHOTOS
 ============================================================ */
 
-async function handlePhoto(
-  event,
+function renderPhotos(
   key
 ){
 
-  const file =
-    event.target.files?.[0];
+  const container =
+    getElement(
+      `photos-${key}`
+    );
 
 
   if(
-    !file
+    !container
   ){
 
     return;
@@ -1908,80 +1753,254 @@ async function handlePhoto(
   }
 
 
-  try{
+  const item =
+    getItem(
+      key
+    );
 
-    const dataUrl =
-      await compressImage(
-        file
+
+  const photos =
+    Array.isArray(
+      item?.photos
+    )
+      ? item.photos
+      : [];
+
+
+  container.innerHTML =
+    '';
+
+
+  photos.forEach(
+    (
+      source,
+      index
+    ) => {
+
+      const wrapper =
+        document.createElement(
+          'div'
+        );
+
+
+      wrapper.className =
+        'photo';
+
+
+      const image =
+        document.createElement(
+          'img'
+        );
+
+
+      image.src =
+        source;
+
+
+      image.alt =
+        'Reviewer photo';
+
+
+      wrapper.appendChild(
+        image
       );
 
 
-    addPhoto(
-      key,
-      dataUrl
-    );
+      const remove =
+        document.createElement(
+          'button'
+        );
 
 
-    openDetailArea(
-      key
-    );
+      remove.type =
+        'button';
 
 
-    renderPhotos(
-      key
-    );
+      remove.className =
+        'photo-remove';
 
 
-    await saveCurrentReport();
-
-  }catch(error){
-
-    console.error(
-      'handlePhoto:',
-      error
-    );
+      remove.textContent =
+        '×';
 
 
-    alert(
-      'Could not add this photo.'
-    );
+      remove.addEventListener(
+        'click',
+        async function(
+          event
+        ){
 
-  }
+          event.stopPropagation();
 
 
-  event.target.value =
-    '';
+          removePhoto(
+            key,
+            index
+          );
+
+
+          renderPhotos(
+            key
+          );
+
+
+          await saveCurrentReport();
+
+        }
+      );
+
+
+      wrapper.appendChild(
+        remove
+      );
+
+
+      container.appendChild(
+        wrapper
+      );
+
+    }
+  );
 
 }
 
 
 /* ============================================================
-   COMPRESS IMAGE
+   SHIP COMMENTS
 ============================================================ */
 
-function compressImage(
+function renderShipComments(
+  key
+){
+
+  const container =
+    getElement(
+      `ship-comments-${key}`
+    );
+
+
+  if(
+    !container
+  ){
+
+    return;
+
+  }
+
+
+  const item =
+    getItem(
+      key
+    );
+
+
+  const comments =
+    Array.isArray(
+      item?.shipComments
+    )
+      ? item.shipComments
+      : [];
+
+
+  if(
+    comments.length === 0
+  ){
+
+    container.innerHTML =
+      '';
+
+
+    return;
+
+  }
+
+
+  container.innerHTML = `
+
+    <div
+      style="
+        margin-top:10px;
+        color:var(--vv-squid);
+        font-size:9px;
+        font-weight:800;
+        letter-spacing:.04em;
+      "
+    >
+
+      SHIP COMMENTS / RESPONSES
+
+    </div>
+
+
+    ${
+      comments
+        .map(
+          comment => `
+
+            <div class="ship-response-display">
+
+              <strong>
+
+                ${escapeHtml(
+                  comment.name ||
+                  'Ship'
+                )}:
+
+              </strong>
+
+
+              <div
+                style="
+                  margin-top:3px;
+                "
+              >
+
+                ${escapeHtml(
+                  comment.text ||
+                  ''
+                )}
+
+              </div>
+
+            </div>
+
+          `
+        )
+        .join('')
+    }
+
+  `;
+
+}
+
+
+/* ============================================================
+   IMAGE READER
+============================================================ */
+
+function readAndResizeImage(
   file
 ){
 
   return new Promise(
-    (
+    function(
       resolve,
       reject
-    ) => {
+    ){
 
       const reader =
         new FileReader();
 
 
       reader.onload =
-        () => {
+        function(){
 
           const image =
             new Image();
 
 
           image.onload =
-            () => {
+            function(){
 
               const maxWidth =
                 1280;
@@ -2041,7 +2060,7 @@ function compressImage(
 
                 reject(
                   new Error(
-                    'Could not create image canvas.'
+                    'Canvas unavailable.'
                   )
                 );
 
@@ -2071,11 +2090,11 @@ function compressImage(
 
 
           image.onerror =
-            () => {
+            function(){
 
               reject(
                 new Error(
-                  'Could not read image.'
+                  'Could not load image.'
                 )
               );
 
@@ -2089,11 +2108,11 @@ function compressImage(
 
 
       reader.onerror =
-        () => {
+        function(){
 
           reject(
             new Error(
-              'Could not read selected file.'
+              'Could not read image.'
             )
           );
 
@@ -2111,264 +2130,7 @@ function compressImage(
 
 
 /* ============================================================
-   RENDER PHOTOS
-============================================================ */
-
-function renderPhotos(
-  key
-){
-
-  const container =
-    document.getElementById(
-      `photos-${key}`
-    );
-
-
-  if(
-    !container
-  ){
-
-    return;
-
-  }
-
-
-  const item =
-    getItem(
-      key
-    );
-
-
-  if(
-    !item
-  ){
-
-    return;
-
-  }
-
-
-  const photos =
-    Array.isArray(
-      item.photos
-    )
-      ? item.photos
-      : [];
-
-
-  container.innerHTML =
-    '';
-
-
-  photos.forEach(
-    (
-      source,
-      index
-    ) => {
-
-      const wrapper =
-        document.createElement(
-          'div'
-        );
-
-
-      wrapper.className =
-        'photo';
-
-
-      wrapper.innerHTML = `
-
-        <img
-          src="${escapeHtml(
-            source
-          )}"
-          alt="Reviewer photo"
-        >
-
-      `;
-
-
-      const remove =
-        document.createElement(
-          'button'
-        );
-
-
-      remove.type =
-        'button';
-
-
-      remove.className =
-        'photo-remove';
-
-
-      remove.textContent =
-        '×';
-
-
-      remove.setAttribute(
-        'aria-label',
-        'Remove photo'
-      );
-
-
-      remove.addEventListener(
-        'click',
-        async event => {
-
-          event.stopPropagation();
-
-
-          removePhoto(
-            key,
-            index
-          );
-
-
-          renderPhotos(
-            key
-          );
-
-
-          await saveCurrentReport();
-
-        }
-      );
-
-
-      wrapper.appendChild(
-        remove
-      );
-
-
-      container.appendChild(
-        wrapper
-      );
-
-    }
-  );
-
-}
-
-
-/* ============================================================
-   RENDER SHIP COMMENTS
-============================================================ */
-
-function renderShipComments(
-  key
-){
-
-  const container =
-    document.getElementById(
-      `ship-comments-${key}`
-    );
-
-
-  if(
-    !container
-  ){
-
-    return;
-
-  }
-
-
-  const item =
-    getItem(
-      key
-    );
-
-
-  if(
-    !item
-  ){
-
-    return;
-
-  }
-
-
-  const comments =
-    Array.isArray(
-      item.shipComments
-    )
-      ? item.shipComments
-      : [];
-
-
-  if(
-    comments.length === 0
-  ){
-
-    container.innerHTML =
-      '';
-
-
-    return;
-
-  }
-
-
-  container.innerHTML = `
-
-    <div
-      style="
-        margin-top:11px;
-        margin-bottom:5px;
-        color:var(--vv-squid);
-        font-size:10px;
-        font-weight:800;
-        letter-spacing:.04em;
-      "
-    >
-
-      SHIP COMMENTS / RESPONSES
-
-    </div>
-
-
-    ${
-      comments
-        .map(
-          comment => `
-
-            <div
-              class="ship-response-display"
-              style="
-                margin-top:5px;
-              "
-            >
-
-              <strong>
-
-                ${escapeHtml(
-                  comment.name ||
-                  'Ship'
-                )}:
-
-              </strong>
-
-
-              ${escapeHtml(
-                comment.text ||
-                ''
-              )}
-
-            </div>
-
-          `
-        )
-        .join('')
-    }
-
-  `;
-
-}
-
-
-/* ============================================================
-   REFRESH CHECKLIST UI
+   REFRESH UI
 ============================================================ */
 
 export function refreshChecklistUI(){
@@ -2377,63 +2139,101 @@ export function refreshChecklistUI(){
     getState();
 
 
-  /*
-    GLOBAL COUNTS
-  */
-
   let total =
     0;
+
 
   let checked =
     0;
 
 
-  Object.values(
-    state
-  ).forEach(
-    item => {
+  SECTIONS.forEach(
+    section => {
 
-      total++;
+      total +=
+        section.items.length;
 
 
-      if(
-        item &&
-        item.checked
-      ){
+      section.items.forEach(
+        (
+          _text,
+          index
+        ) => {
 
-        checked++;
+          const key =
+            `${section.id}__${index}`;
 
-      }
+
+          if(
+            state[key]?.checked
+          ){
+
+            checked++;
+
+          }
+
+
+          const button =
+            document.querySelector(
+              `.check-btn[data-key="${key}"]`
+            );
+
+
+          if(
+            button
+          ){
+
+            const isChecked =
+              Boolean(
+                state[key]?.checked
+              );
+
+
+            button.classList.toggle(
+              'checked',
+              isChecked
+            );
+
+
+            button.textContent =
+              isChecked
+                ? '✓'
+                : '';
+
+          }
+
+        }
+      );
 
     }
   );
 
 
   const fill =
-    document.getElementById(
+    getElement(
       'fill'
     );
 
 
   const progress =
-    document.getElementById(
+    getElement(
       'progress'
     );
-
-
-  const percentage =
-    total
-      ? Math.round(
-          checked /
-          total *
-          100
-        )
-      : 0;
 
 
   if(
     fill
   ){
+
+    const percentage =
+      total > 0
+        ? Math.round(
+            checked /
+            total *
+            100
+          )
+        : 0;
+
 
     fill.style.width =
       `${percentage}%`;
@@ -2452,354 +2252,244 @@ export function refreshChecklistUI(){
 
 
   /*
-    If the department home is visible,
-    refresh all cards.
+    Department count.
   */
 
   if(
-    !currentDepartmentId
+    currentDepartmentId
   ){
 
-    refreshDepartmentHomeCards();
-
-    return;
-
-  }
-
-
-  /*
-    Current department only.
-  */
-
-  const section =
-    SECTIONS.find(
-      item =>
-        item.id ===
-        currentDepartmentId
-    );
+    const section =
+      SECTIONS.find(
+        item =>
+          item.id ===
+          currentDepartmentId
+      );
 
 
-  if(
-    !section
-  ){
-
-    return;
-
-  }
-
-
-  const departmentCount =
-    getDepartmentCount(
+    if(
       section
-    );
+    ){
+
+      const counts =
+        getDepartmentCounts(
+          section
+        );
 
 
-  const departmentCountElement =
-    document.getElementById(
-      'currentDepartmentCount'
-    );
+      const current =
+        getElement(
+          'departmentCurrentCount'
+        );
 
 
-  if(
-    departmentCountElement
-  ){
+      if(
+        current
+      ){
 
-    departmentCountElement.textContent =
-      `${departmentCount.checked}/${departmentCount.total} checked`;
+        current.textContent =
+          `${counts.checked}/${counts.total} checked`;
+
+      }
+
+    }
+
+  }else{
+
+    refreshDepartmentHome();
 
   }
 
-
-  /*
-    Update every point.
-  */
-
-  section.items.forEach(
-    (
-      _,
-      index
-    ) => {
-
-      const key =
-        `${section.id}__${index}`;
+}
 
 
-      const item =
-        state[key];
+/* ============================================================
+   REFRESH DEPARTMENT HOME
+============================================================ */
+
+function refreshDepartmentHome(){
+
+  const cards =
+    document.querySelectorAll(
+      '.department-card'
+    );
 
 
-      const button =
-        document.querySelector(
-          `.check-btn[data-key="${CSS.escape(
-            key
-          )}"]`
-        );
+  cards.forEach(
+    card => {
+
+      const id =
+        card.dataset.department;
 
 
-      const extra =
-        document.getElementById(
-          `extra-${key}`
-        );
-
-
-      const followup =
-        document.getElementById(
-          `followup-${key}`
-        );
-
-
-      const pointHasDetails =
-        Boolean(
-          item &&
-          (
-            (
-              Array.isArray(
-                item.comments
-              ) &&
-              item.comments.length > 0
-            ) ||
-            (
-              Array.isArray(
-                item.photos
-              ) &&
-              item.photos.length > 0
-            ) ||
-            item.followUpNeeded ||
-            (
-              Array.isArray(
-                item.shipComments
-              ) &&
-              item.shipComments.length > 0
-            )
-          )
+      const section =
+        SECTIONS.find(
+          item =>
+            item.id ===
+            id
         );
 
 
       if(
-        button
+        !section
       ){
 
-        button.classList.toggle(
-          'checked',
-          Boolean(
-            item?.checked
-          )
-        );
+        return;
 
       }
 
 
-      if(
-        followup
-      ){
-
-        followup.checked =
-          Boolean(
-            item?.followUpNeeded
-          );
-
-      }
-
-
-      if(
-        pointHasDetails
-      ){
-
-        openDetailArea(
-          key
+      const counts =
+        getDepartmentCounts(
+          section
         );
 
+
+      const count =
+        card.querySelector(
+          '.department-card-count'
+        );
+
+
+      const label =
+        card.querySelector(
+          '.department-card-label'
+        );
+
+
+      if(
+        count
+      ){
+
+        count.textContent =
+          `${counts.checked}/${counts.total}`;
+
       }
 
 
-      renderComments(
-        key
-      );
+      const complete =
+        counts.checked ===
+        counts.total;
 
 
-      renderPhotos(
-        key
-      );
-
-
-      renderShipComments(
-        key
+      card.classList.toggle(
+        'complete',
+        complete
       );
 
 
       if(
-        extra
+        label
       ){
 
-        if(
-          pointHasDetails
-        ){
-
-          extra.classList.remove(
-            'hidden'
-          );
-
-        }
+        label.textContent =
+          complete
+            ? 'COMPLETE'
+            : 'OPEN CHECKLIST';
 
       }
 
     }
   );
 
-}
-
-
-/* ============================================================
-   REFRESH DEPARTMENT CARDS
-============================================================ */
-
-function refreshDepartmentHomeCards(){
-
-  document
-    .querySelectorAll(
-      '.department-card'
-    )
-    .forEach(
-      card => {
-
-        const id =
-          card.dataset.departmentId;
-
-
-        const section =
-          SECTIONS.find(
-            item =>
-              item.id ===
-              id
-          );
-
-
-        if(
-          !section
-        ){
-
-          return;
-
-        }
-
-
-        const count =
-          getDepartmentCount(
-            section
-          );
-
-
-        const countElement =
-          card.querySelector(
-            '.department-card-count'
-          );
-
-
-        const labelElement =
-          card.querySelector(
-            '.department-card-label'
-          );
-
-
-        if(
-          countElement
-        ){
-
-          countElement.textContent =
-            `${count.checked}/${count.total}`;
-
-        }
-
-
-        const complete =
-          count.checked ===
-          count.total;
-
-
-        card.classList.toggle(
-          'complete',
-          complete
-        );
-
-
-        if(
-          labelElement
-        ){
-
-          labelElement.textContent =
-            complete
-              ? 'COMPLETE'
-              : 'OPEN CHECKLIST';
-
-        }
-
-      }
-    );
-
-
-  /*
-    Refresh overview numbers.
-  */
 
   const counts =
     getChecklistCounts();
 
 
-  const values = {
-
-    checked:
-      counts.checked,
-
-    comments:
-      counts.comments,
-
-    photos:
-      counts.photos,
-
-    followUps:
-      counts.followUps
-
-  };
-
-
-  const cards =
+  const overview =
     document.querySelectorAll(
       '.department-overview-card'
     );
 
 
   if(
-    cards.length >= 4
+    overview.length >= 4
   ){
 
-    cards[0]
-      .querySelector('strong')
-      .textContent =
-        values.checked;
+    const checked =
+      overview[0]
+        .querySelector(
+          'strong'
+        );
 
 
-    cards[0]
-      .querySelector('span')
-      .textContent =
+    const total =
+      overview[0]
+        .querySelector(
+          'span'
+        );
+
+
+    const comments =
+      overview[1]
+        .querySelector(
+          'strong'
+        );
+
+
+    const photos =
+      overview[2]
+        .querySelector(
+          'strong'
+        );
+
+
+    const followUps =
+      overview[3]
+        .querySelector(
+          'strong'
+        );
+
+
+    if(
+      checked
+    ){
+
+      checked.textContent =
+        counts.checked;
+
+    }
+
+
+    if(
+      total
+    ){
+
+      total.textContent =
         `of ${counts.total}`;
 
-
-    cards[1]
-      .querySelector('strong')
-      .textContent =
-        values.comments;
+    }
 
 
-    cards[2]
-      .querySelector('strong')
-      .textContent =
-        values.photos;
+    if(
+      comments
+    ){
+
+      comments.textContent =
+        counts.comments;
+
+    }
 
 
-    cards[3]
-      .querySelector('strong')
-      .textContent =
-        values.followUps;
+    if(
+      photos
+    ){
+
+      photos.textContent =
+        counts.photos;
+
+    }
+
+
+    if(
+      followUps
+    ){
+
+      followUps.textContent =
+        counts.followUps;
+
+    }
 
   }
 
@@ -2817,19 +2507,19 @@ export function updateChecklistHeader(){
 
 
   const ship =
-    document.getElementById(
+    getElement(
       'hdrShip'
     );
 
 
   const reviewer =
-    document.getElementById(
+    getElement(
       'hdrReviewer'
     );
 
 
   const visit =
-    document.getElementById(
+    getElement(
       'visitMeta'
     );
 
@@ -2940,6 +2630,8 @@ export function getChecklistFollowUps(){
                   ? item.photos
                   : [],
 
+              followUpNeeded:true,
+
               shipComments:
                 Array.isArray(
                   item.shipComments
@@ -2991,7 +2683,7 @@ export function getAllChecklistPoints(){
 
 
           const item =
-            state[key];
+            state[key] || {};
 
 
           points.push({
@@ -3005,31 +2697,31 @@ export function getAllChecklistPoints(){
 
             checked:
               Boolean(
-                item?.checked
+                item.checked
               ),
 
             comments:
               Array.isArray(
-                item?.comments
+                item.comments
               )
                 ? item.comments
                 : [],
 
             photos:
               Array.isArray(
-                item?.photos
+                item.photos
               )
                 ? item.photos
                 : [],
 
             followUpNeeded:
               Boolean(
-                item?.followUpNeeded
+                item.followUpNeeded
               ),
 
             shipComments:
               Array.isArray(
-                item?.shipComments
+                item.shipComments
               )
                 ? item.shipComments
                 : []
@@ -3060,13 +2752,13 @@ export async function saveChecklist(){
 
 
 /* ============================================================
-   CLEAR CHECKLIST UI
+   CLEAR UI
 ============================================================ */
 
 export function clearChecklistUI(){
 
   const container =
-    document.getElementById(
+    getElement(
       'sections'
     );
 
@@ -3086,7 +2778,7 @@ export function clearChecklistUI(){
 
 
   const fill =
-    document.getElementById(
+    getElement(
       'fill'
     );
 
@@ -3102,7 +2794,7 @@ export function clearChecklistUI(){
 
 
   const progress =
-    document.getElementById(
+    getElement(
       'progress'
     );
 
