@@ -116,6 +116,13 @@ const ADMIN_EMAILS = [
 
 let adminMode =
   false;
+function isAdmin(){
+
+  return Boolean(
+    adminMode
+  );
+
+}
 
 
 /* ============================================================
