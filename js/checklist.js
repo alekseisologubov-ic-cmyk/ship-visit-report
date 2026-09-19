@@ -5,23 +5,20 @@
   checklist.js
   ============================================================
 
-  MAIN FLOW
+  CLEAN DEPARTMENT NAVIGATION
 
-  CHECKLIST HOME
-      |
-      +-- CULINARY
-      +-- BAR
-      +-- RESTAURANT
-      +-- PROCUREMENT
-      +-- SANITATION
+  Main screen:
+    - Report overview
+    - Department cards
 
-  Click department
-      |
-      v
-  Department checklist
-      |
-      v
-  Back to Departments
+  Department screen:
+    - Checklist points
+    - Circle check
+    - Comment
+    - Photo
+    - Follow-up
+
+  Compatible with current main.js
 */
 
 
@@ -53,7 +50,7 @@ import {
    CURRENT DEPARTMENT
 ============================================================ */
 
-let currentDepartmentId = null;
+let currentDepartment = null;
 
 
 /* ============================================================
@@ -76,7 +73,7 @@ export function setChecklistChangedCallback(
 
 
 /* ============================================================
-   HELPERS
+   ESCAPE HTML
 ============================================================ */
 
 function escapeHtml(
@@ -87,11 +84,9 @@ function escapeHtml(
     value ?? ''
   ).replace(
     /[&<>"']/g,
-    function(
-      character
-    ){
+    character => {
 
-      return {
+      const map = {
 
         '&':'&amp;',
         '<':'&lt;',
@@ -99,20 +94,11 @@ function escapeHtml(
         '"':'&quot;',
         "'":'&#39;'
 
-      }[character];
+      };
+
+      return map[character];
 
     }
-  );
-
-}
-
-
-function getElement(
-  id
-){
-
-  return document.getElementById(
-    id
   );
 
 }
@@ -159,7 +145,7 @@ async function saveCurrentReport(){
     ){
 
       console.error(
-        'Could not save report:',
+        'Save report failed:',
         result?.error
       );
 
@@ -174,20 +160,9 @@ async function saveCurrentReport(){
       'function'
     ){
 
-      try{
-
-        await checklistChangedCallback(
-          result.data
-        );
-
-      }catch(error){
-
-        console.error(
-          'Checklist callback error:',
-          error
-        );
-
-      }
+      await checklistChangedCallback(
+        result.data
+      );
 
     }
 
@@ -197,7 +172,7 @@ async function saveCurrentReport(){
   }catch(error){
 
     console.error(
-      'saveCurrentReport error:',
+      'saveCurrentReport:',
       error
     );
 
@@ -210,7 +185,7 @@ async function saveCurrentReport(){
 
 
 /* ============================================================
-   GLOBAL COUNTS
+   TOTAL COUNTS
 ============================================================ */
 
 export function getChecklistCounts(){
@@ -235,12 +210,19 @@ export function getChecklistCounts(){
   SECTIONS.forEach(
     section => {
 
-      total +=
-        Array.isArray(
+      if(
+        !Array.isArray(
           section.items
         )
-          ? section.items.length
-          : 0;
+      ){
+
+        return;
+
+      }
+
+
+      total +=
+        section.items.length;
 
 
       section.items.forEach(
@@ -346,10 +328,10 @@ export function getChecklistCounts(){
 
 
 /* ============================================================
-   DEPARTMENT COUNTS
+   DEPARTMENT COUNT
 ============================================================ */
 
-function getDepartmentCounts(
+function getDepartmentCount(
   section
 ){
 
@@ -358,14 +340,6 @@ function getDepartmentCounts(
 
 
   let checked = 0;
-
-
-  const total =
-    Array.isArray(
-      section.items
-    )
-      ? section.items.length
-      : 0;
 
 
   section.items.forEach(
@@ -394,7 +368,8 @@ function getDepartmentCounts(
 
     checked,
 
-    total
+    total:
+      section.items.length
 
   };
 
@@ -411,15 +386,15 @@ function getDepartmentIcon(
 
   const icons = {
 
-    culinary: '🍴',
+    culinary:'🍴',
 
-    bar: '🍸',
+    bar:'🍸',
 
-    restaurant: '🍽',
+    restaurant:'🍽',
 
-    procurement: '📦',
+    procurement:'📦',
 
-    sanitation: '🧼'
+    sanitation:'🧼'
 
   };
 
@@ -433,13 +408,13 @@ function getDepartmentIcon(
 
 
 /* ============================================================
-   RENDER MAIN CHECKLIST
+   MAIN RENDER
 ============================================================ */
 
 export function renderChecklist(){
 
   const container =
-    getElement(
+    document.getElementById(
       'sections'
     );
 
@@ -449,7 +424,7 @@ export function renderChecklist(){
   ){
 
     console.error(
-      '#sections not found'
+      'Checklist container #sections not found.'
     );
 
 
@@ -458,7 +433,7 @@ export function renderChecklist(){
   }
 
 
-  currentDepartmentId =
+  currentDepartment =
     null;
 
 
@@ -474,7 +449,7 @@ export function renderChecklist(){
 function renderDepartmentHome(){
 
   const container =
-    getElement(
+    document.getElementById(
       'sections'
     );
 
@@ -579,86 +554,16 @@ function renderDepartmentHome(){
 
       <div class="department-grid">
 
-
         ${
-          SECTIONS.map(
-            section => {
-
-              const departmentCounts =
-                getDepartmentCounts(
+          SECTIONS
+            .map(
+              section =>
+                renderDepartmentCard(
                   section
-                );
-
-
-              const complete =
-                departmentCounts.checked ===
-                departmentCounts.total;
-
-
-              return `
-
-                <button
-                  type="button"
-                  class="department-card ${
-                    complete
-                      ? 'complete'
-                      : ''
-                  }"
-                  data-department="${escapeHtml(
-                    section.id
-                  )}"
-                >
-
-                  <div class="department-icon">
-
-                    <span
-                      aria-hidden="true"
-                    >
-
-                      ${getDepartmentIcon(
-                        section.id
-                      )}
-
-                    </span>
-
-                  </div>
-
-
-                  <div class="department-card-name">
-
-                    ${escapeHtml(
-                      section.title
-                    )}
-
-                  </div>
-
-
-                  <div class="department-card-count">
-
-                    ${departmentCounts.checked}/${departmentCounts.total}
-
-                  </div>
-
-
-                  <div class="department-card-label">
-
-                    ${
-                      complete
-                        ? 'COMPLETE'
-                        : 'OPEN CHECKLIST'
-                    }
-
-                  </div>
-
-
-                </button>
-
-              `;
-
-            }
-          ).join('')
+                )
+            )
+            .join('')
         }
-
 
       </div>
 
@@ -666,7 +571,7 @@ function renderDepartmentHome(){
       <div class="department-help">
 
         Select a department to open
-        its checklist points.
+        its checklist.
 
       </div>
 
@@ -676,12 +581,98 @@ function renderDepartmentHome(){
   `;
 
 
-  /*
-    Bind department buttons.
-  */
+  bindDepartmentButtons();
+
+}
+
+
+/* ============================================================
+   DEPARTMENT CARD
+============================================================ */
+
+function renderDepartmentCard(
+  section
+){
+
+  const count =
+    getDepartmentCount(
+      section
+    );
+
+
+  const complete =
+    count.checked ===
+    count.total;
+
+
+  return `
+
+    <button
+      type="button"
+      class="department-card ${
+        complete
+          ? 'complete'
+          : ''
+      }"
+      data-department="${escapeHtml(
+        section.id
+      )}"
+    >
+
+      <div class="department-icon">
+
+        <span>
+
+          ${getDepartmentIcon(
+            section.id
+          )}
+
+        </span>
+
+      </div>
+
+
+      <div class="department-card-name">
+
+        ${escapeHtml(
+          section.title
+        )}
+
+      </div>
+
+
+      <div class="department-card-count">
+
+        ${count.checked}/${count.total}
+
+      </div>
+
+
+      <div class="department-card-label">
+
+        ${
+          complete
+            ? 'COMPLETE'
+            : 'OPEN CHECKLIST'
+        }
+
+      </div>
+
+    </button>
+
+  `;
+
+}
+
+
+/* ============================================================
+   DEPARTMENT BUTTONS
+============================================================ */
+
+function bindDepartmentButtons(){
 
   const buttons =
-    container.querySelectorAll(
+    document.querySelectorAll(
       '[data-department]'
     );
 
@@ -737,7 +728,7 @@ export function openDepartment(
   }
 
 
-  currentDepartmentId =
+  currentDepartment =
     departmentId;
 
 
@@ -755,12 +746,12 @@ export function openDepartment(
 
 
 /* ============================================================
-   BACK TO DEPARTMENTS
+   CLOSE DEPARTMENT
 ============================================================ */
 
 export function closeDepartment(){
 
-  currentDepartmentId =
+  currentDepartment =
     null;
 
 
@@ -776,7 +767,7 @@ export function closeDepartment(){
 
 
 /* ============================================================
-   RENDER DEPARTMENT
+   DEPARTMENT PAGE
 ============================================================ */
 
 function renderDepartment(
@@ -784,7 +775,7 @@ function renderDepartment(
 ){
 
   const container =
-    getElement(
+    document.getElementById(
       'sections'
     );
 
@@ -798,8 +789,8 @@ function renderDepartment(
   }
 
 
-  const counts =
-    getDepartmentCounts(
+  const count =
+    getDepartmentCount(
       section
     );
 
@@ -855,7 +846,7 @@ function renderDepartment(
               id="departmentCurrentCount"
             >
 
-              ${counts.checked}/${counts.total}
+              ${count.checked}/${count.total}
               checked
 
             </div>
@@ -869,23 +860,6 @@ function renderDepartment(
       </div>
 
 
-      ${
-        section.note
-          ? `
-
-            <div class="department-note">
-
-              ${escapeHtml(
-                section.note
-              )}
-
-            </div>
-
-          `
-          : ''
-      }
-
-
       <div
         id="departmentPoints"
         class="department-point-list"
@@ -897,17 +871,17 @@ function renderDepartment(
   `;
 
 
-  const backButton =
-    getElement(
+  const back =
+    document.getElementById(
       'departmentBackBtn'
     );
 
 
   if(
-    backButton
+    back
   ){
 
-    backButton.addEventListener(
+    back.addEventListener(
       'click',
       closeDepartment
     );
@@ -923,7 +897,7 @@ function renderDepartment(
 
 
 /* ============================================================
-   RENDER DEPARTMENT POINTS
+   DEPARTMENT POINTS
 ============================================================ */
 
 function renderDepartmentPoints(
@@ -931,7 +905,7 @@ function renderDepartmentPoints(
 ){
 
   const container =
-    getElement(
+    document.getElementById(
       'departmentPoints'
     );
 
@@ -945,22 +919,22 @@ function renderDepartmentPoints(
   }
 
 
-  container.innerHTML =
-    '';
-
-
   section.items.forEach(
     (
       text,
       index
     ) => {
 
-      container.appendChild(
-        createChecklistItem(
+      const item =
+        createPoint(
           section,
           text,
           index
-        )
+        );
+
+
+      container.appendChild(
+        item
       );
 
     }
@@ -973,10 +947,10 @@ function renderDepartmentPoints(
 
 
 /* ============================================================
-   CREATE CHECKLIST ITEM
+   CREATE POINT
 ============================================================ */
 
-function createChecklistItem(
+function createPoint(
   section,
   text,
   index
@@ -992,21 +966,21 @@ function createChecklistItem(
     ) || {};
 
 
-  const element =
+  const wrapper =
     document.createElement(
       'div'
     );
 
 
-  element.className =
+  wrapper.className =
     'item';
 
 
-  element.id =
+  wrapper.id =
     `item-${key}`;
 
 
-  element.innerHTML = `
+  wrapper.innerHTML = `
 
     <div class="item-row">
 
@@ -1021,7 +995,6 @@ function createChecklistItem(
         data-key="${escapeHtml(
           key
         )}"
-        aria-label="Mark point checked"
       >
 
         ${
@@ -1079,28 +1052,33 @@ function createChecklistItem(
 
     <div
       class="extra ${
-        hasDetails(
-          item
-        )
+        hasDetails(item)
           ? ''
           : 'hidden'
       }"
-      id="extra-${key}"
+      id="extra-${escapeHtml(
+        key
+      )}"
     >
 
 
       <div
-        id="comments-${key}"
-        class="comments-list"
+        id="comments-${escapeHtml(
+          key
+        )}"
       ></div>
 
 
-      <div class="comment-row">
+      <div
+        class="comment-row"
+      >
 
 
         <textarea
-          id="comment-input-${key}"
-          placeholder="Add a reviewer comment"
+          id="comment-input-${escapeHtml(
+            key
+          )}"
+          placeholder="Add reviewer comment"
         ></textarea>
 
 
@@ -1121,21 +1099,27 @@ function createChecklistItem(
 
 
       <div
-        id="photos-${key}"
+        id="photos-${escapeHtml(
+          key
+        )}"
         class="photos"
       ></div>
 
 
-      <div class="followup-row">
+      <div
+        class="followup-row"
+      >
 
 
         <input
           type="checkbox"
+          id="followup-${escapeHtml(
+            key
+          )}"
           class="followup-check"
           data-key="${escapeHtml(
             key
           )}"
-          id="followup-${key}"
           ${
             item.followUpNeeded
               ? 'checked'
@@ -1145,7 +1129,9 @@ function createChecklistItem(
 
 
         <label
-          for="followup-${key}"
+          for="followup-${escapeHtml(
+            key
+          )}"
         >
 
           Follow-Up Needed from Ship
@@ -1157,30 +1143,32 @@ function createChecklistItem(
 
 
       <div
-        id="ship-comments-${key}"
-        class="ship-comments"
+        id="ship-comments-${escapeHtml(
+          key
+        )}"
       ></div>
 
 
       <input
         type="file"
-        accept="image/*"
-        capture="environment"
-        class="hidden photo-input"
-        id="photo-input-${key}"
+        class="photo-input hidden"
+        id="photo-input-${escapeHtml(
+          key
+        )}"
         data-key="${escapeHtml(
           key
         )}"
+        accept="image/*"
+        capture="environment"
       >
-
 
     </div>
 
   `;
 
 
-  bindItemEvents(
-    element,
+  bindPointEvents(
+    wrapper,
     key
   );
 
@@ -1200,13 +1188,13 @@ function createChecklistItem(
   );
 
 
-  return element;
+  return wrapper;
 
 }
 
 
 /* ============================================================
-   HAS DETAILS
+   DETAILS
 ============================================================ */
 
 function hasDetails(
@@ -1261,21 +1249,21 @@ function hasDetails(
 
 
 /* ============================================================
-   ITEM EVENTS
+   POINT EVENTS
 ============================================================ */
 
-function bindItemEvents(
+function bindPointEvents(
   element,
   key
 ){
 
-  const checkButton =
+  const check =
     element.querySelector(
       '.check-btn'
     );
 
 
-  const noteButton =
+  const commentButton =
     element.querySelector(
       '.note-button'
     );
@@ -1287,13 +1275,13 @@ function bindItemEvents(
     );
 
 
-  const addCommentButton =
+  const addComment =
     element.querySelector(
       '.add-comment'
     );
 
 
-  const followUp =
+  const followup =
     element.querySelector(
       '.followup-check'
     );
@@ -1305,11 +1293,15 @@ function bindItemEvents(
     );
 
 
+  /*
+    CHECK
+  */
+
   if(
-    checkButton
+    check
   ){
 
-    checkButton.addEventListener(
+    check.addEventListener(
       'click',
       async function(
         event
@@ -1324,13 +1316,13 @@ function bindItemEvents(
           );
 
 
-        checkButton.classList.toggle(
+        check.classList.toggle(
           'checked',
           checked
         );
 
 
-        checkButton.textContent =
+        check.textContent =
           checked
             ? '✓'
             : '';
@@ -1347,11 +1339,15 @@ function bindItemEvents(
   }
 
 
+  /*
+    COMMENT
+  */
+
   if(
-    noteButton
+    commentButton
   ){
 
-    noteButton.addEventListener(
+    commentButton.addEventListener(
       'click',
       function(
         event
@@ -1366,7 +1362,7 @@ function bindItemEvents(
 
 
         const input =
-          getElement(
+          document.getElementById(
             `comment-input-${key}`
           );
 
@@ -1384,6 +1380,10 @@ function bindItemEvents(
 
   }
 
+
+  /*
+    PHOTO
+  */
 
   if(
     photoButton
@@ -1417,11 +1417,15 @@ function bindItemEvents(
   }
 
 
+  /*
+    ADD COMMENT
+  */
+
   if(
-    addCommentButton
+    addComment
   ){
 
-    addCommentButton.addEventListener(
+    addComment.addEventListener(
       'click',
       async function(
         event
@@ -1431,7 +1435,7 @@ function bindItemEvents(
 
 
         const input =
-          getElement(
+          document.getElementById(
             `comment-input-${key}`
           );
 
@@ -1489,11 +1493,15 @@ function bindItemEvents(
   }
 
 
+  /*
+    FOLLOW-UP
+  */
+
   if(
-    followUp
+    followup
   ){
 
-    followUp.addEventListener(
+    followup.addEventListener(
       'change',
       async function(
         event
@@ -1504,7 +1512,7 @@ function bindItemEvents(
 
         setFollowUp(
           key,
-          followUp.checked
+          followup.checked
         );
 
 
@@ -1520,6 +1528,10 @@ function bindItemEvents(
 
   }
 
+
+  /*
+    PHOTO INPUT
+  */
 
   if(
     photoInput
@@ -1547,15 +1559,15 @@ function bindItemEvents(
 
         try{
 
-          const data =
-            await readAndResizeImage(
+          const photo =
+            await readImage(
               file
             );
 
 
           addPhoto(
             key,
-            data
+            photo
           );
 
 
@@ -1580,7 +1592,7 @@ function bindItemEvents(
 
 
           alert(
-            'Could not add the photo.'
+            'Could not add photo.'
           );
 
         }
@@ -1606,7 +1618,7 @@ function openDetails(
 ){
 
   const extra =
-    getElement(
+    document.getElementById(
       `extra-${key}`
     );
 
@@ -1633,7 +1645,7 @@ function renderComments(
 ){
 
   const container =
-    getElement(
+    document.getElementById(
       `comments-${key}`
     );
 
@@ -1677,9 +1689,12 @@ function renderComments(
   container.innerHTML = `
 
     <div
-      class="response-label"
       style="
         margin-top:8px;
+        margin-bottom:5px;
+        color:var(--vv-squid);
+        font-size:9px;
+        font-weight:800;
       "
     >
 
@@ -1699,24 +1714,17 @@ function renderComments(
 
                 ${escapeHtml(
                   comment.name ||
+                  getReviewer() ||
                   'Reviewer'
                 )}:
 
               </strong>
 
 
-              <div
-                style="
-                  margin-top:3px;
-                "
-              >
-
-                ${escapeHtml(
-                  comment.text ||
-                  ''
-                )}
-
-              </div>
+              ${escapeHtml(
+                comment.text ||
+                ''
+              )}
 
             </div>
 
@@ -1739,7 +1747,7 @@ function renderPhotos(
 ){
 
   const container =
-    getElement(
+    document.getElementById(
       `photos-${key}`
     );
 
@@ -1773,7 +1781,7 @@ function renderPhotos(
 
   photos.forEach(
     (
-      source,
+      photo,
       index
     ) => {
 
@@ -1794,7 +1802,7 @@ function renderPhotos(
 
 
       image.src =
-        source;
+        photo;
 
 
       image.alt =
@@ -1874,7 +1882,7 @@ function renderShipComments(
 ){
 
   const container =
-    getElement(
+    document.getElementById(
       `ship-comments-${key}`
     );
 
@@ -1923,7 +1931,6 @@ function renderShipComments(
         color:var(--vv-squid);
         font-size:9px;
         font-weight:800;
-        letter-spacing:.04em;
       "
     >
 
@@ -1937,7 +1944,9 @@ function renderShipComments(
         .map(
           comment => `
 
-            <div class="ship-response-display">
+            <div
+              class="ship-response-display"
+            >
 
               <strong>
 
@@ -1949,18 +1958,10 @@ function renderShipComments(
               </strong>
 
 
-              <div
-                style="
-                  margin-top:3px;
-                "
-              >
-
-                ${escapeHtml(
-                  comment.text ||
-                  ''
-                )}
-
-              </div>
+              ${escapeHtml(
+                comment.text ||
+                ''
+              )}
 
             </div>
 
@@ -1975,18 +1976,18 @@ function renderShipComments(
 
 
 /* ============================================================
-   IMAGE READER
+   READ IMAGE
 ============================================================ */
 
-function readAndResizeImage(
+function readImage(
   file
 ){
 
   return new Promise(
-    function(
+    (
       resolve,
       reject
-    ){
+    ) => {
 
       const reader =
         new FileReader();
@@ -2006,7 +2007,7 @@ function readAndResizeImage(
                 1280;
 
 
-              const scale =
+              const ratio =
                 Math.min(
                   1,
                   maxWidth /
@@ -2015,22 +2016,16 @@ function readAndResizeImage(
 
 
               const width =
-                Math.max(
-                  1,
-                  Math.round(
-                    image.width *
-                    scale
-                  )
+                Math.round(
+                  image.width *
+                  ratio
                 );
 
 
               const height =
-                Math.max(
-                  1,
-                  Math.round(
-                    image.height *
-                    scale
-                  )
+                Math.round(
+                  image.height *
+                  ratio
                 );
 
 
@@ -2060,7 +2055,7 @@ function readAndResizeImage(
 
                 reject(
                   new Error(
-                    'Canvas unavailable.'
+                    'Could not create canvas.'
                   )
                 );
 
@@ -2150,22 +2145,25 @@ export function refreshChecklistUI(){
   SECTIONS.forEach(
     section => {
 
-      total +=
-        section.items.length;
-
-
       section.items.forEach(
         (
           _text,
           index
         ) => {
 
+          total++;
+
+
           const key =
             `${section.id}__${index}`;
 
 
+          const item =
+            state[key];
+
+
           if(
-            state[key]?.checked
+            item?.checked
           ){
 
             checked++;
@@ -2175,7 +2173,7 @@ export function refreshChecklistUI(){
 
           const button =
             document.querySelector(
-              `.check-btn[data-key="${key}"]`
+              `[data-key="${key}"].check-btn`
             );
 
 
@@ -2185,7 +2183,7 @@ export function refreshChecklistUI(){
 
             const isChecked =
               Boolean(
-                state[key]?.checked
+                item?.checked
               );
 
 
@@ -2209,36 +2207,30 @@ export function refreshChecklistUI(){
   );
 
 
-  const fill =
-    getElement(
-      'fill'
-    );
-
+  /*
+    Progress.
+  */
 
   const progress =
-    getElement(
+    document.getElementById(
       'progress'
     );
 
 
-  if(
-    fill
-  ){
-
-    const percentage =
-      total > 0
-        ? Math.round(
-            checked /
-            total *
-            100
-          )
-        : 0;
+  const fill =
+    document.getElementById(
+      'fill'
+    );
 
 
-    fill.style.width =
-      `${percentage}%`;
-
-  }
+  const percentage =
+    total > 0
+      ? Math.round(
+          checked /
+          total *
+          100
+        )
+      : 0;
 
 
   if(
@@ -2251,19 +2243,29 @@ export function refreshChecklistUI(){
   }
 
 
+  if(
+    fill
+  ){
+
+    fill.style.width =
+      `${percentage}%`;
+
+  }
+
+
   /*
     Department count.
   */
 
   if(
-    currentDepartmentId
+    currentDepartment
   ){
 
     const section =
       SECTIONS.find(
         item =>
           item.id ===
-          currentDepartmentId
+          currentDepartment
       );
 
 
@@ -2271,227 +2273,31 @@ export function refreshChecklistUI(){
       section
     ){
 
-      const counts =
-        getDepartmentCounts(
+      const count =
+        getDepartmentCount(
           section
         );
 
 
-      const current =
-        getElement(
+      const element =
+        document.getElementById(
           'departmentCurrentCount'
         );
 
 
       if(
-        current
+        element
       ){
 
-        current.textContent =
-          `${counts.checked}/${counts.total} checked`;
+        element.textContent =
+          `${count.checked}/${count.total} checked`;
 
       }
-
-    }
-
-  }else{
-
-    refreshDepartmentHome();
-
-  }
-
-}
-
-
-/* ============================================================
-   REFRESH DEPARTMENT HOME
-============================================================ */
-
-function refreshDepartmentHome(){
-
-  const cards =
-    document.querySelectorAll(
-      '.department-card'
-    );
-
-
-  cards.forEach(
-    card => {
-
-      const id =
-        card.dataset.department;
-
-
-      const section =
-        SECTIONS.find(
-          item =>
-            item.id ===
-            id
-        );
-
-
-      if(
-        !section
-      ){
-
-        return;
-
-      }
-
-
-      const counts =
-        getDepartmentCounts(
-          section
-        );
-
-
-      const count =
-        card.querySelector(
-          '.department-card-count'
-        );
-
-
-      const label =
-        card.querySelector(
-          '.department-card-label'
-        );
-
-
-      if(
-        count
-      ){
-
-        count.textContent =
-          `${counts.checked}/${counts.total}`;
-
-      }
-
-
-      const complete =
-        counts.checked ===
-        counts.total;
-
-
-      card.classList.toggle(
-        'complete',
-        complete
-      );
-
-
-      if(
-        label
-      ){
-
-        label.textContent =
-          complete
-            ? 'COMPLETE'
-            : 'OPEN CHECKLIST';
-
-      }
-
-    }
-  );
-
-
-  const counts =
-    getChecklistCounts();
-
-
-  const overview =
-    document.querySelectorAll(
-      '.department-overview-card'
-    );
-
-
-  if(
-    overview.length >= 4
-  ){
-
-    const checked =
-      overview[0]
-        .querySelector(
-          'strong'
-        );
-
-
-    const total =
-      overview[0]
-        .querySelector(
-          'span'
-        );
-
-
-    const comments =
-      overview[1]
-        .querySelector(
-          'strong'
-        );
-
-
-    const photos =
-      overview[2]
-        .querySelector(
-          'strong'
-        );
-
-
-    const followUps =
-      overview[3]
-        .querySelector(
-          'strong'
-        );
-
-
-    if(
-      checked
-    ){
-
-      checked.textContent =
-        counts.checked;
-
-    }
-
-
-    if(
-      total
-    ){
-
-      total.textContent =
-        `of ${counts.total}`;
-
-    }
-
-
-    if(
-      comments
-    ){
-
-      comments.textContent =
-        counts.comments;
-
-    }
-
-
-    if(
-      photos
-    ){
-
-      photos.textContent =
-        counts.photos;
-
-    }
-
-
-    if(
-      followUps
-    ){
-
-      followUps.textContent =
-        counts.followUps;
 
     }
 
   }
+
 
 }
 
@@ -2507,19 +2313,19 @@ export function updateChecklistHeader(){
 
 
   const ship =
-    getElement(
+    document.getElementById(
       'hdrShip'
     );
 
 
   const reviewer =
-    getElement(
+    document.getElementById(
       'hdrReviewer'
     );
 
 
   const visit =
-    getElement(
+    document.getElementById(
       'visitMeta'
     );
 
@@ -2630,7 +2436,8 @@ export function getChecklistFollowUps(){
                   ? item.photos
                   : [],
 
-              followUpNeeded:true,
+              followUpNeeded:
+                true,
 
               shipComments:
                 Array.isArray(
@@ -2656,7 +2463,7 @@ export function getChecklistFollowUps(){
 
 
 /* ============================================================
-   ALL CHECKLIST POINTS
+   ALL POINTS
 ============================================================ */
 
 export function getAllChecklistPoints(){
@@ -2683,7 +2490,8 @@ export function getAllChecklistPoints(){
 
 
           const item =
-            state[key] || {};
+            state[key] ||
+            {};
 
 
           points.push({
@@ -2758,7 +2566,7 @@ export async function saveChecklist(){
 export function clearChecklistUI(){
 
   const container =
-    getElement(
+    document.getElementById(
       'sections'
     );
 
@@ -2773,28 +2581,12 @@ export function clearChecklistUI(){
   }
 
 
-  currentDepartmentId =
+  currentDepartment =
     null;
 
 
-  const fill =
-    getElement(
-      'fill'
-    );
-
-
-  if(
-    fill
-  ){
-
-    fill.style.width =
-      '0%';
-
-  }
-
-
   const progress =
-    getElement(
+    document.getElementById(
       'progress'
     );
 
@@ -2808,11 +2600,27 @@ export function clearChecklistUI(){
 
   }
 
+
+  const fill =
+    document.getElementById(
+      'fill'
+    );
+
+
+  if(
+    fill
+  ){
+
+    fill.style.width =
+      '0%';
+
+  }
+
 }
 
 
 /* ============================================================
-   DEFAULT EXPORT
+   DEFAULT
 ============================================================ */
 
 export default {
