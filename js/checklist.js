@@ -49,6 +49,8 @@ import {
   getItem,
   toggleChecked,
   addReviewerComment,
+  addDepartmentGeneralComment,
+  getDepartmentGeneralComments,
   addPhoto,
   removePhoto,
   setFollowUp,
@@ -929,6 +931,41 @@ function renderDepartment(
 
 
       <!-- ==============================================
+           GENERAL COMMENTS
+      =============================================== -->
+
+      <div class="department-general-comments">
+
+        <div class="department-general-comments-title">
+          GENERAL COMMENTS
+        </div>
+
+        <div
+          id="general-comments-${escapeHtml(section.id)}"
+          class="department-general-comments-list"
+        ></div>
+
+        <div class="department-general-comment-row">
+
+          <textarea
+            id="general-comment-input-${escapeHtml(section.id)}"
+            placeholder="Add general comments for this department"
+          ></textarea>
+
+          <button
+            type="button"
+            class="department-general-comment-add"
+            data-general-comment-section="${escapeHtml(section.id)}"
+          >
+            Add Comment
+          </button>
+
+        </div>
+
+      </div>
+
+
+      <!-- ==============================================
            CHECKLIST POINTS
       =============================================== -->
 
@@ -961,9 +998,62 @@ function renderDepartment(
   }
 
 
+  bindDepartmentGeneralComment(section);
+  renderDepartmentGeneralComments(section);
+
   renderDepartmentPoints(
     section
   );
+
+}
+
+
+/* ============================================================
+   GENERAL COMMENTS
+============================================================ */
+
+function renderDepartmentGeneralComments(section){
+
+  const container = getElement(`general-comments-${section.id}`);
+  if(!container) return;
+
+  const comments = getDepartmentGeneralComments(section.id);
+
+  container.innerHTML = comments.map(comment => `
+    <div class="department-general-comment">
+      <strong>${escapeHtml(comment.name || getReviewer() || 'Reviewer')}:</strong>
+      <div style="margin-top:3px;">${escapeHtml(comment.text || '')}</div>
+    </div>
+  `).join('');
+
+}
+
+function bindDepartmentGeneralComment(section){
+
+  const button = document.querySelector(
+    `[data-general-comment-section="${section.id}"]`
+  );
+  const input = getElement(
+    `general-comment-input-${section.id}`
+  );
+
+  if(!button || !input) return;
+
+  button.addEventListener('click', async function(){
+
+    const text = input.value.trim();
+    if(!text){
+      input.focus();
+      return;
+    }
+
+    if(!addDepartmentGeneralComment(section.id, text)) return;
+
+    input.value = '';
+    renderDepartmentGeneralComments(section);
+    await saveCurrentReport();
+
+  });
 
 }
 
@@ -2470,6 +2560,8 @@ export function refreshChecklistUI(){
     if(
       section
     ){
+
+      renderDepartmentGeneralComments(section);
 
       section.items.forEach(
         (
