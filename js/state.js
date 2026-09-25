@@ -23,6 +23,7 @@
 
 
 import {
+  SECTIONS,
   emptyState
 } from './data.js';
 
@@ -50,6 +51,8 @@ let meta = {
 let currentReviewer = '';
 
 
+const DEPARTMENT_GENERAL_PREFIX = '__department_general__';
+
 let state = emptyState();
 
 
@@ -69,6 +72,36 @@ function cleanText(value) {
     value ?? ''
   ).trim();
 
+}
+
+
+function departmentGeneralKey(sectionId) {
+  return `${DEPARTMENT_GENERAL_PREFIX}${sectionId}`;
+}
+
+function isDepartmentGeneralKey(key) {
+  return String(key || '').startsWith(DEPARTMENT_GENERAL_PREFIX);
+}
+
+function normalizeDepartmentGeneralComments(value, reviewerName = '') {
+  let source = value;
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    source = value.comments ?? [];
+  }
+  return toArray(source).map(entry => {
+    if (typeof entry === 'string') {
+      const text = cleanText(entry);
+      return text ? { name: reviewerName || 'Reviewer', text, timestamp: null } : null;
+    }
+    if (!entry || typeof entry !== 'object') return null;
+    const text = cleanText(entry.text ?? entry.comment ?? entry.message ?? entry.value ?? '');
+    if (!text) return null;
+    return {
+      name: cleanText(entry.name ?? entry.reviewer ?? entry.author ?? reviewerName ?? 'Reviewer') || 'Reviewer',
+      text,
+      timestamp: entry.timestamp ?? entry.createdAt ?? null
+    };
+  }).filter(Boolean);
 }
 
 
@@ -492,6 +525,13 @@ function normalizeState(
   const base =
     emptyState();
 
+  SECTIONS.forEach(section => {
+    base[departmentGeneralKey(section.id)] = {
+      isDepartmentGeneral: true,
+      comments: []
+    };
+  });
+
 
   const source =
     (
@@ -506,6 +546,17 @@ function normalizeState(
     base
   ).forEach(
     key => {
+
+      if (isDepartmentGeneralKey(key)) {
+        base[key] = {
+          isDepartmentGeneral: true,
+          comments: normalizeDepartmentGeneralComments(
+            source[key],
+            reviewerName
+          )
+        };
+        return;
+      }
 
       base[key] =
         normalizeItem(
@@ -1063,6 +1114,42 @@ export function setShipComments(
       comments
     );
 
+}
+
+
+/* ============================================================
+   DEPARTMENT GENERAL COMMENTS
+============================================================ */
+
+export function getDepartmentGeneralComments(sectionId) {
+  const comments = state[departmentGeneralKey(sectionId)]?.comments;
+  return Array.isArray(comments) ? comments : [];
+}
+
+export function addDepartmentGeneralComment(sectionId, text) {
+  const clean = cleanText(text);
+  if (!clean) return false;
+  const key = departmentGeneralKey(sectionId);
+  if (!state[key]) {
+    state[key] = { isDepartmentGeneral: true, comments: [] };
+  }
+  if (!Array.isArray(state[key].comments)) state[key].comments = [];
+  state[key].comments.push({
+    name: currentReviewer || meta.reviewer || 'Reviewer',
+    text: clean,
+    timestamp: new Date().toISOString()
+  });
+  return true;
+}
+
+export function setDepartmentGeneralComments(sectionId, comments) {
+  state[departmentGeneralKey(sectionId)] = {
+    isDepartmentGeneral: true,
+    comments: normalizeDepartmentGeneralComments(
+      comments,
+      currentReviewer || meta.reviewer || 'Reviewer'
+    )
+  };
 }
 
 
@@ -1631,6 +1718,10 @@ export function getSummaryCounts() {
   )
   .forEach(
     item => {
+
+      if (item?.isDepartmentGeneral) {
+        return;
+      }
 
       total++;
 
