@@ -16,6 +16,7 @@ import {
   getState,
   getMeta,
   getReviewer,
+  getDepartmentGeneralComments,
   getReportId
 } from './state.js';
 
@@ -269,20 +270,20 @@ export function renderShipReview(){
   `;
 
 
+  const departmentsWithComments = SECTIONS.filter(
+    section => getDepartmentGeneralComments(section.id).length > 0
+  );
+
   if(
-    points.length === 0
+    points.length === 0 &&
+    departmentsWithComments.length === 0
   ){
 
     container.innerHTML = `
-
       <div class="empty">
-
         No checklist points have been checked.
-
       </div>
-
     `;
-
 
     return;
 
@@ -364,45 +365,60 @@ export function renderShipReview(){
   );
 
 
-  groups.forEach(
-    group => {
+  SECTIONS.forEach(section => {
 
+    const group = groups.find(item => item.section === section.title);
+    const generalComments = getDepartmentGeneralComments(section.id);
+
+    if((!group || group.points.length === 0) && !generalComments.length){
+      return;
+    }
+
+    html += `
+      <div
+        style="
+          margin-top:18px;
+          margin-bottom:10px;
+          padding-bottom:7px;
+          border-bottom:2px solid var(--vv-red);
+          color:var(--vv-squid);
+          font-size:15px;
+          font-weight:800;
+        "
+      >
+        ${escapeHtml(section.title)}
+      </div>
+    `;
+
+    if(generalComments.length){
       html += `
-
         <div
           style="
-            margin-top:18px;
             margin-bottom:10px;
-            padding-bottom:7px;
-            border-bottom:2px solid var(--vv-red);
-            color:var(--vv-squid);
-            font-size:15px;
-            font-weight:800;
+            padding:10px 12px;
+            border-left:4px solid var(--vv-squid);
+            border-radius:8px;
+            background:#F8F5FA;
           "
         >
-
-          ${escapeHtml(
-            group.section
-          )}
-
+          <div class="response-label">GENERAL COMMENTS</div>
+          ${generalComments.map(comment => `
+            <div style="margin-top:6px;font-size:11px;line-height:1.5;color:var(--vv-body);">
+              <strong>${escapeHtml(comment.name || 'Reviewer')}:</strong>
+              ${escapeHtml(comment.text || '')}
+            </div>
+          `).join('')}
         </div>
-
       `;
-
-
-      group.points.forEach(
-        point => {
-
-          html +=
-            renderReviewPoint(
-              point
-            );
-
-        }
-      );
-
     }
-  );
+
+    if(group){
+      group.points.forEach(point => {
+        html += renderReviewPoint(point);
+      });
+    }
+
+  });
 
 
   container.innerHTML =
