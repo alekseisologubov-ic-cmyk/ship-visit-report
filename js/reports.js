@@ -1169,6 +1169,8 @@ export function renderReportOverall(
       ?.state ||
     {};
 
+  window.__SHIP_VISIT_RENDER_STATE__ = state;
+
 
   const points =
     getAllPoints(
@@ -1180,20 +1182,18 @@ export function renderReportOverall(
     );
 
 
-  if(
-    points.length === 0
-  ){
+  const hasGeneralComments = SECTIONS.some(section => {
+    const comments = state[`__department_general__${section.id}`]?.comments;
+    return Array.isArray(comments) && comments.length > 0;
+  });
+
+  if(points.length === 0 && !hasGeneralComments){
 
     container.innerHTML = `
-
       <div class="empty">
-
         No checklist points were marked as checked.
-
       </div>
-
     `;
-
 
     return;
 
@@ -1300,93 +1300,51 @@ function renderOverallGroups(
   points
 ){
 
-  const groups =
-    [];
-
-
-  points.forEach(
-    point => {
-
-      let group =
-        groups.find(
-          item =>
-            item.section ===
-            point.section
-        );
-
-
-      if(
-        !group
-      ){
-
-        group = {
-
-          section:
-            point.section,
-
-          points:[]
-
-        };
-
-
-        groups.push(
-          group
-        );
-
-      }
-
-
-      group.points.push(
-        point
-      );
-
+  const groups = [];
+  points.forEach(point => {
+    let group = groups.find(item => item.section === point.section);
+    if(!group){
+      group = { section: point.section, points: [] };
+      groups.push(group);
     }
-  );
+    group.points.push(point);
+  });
 
+  const state = window.__SHIP_VISIT_RENDER_STATE__ || {};
 
-  return groups
-    .map(
-      group => `
+  return SECTIONS.map(section => {
 
-        <div
-          style="
-            margin-bottom:20px;
-          "
-        >
+    const group = groups.find(item => item.section === section.title);
+    const comments = state[`__department_general__${section.id}`]?.comments;
+    const generalComments = Array.isArray(comments) ? comments : [];
 
-          <div
-            style="
-              margin-bottom:10px;
-              padding-bottom:7px;
-              border-bottom:2px solid var(--vv-red);
-              color:var(--vv-squid);
-              font-size:15px;
-              font-weight:800;
-            "
-          >
+    if((!group || !group.points.length) && !generalComments.length){
+      return '';
+    }
 
-            ${escapeHtml(
-              group.section
-            )}
-
-          </div>
-
-
-          ${
-            group.points
-              .map(
-                renderOverallPoint
-              )
-              .join('')
-          }
-
+    return `
+      <div style="margin-bottom:20px;">
+        <div style="margin-bottom:10px;padding-bottom:7px;border-bottom:2px solid var(--vv-red);color:var(--vv-squid);font-size:15px;font-weight:800;">
+          ${escapeHtml(section.title)}
         </div>
+        ${generalComments.length ? `
+          <div style="margin-bottom:10px;padding:10px 12px;border-left:4px solid var(--vv-squid);border-radius:8px;background:#F8F5FA;">
+            <div class="response-label">GENERAL COMMENTS</div>
+            ${generalComments.map(comment => `
+              <div style="margin-top:6px;font-size:11px;line-height:1.5;">
+                <strong>${escapeHtml(comment.name || 'Reviewer')}:</strong> ${escapeHtml(comment.text || '')}
+              </div>
+            `).join('')}
+          </div>
+        ` : ''}
+        ${group ? group.points.map(renderOverallPoint).join('') : ''}
+      </div>
+    `;
 
-      `
-    )
-    .join('');
+  }).join('');
 
 }
+
 
 
 /* =========================================================
