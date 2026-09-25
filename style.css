@@ -1300,6 +1300,172 @@ section {
 
 
 /* ============================================================
+   DEPARTMENT GENERAL COMMENTS
+============================================================ */
+
+.department-general-comments {
+
+  width:100%;
+
+  padding:14px 12px 16px;
+
+  border-bottom:1px solid var(--vv-line);
+
+  background:#FFFFFF;
+
+}
+
+
+.department-general-comments-title {
+
+  margin-bottom:7px;
+
+  color:var(--vv-squid);
+
+  font-size:10px;
+
+  line-height:1.2;
+
+  font-weight:800;
+
+  letter-spacing:.05em;
+
+}
+
+
+.department-general-comment-row {
+
+  display:flex;
+
+  flex-direction:column;
+
+  align-items:stretch;
+
+  gap:8px;
+
+  width:100%;
+
+}
+
+
+.department-general-comment-row textarea {
+
+  display:block;
+
+  width:100%;
+
+  min-height:105px;
+
+  padding:10px 12px;
+
+  border:1px solid var(--vv-line);
+
+  border-radius:8px;
+
+  background:#FFFFFF;
+
+  color:var(--vv-body);
+
+  outline:none;
+
+  font-size:13px;
+
+  line-height:1.45;
+
+  resize:vertical;
+
+}
+
+
+.department-general-comment-row textarea:focus {
+
+  border-color:var(--vv-squid);
+
+  box-shadow:
+    0 0 0 2px
+    rgba(60,16,83,.07);
+
+}
+
+
+.department-general-comment-add {
+
+  display:flex;
+
+  align-items:center;
+
+  justify-content:center;
+
+  width:100%;
+
+  min-height:44px;
+
+  padding:9px 14px;
+
+  border:1px solid var(--vv-squid);
+
+  border-radius:7px;
+
+  background:var(--vv-squid);
+
+  color:#FFFFFF;
+
+  font-size:11px;
+
+  line-height:1.2;
+
+  font-weight:800;
+
+}
+
+
+.department-general-comment-add:hover {
+
+  background:var(--vv-squid-dark);
+
+}
+
+
+.department-general-comments-list {
+
+  width:100%;
+
+  margin-bottom:8px;
+
+}
+
+
+.department-general-comment {
+
+  width:100%;
+
+  margin-bottom:7px;
+
+  padding:9px 10px;
+
+  border-left:3px solid var(--vv-squid);
+
+  border-radius:6px;
+
+  background:#F8F5FA;
+
+  color:var(--vv-body);
+
+  font-size:10px;
+
+  line-height:1.45;
+
+}
+
+
+.department-general-comment strong {
+
+  color:var(--vv-squid);
+
+}
+
+
+/* ============================================================
    DEPARTMENT POINT LIST
 ============================================================ */
 
@@ -2681,6 +2847,24 @@ section {
   }
 
 
+  .department-general-comments {
+
+    padding-left:24px;
+
+    padding-right:24px;
+
+  }
+
+
+  .department-general-comment-row textarea {
+
+    min-height:115px;
+
+    font-size:13px;
+
+  }
+
+
   .department-checklist-top {
 
     padding-left:24px;
@@ -3005,6 +3189,48 @@ section {
   /* ======================================================
      DEPARTMENT CHECKLIST
   ====================================================== */
+
+  .department-general-comments {
+
+    padding:
+      10px 8px 12px;
+
+  }
+
+
+  .department-general-comments-title {
+
+    font-size:8px;
+
+  }
+
+
+  .department-general-comment-row {
+
+    gap:7px;
+
+  }
+
+
+  .department-general-comment-row textarea {
+
+    min-height:95px;
+
+    padding:9px 10px;
+
+    font-size:11px;
+
+  }
+
+
+  .department-general-comment-add {
+
+    min-height:38px;
+
+    font-size:9px;
+
+  }
+
 
   .department-checklist-top {
 
