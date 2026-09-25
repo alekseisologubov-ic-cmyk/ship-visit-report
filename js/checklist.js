@@ -949,7 +949,7 @@ function renderDepartment(
 
           <textarea
             id="general-comment-input-${escapeHtml(section.id)}"
-            placeholder="Add general comments for this department"
+            placeholder="Add general comments for this department..."
           ></textarea>
 
           <button
