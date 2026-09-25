@@ -105,6 +105,10 @@ let currentSubmittedReport =
   null;
 
 
+let currentShipResponseReport =
+  null;
+
+
 /* ============================================================
    ADMIN
 ============================================================ */
@@ -3065,7 +3069,8 @@ function renderShipResponseReports(
 ){
 
   /*
-    Only reports containing a follow-up point.
+    The Ship Response landing page shows ONE CARD PER REPORT.
+    The full report is opened only after clicking OPEN REPORT.
   */
 
   const waiting =
@@ -3074,12 +3079,15 @@ function renderShipResponseReports(
         getReportPoints(
           report,
           true
-        )
-        .some(
+        ).some(
           point =>
             point.followUpNeeded
         )
     );
+
+
+  currentShipResponseReport =
+    null;
 
 
   if(
@@ -3107,7 +3115,7 @@ function renderShipResponseReports(
   container.innerHTML =
     waiting
       .map(
-        renderShipResponseReport
+        renderShipResponseReportCard
       )
       .join('');
 
@@ -3118,10 +3126,10 @@ function renderShipResponseReports(
 
 
 /* ============================================================
-   SHIP RESPONSE REPORT
+   SHIP RESPONSE REPORT CARD
 ============================================================ */
 
-function renderShipResponseReport(
+function renderShipResponseReportCard(
   report
 ){
 
@@ -3129,11 +3137,14 @@ function renderShipResponseReport(
     getReportPoints(
       report,
       true
-    )
-    .filter(
+    );
+
+
+  const followUpCount =
+    points.filter(
       point =>
         point.followUpNeeded
-    );
+    ).length;
 
 
   return `
@@ -3191,33 +3202,25 @@ function renderShipResponseReport(
         class="response-status"
       >
 
-        SHIP RESPONSE REQUIRED
+        ${points.length} CHECKED POINTS
+        &nbsp;•&nbsp;
+        ${followUpCount} FOLLOW-UPS
 
       </div>
 
 
-      ${
-        points
-          .map(
-            point =>
-              renderShipResponsePoint(
-                report.id,
-                point
-              )
-          )
-          .join('')
-      }
-
-
       <button
         type="button"
-        class="btn-primary submit-ship-response"
-        data-response-report-id="${escapeHtml(
+        class="btn-primary open-ship-response-report"
+        data-open-response-report-id="${escapeHtml(
           report.id
         )}"
+        style="
+          margin-top:12px;
+        "
       >
 
-        Submit Report
+        OPEN REPORT
 
       </button>
 
@@ -3259,6 +3262,369 @@ function renderShipResponseReport(
     </div>
 
   `;
+
+}
+
+
+/* ============================================================
+   OPEN FULL SHIP RESPONSE REPORT
+============================================================ */
+
+function openShipResponseReport(
+  report
+){
+
+  if(
+    !report
+  ){
+
+    return;
+
+  }
+
+
+  currentShipResponseReport =
+    report;
+
+
+  const container =
+    document.getElementById(
+      'responseList'
+    );
+
+
+  if(
+    !container
+  ){
+
+    return;
+
+  }
+
+
+  const points =
+    getReportPoints(
+      report,
+      true
+    );
+
+
+  container.innerHTML = `
+
+    <div
+      style="
+        margin-bottom:14px;
+      "
+    >
+
+      <button
+        type="button"
+        class="btn-secondary"
+        id="shipResponseListBackBtn"
+        style="
+          margin-bottom:12px;
+        "
+      >
+
+        ← Back to Reports
+
+      </button>
+
+
+      <div
+        class="report-card blue"
+        style="
+          margin-bottom:0;
+        "
+      >
+
+        <h3>
+
+          ${escapeHtml(
+            report.ship ||
+            'Unnamed Ship'
+          )}
+
+        </h3>
+
+
+        <div
+          class="report-meta"
+          style="
+            line-height:1.7;
+          "
+        >
+
+          <b>Visit:</b>
+
+          ${escapeHtml(
+            report.date_on ||
+            ''
+          )}
+
+          ${
+            report.date_off
+              ? ` → ${escapeHtml(
+                  report.date_off
+                )}`
+              : ''
+          }
+
+          <br>
+
+
+          <b>Reviewer:</b>
+
+          ${escapeHtml(
+            report.reviewer ||
+            ''
+          )}
+
+        </div>
+
+
+        <div
+          class="response-status"
+          style="
+            margin-top:9px;
+          "
+        >
+
+          FULL REPORT — SHIP RESPONSE
+
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <div>
+
+      ${
+        SECTIONS
+          .map(
+            section => {
+
+              const sectionPoints =
+                points.filter(
+                  point =>
+                    point.section ===
+                    section.title
+                );
+
+
+              const generalComments =
+                getDepartmentGeneralCommentsFromReport(
+                  report,
+                  section.id
+                );
+
+
+              if(
+                sectionPoints.length === 0 &&
+                generalComments.length === 0
+              ){
+
+                return '';
+
+              }
+
+
+              return `
+
+                <div
+                  style="
+                    margin-top:20px;
+                  "
+                >
+
+                  <div
+                    style="
+                      margin-bottom:10px;
+                      padding-bottom:7px;
+                      border-bottom:2px solid var(--vv-red);
+                      color:var(--vv-squid);
+                      font-size:15px;
+                      font-weight:800;
+                    "
+                  >
+
+                    ${escapeHtml(
+                      section.title
+                    )}
+
+                  </div>
+
+
+                  ${
+                    generalComments.length
+                      ? `
+
+                        <div
+                          style="
+                            margin-bottom:10px;
+                            padding:10px 12px;
+                            border-left:4px solid var(--vv-squid);
+                            border-radius:8px;
+                            background:#F8F5FA;
+                          "
+                        >
+
+                          <div
+                            style="
+                              color:var(--vv-squid);
+                              font-size:9px;
+                              font-weight:800;
+                              letter-spacing:.04em;
+                            "
+                          >
+
+                            GENERAL COMMENTS
+
+                          </div>
+
+
+                          ${
+                            generalComments
+                              .map(
+                                comment => `
+
+                                  <div
+                                    style="
+                                      margin-top:7px;
+                                      font-size:11px;
+                                      line-height:1.5;
+                                      color:var(--vv-body);
+                                    "
+                                  >
+
+                                    <strong>
+                                      ${escapeHtml(
+                                        comment.name ||
+                                        'Reviewer'
+                                      )}:
+                                    </strong>
+
+                                    ${escapeHtml(
+                                      comment.text ||
+                                      ''
+                                    )}
+
+                                  </div>
+
+                                `
+                              )
+                              .join('')
+                          }
+
+                        </div>
+
+                      `
+                      : ''
+                  }
+
+
+                  ${
+                    sectionPoints
+                      .map(
+                        point =>
+                          renderShipResponsePoint(
+                            report.id,
+                            point
+                          )
+                      )
+                      .join('')
+                  }
+
+                </div>
+
+              `;
+
+            }
+          )
+          .join('')
+      }
+
+    </div>
+
+
+    <button
+      type="button"
+      class="btn-primary submit-ship-response"
+      data-response-report-id="${escapeHtml(
+        report.id
+      )}"
+      style="
+        margin-top:20px;
+      "
+    >
+
+      Submit Report
+
+    </button>
+
+
+    ${
+      isAdmin()
+        ? `
+
+          <button
+            type="button"
+            class="admin-delete"
+            data-response-delete-id="${escapeHtml(
+              report.id
+            )}"
+            style="
+              width:100%;
+              min-height:38px;
+              margin-top:8px;
+              padding:8px 10px;
+              border:1px solid #CC0000;
+              border-radius:7px;
+              background:#FFFFFF;
+              color:#CC0000;
+              font-family:inherit;
+              font-size:9px;
+              font-weight:800;
+              cursor:pointer;
+            "
+          >
+
+            DELETE REPORT
+
+          </button>
+
+        `
+        : ''
+    }
+
+  `;
+
+
+  const back =
+    document.getElementById(
+      'shipResponseListBackBtn'
+    );
+
+
+  if(
+    back
+  ){
+
+    back.addEventListener(
+      'click',
+      async function(){
+
+        await loadShipResponsesScreen();
+
+      }
+    );
+
+  }
+
+
+  bindShipResponseButtons();
 
 }
 
@@ -3312,13 +3678,21 @@ function renderShipResponsePoint(
 
 
       <div
-        class="status blue"
+        class="status ${
+          point.followUpNeeded
+            ? 'blue'
+            : 'green'
+        }"
         style="
           margin-top:7px;
         "
       >
 
-        FOLLOW-UP NEEDED FROM SHIP
+        ${
+          point.followUpNeeded
+            ? 'FOLLOW-UP NEEDED FROM SHIP'
+            : 'CHECKED — NO SHIP RESPONSE REQUIRED'
+        }
 
       </div>
 
@@ -3531,35 +3905,43 @@ function renderShipResponsePoint(
       }
 
 
-      <!-- SHIP INPUT -->
+      <!-- SHIP INPUT ONLY FOR FOLLOW-UP -->
 
-      <div
-        class="field"
-        style="
-          margin-top:11px;
-          margin-bottom:0;
-        "
-      >
+      ${
+        point.followUpNeeded
+          ? `
 
-        <label>
+            <div
+              class="field"
+              style="
+                margin-top:11px;
+                margin-bottom:0;
+              "
+            >
 
-          SHIP COMMENT
+              <label>
 
-        </label>
+                SHIP COMMENT
+
+              </label>
 
 
-        <textarea
-          class="ship-response-input"
-          data-response-report="${escapeHtml(
-            reportId
-          )}"
-          data-response-key="${escapeHtml(
-            point.key
-          )}"
-          placeholder="Enter ship response"
-        ></textarea>
+              <textarea
+                class="ship-response-input"
+                data-response-report="${escapeHtml(
+                  reportId
+                )}"
+                data-response-key="${escapeHtml(
+                  point.key
+                )}"
+                placeholder="Enter ship response"
+              ></textarea>
 
-      </div>
+            </div>
+
+          `
+          : ''
+      }
 
 
     </div>
@@ -3574,6 +3956,67 @@ function renderShipResponsePoint(
 ============================================================ */
 
 function bindShipResponseButtons(){
+
+  document
+    .querySelectorAll(
+      '.open-ship-response-report'
+    )
+    .forEach(
+      button => {
+
+        if(
+          button.dataset.openResponseBound === 'true'
+        ){
+
+          return;
+
+        }
+
+
+        button.dataset.openResponseBound = 'true';
+
+        button.addEventListener(
+          'click',
+          async function(){
+
+            const reportId =
+              button.dataset.openResponseReportId;
+
+
+            const result =
+              await withTimeout(
+                getReport(reportId),
+                15000,
+                'Loading report timed out.'
+              );
+
+
+            if(
+              !result ||
+              !result.success ||
+              !result.data
+            ){
+
+              showError(
+                'Could not open this report.',
+                result?.error || null
+              );
+
+              return;
+
+            }
+
+
+            openShipResponseReport(
+              result.data
+            );
+
+          }
+        );
+
+      }
+    );
+
 
   document
     .querySelectorAll(
