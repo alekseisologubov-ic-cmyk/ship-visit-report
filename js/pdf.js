@@ -426,6 +426,23 @@ function getShipComments(item){
 }
 
 
+function getDepartmentGeneralComments(state, sectionId){
+  const comments = state?.[`__department_general__${sectionId}`]?.comments;
+  return Array.isArray(comments)
+    ? comments.filter(comment => comment && safeText(comment.text).trim()).map(comment => ({
+        name: comment.name || 'Reviewer',
+        text: safeText(comment.text).trim()
+      }))
+    : [];
+}
+
+function countDepartmentGeneralComments(state){
+  return SECTIONS.reduce((total, section) =>
+    total + getDepartmentGeneralComments(state, section.id).length, 0
+  );
+}
+
+
 /* ============================================================
    COLLECT CHECKED POINTS
 ============================================================ */
@@ -611,7 +628,7 @@ function getTotalChecklistPoints(){
    REPORT COUNTS
 ============================================================ */
 
-function getReportCounts(points){
+function getReportCounts(points, departmentGeneralCommentCount = 0){
 
   let comments = 0;
 
@@ -666,7 +683,8 @@ function getReportCounts(points){
     checked:
       points.length,
 
-    comments,
+    comments:
+      comments + departmentGeneralCommentCount,
 
     photos,
 
@@ -916,7 +934,8 @@ export function generatePDF(){
 
   const counts =
     getReportCounts(
-      points
+      points,
+      countDepartmentGeneralComments(state)
     );
 
 
@@ -2131,26 +2150,38 @@ export function generatePDF(){
 
   }else{
 
-    groups.forEach(
-      group => {
+    SECTIONS.forEach(section => {
 
-        addSectionTitle(
-          group.section
-        );
+      const group = groups.find(item => item.section === section.title);
+      const generalComments = getDepartmentGeneralComments(state, section.id);
 
-
-        group.points.forEach(
-          point => {
-
-            addPoint(
-              point
-            );
-
-          }
-        );
-
+      if((!group || !group.points.length) && !generalComments.length){
+        return;
       }
-    );
+
+      addSectionTitle(section.title);
+
+      if(generalComments.length){
+        addText('GENERAL COMMENTS', {
+          size:7.5, color:squid, bold:true,
+          x:margin, width:contentWidth, lineHeight:10
+        });
+
+        generalComments.forEach(comment => {
+          addText(`${comment.name || 'Reviewer'}: ${comment.text || ''}`, {
+            size:8.5, color:gray,
+            x:margin + 7, width:contentWidth - 7, lineHeight:11
+          });
+        });
+        y += 3;
+      }
+
+      if(group){
+        group.points.forEach(point => addPoint(point));
+      }
+
+    });
+
 
   }
 
