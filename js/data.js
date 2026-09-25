@@ -33,7 +33,6 @@ export const SECTIONS = [
       'Review AIMS report, outstanding maintenance follow-up'
     ]
   },
-
   {
     id: 'bar',
     title: 'BAR',
@@ -53,7 +52,6 @@ export const SECTIONS = [
       'Cost reduction feedback'
     ]
   },
-
   {
     id: 'restaurant',
     title: 'RESTAURANT',
@@ -77,7 +75,6 @@ export const SECTIONS = [
       'Closing meeting discussing / inspection'
     ]
   },
-
   {
     id: 'procurement',
     title: 'PROCUREMENT',
@@ -99,7 +96,6 @@ export const SECTIONS = [
       'Missing item lists updated and communicated with Procurement'
     ]
   },
-
   {
     id: 'sanitation',
     title: 'SANITATION',
@@ -120,87 +116,31 @@ export const SECTIONS = [
   }
 ];
 
-
-/*
-  Create the initial state for every checklist point.
-
-  Each point keeps:
-  - checked
-  - comments from reviewers
-  - photos
-  - follow-up flag
-  - ship comments
-*/
-
 export function emptyState() {
-
   const state = {};
-
   for (const section of SECTIONS) {
-
     section.items.forEach((text, index) => {
-
-      const key =
-        `${section.id}__${index}`;
-
+      const key = `${section.id}__${index}`;
       state[key] = {
-
         checked: false,
-
         comments: [],
-
         photos: [],
-
         followUpNeeded: false,
-
         shipComments: []
-
       };
-
     });
-
   }
-
   return state;
 }
 
-
-/*
-  Find the section and checklist text
-  belonging to a state key.
-
-  Example:
-  culinary__3
-*/
-
 export function itemInfo(key) {
-
-  const parts =
-    String(key).split('__');
-
-  const sectionId =
-    parts[0];
-
-  const index =
-    Number(parts[1]);
-
-
-  const section =
-    SECTIONS.find(
-      item =>
-        item.id === sectionId
-    );
-
-
+  const parts = String(key).split('__');
+  const sectionId = parts[0];
+  const index = Number(parts[1]);
+  const section = SECTIONS.find(item => item.id === sectionId);
   return {
-
     section,
-
-    text:
-      section?.items[index] ?? '',
-
+    text: section?.items[index] ?? '',
     index
-
   };
-
 }
