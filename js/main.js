@@ -155,6 +155,53 @@ function(){
 
 };
 
+/* ============================================================
+   ADMIN DELETE BUTTON
+============================================================ */
+
+function adminDeleteButton(
+  reportId
+){
+
+  if(
+    !isAdmin()
+  ){
+
+    return '';
+
+  }
+
+
+  return `
+
+    <button
+      type="button"
+      class="admin-delete"
+      data-admin-delete="${escapeHtml(reportId)}"
+      style="
+        width:100%;
+        min-height:38px;
+        margin-top:8px;
+        padding:8px 10px;
+        border:1px solid #CC0000;
+        border-radius:7px;
+        background:#FFFFFF;
+        color:#CC0000;
+        font-family:inherit;
+        font-size:9px;
+        font-weight:800;
+        cursor:pointer;
+      "
+    >
+
+      DELETE REPORT
+
+    </button>
+
+  `;
+
+}
+
 
 /* ============================================================
    START
@@ -2740,6 +2787,10 @@ function renderOpenReports(
 
             </div>
 
+            ${adminDeleteButton(
+              report.id
+            )}
+
           </div>
 
         `
@@ -2785,6 +2836,9 @@ function renderOpenReports(
 
       }
     );
+
+
+  bindAdminDeleteButtons();
 
 }
 
@@ -3071,26 +3125,15 @@ function renderShipResponseReport(
   report
 ){
 
-  /*
-    The Ship Response screen shows the FULL REPORT:
-    - every checklist point checked by the reviewer
-    - department-level General Comments
-    - reviewer comments/photos already attached to points
-    - ship response input ONLY where Follow-Up is required
-  */
-
   const points =
     getReportPoints(
       report,
       true
-    );
-
-
-  const followUpCount =
-    points.filter(
+    )
+    .filter(
       point =>
         point.followUpNeeded
-    ).length;
+    );
 
 
   return `
@@ -3148,172 +3191,19 @@ function renderShipResponseReport(
         class="response-status"
       >
 
-        FULL REPORT — SHIP RESPONSE REQUIRED
-
-      </div>
-
-
-      <div
-        style="
-          margin-top:10px;
-          padding:10px 12px;
-          border:1px solid var(--vv-line);
-          border-radius:8px;
-          background:var(--vv-bg);
-          color:var(--vv-gray);
-          font-size:10px;
-          line-height:1.5;
-        "
-      >
-
-        ${points.length}
-        checked point(s) shown.
-        ${followUpCount}
-        point(s) require ship follow-up.
-        Ship comments can be entered only on points marked for follow-up.
+        SHIP RESPONSE REQUIRED
 
       </div>
 
 
       ${
-        SECTIONS
+        points
           .map(
-            section => {
-
-              const sectionPoints =
-                points.filter(
-                  point =>
-                    point.section === section.title
-                );
-
-              const generalComments =
-                getDepartmentGeneralCommentsFromReport(
-                  report,
-                  section.id
-                );
-
-
-              if(
-                sectionPoints.length === 0 &&
-                generalComments.length === 0
-              ){
-
-                return '';
-
-              }
-
-
-              return `
-
-                <div
-                  style="
-                    margin-top:18px;
-                  "
-                >
-
-                  <div
-                    style="
-                      margin-bottom:10px;
-                      padding-bottom:7px;
-                      border-bottom:2px solid var(--vv-red);
-                      color:var(--vv-squid);
-                      font-size:15px;
-                      font-weight:800;
-                    "
-                  >
-
-                    ${escapeHtml(
-                      section.title
-                    )}
-
-                  </div>
-
-
-                  ${
-                    generalComments.length
-                      ? `
-
-                        <div
-                          style="
-                            margin-bottom:10px;
-                            padding:10px 12px;
-                            border-left:4px solid var(--vv-squid);
-                            border-radius:8px;
-                            background:#F8F5FA;
-                          "
-                        >
-
-                          <div
-                            style="
-                              color:var(--vv-squid);
-                              font-size:9px;
-                              font-weight:800;
-                              letter-spacing:.04em;
-                            "
-                          >
-
-                            GENERAL COMMENTS
-
-                          </div>
-
-
-                          ${
-                            generalComments
-                              .map(
-                                comment => `
-
-                                  <div
-                                    style="
-                                      margin-top:7px;
-                                      font-size:11px;
-                                      line-height:1.5;
-                                      color:var(--vv-body);
-                                    "
-                                  >
-
-                                    <strong>
-                                      ${escapeHtml(
-                                        comment.name ||
-                                        'Reviewer'
-                                      )}:
-                                    </strong>
-
-                                    ${escapeHtml(
-                                      comment.text ||
-                                      ''
-                                    )}
-
-                                  </div>
-
-                                `
-                              )
-                              .join('')
-                          }
-
-                        </div>
-
-                      `
-                      : ''
-                  }
-
-
-                  ${
-                    sectionPoints
-                      .map(
-                        point =>
-                          renderShipResponsePoint(
-                            report.id,
-                            point
-                          )
-                      )
-                      .join('')
-                  }
-
-                </div>
-
-              `;
-
-            }
+            point =>
+              renderShipResponsePoint(
+                report.id,
+                point
+              )
           )
           .join('')
       }
@@ -3372,6 +3262,7 @@ function renderShipResponseReport(
 
 }
 
+
 /* ============================================================
    SHIP RESPONSE POINT
 ============================================================ */
@@ -3421,21 +3312,13 @@ function renderShipResponsePoint(
 
 
       <div
-        class="status ${
-          point.followUpNeeded
-            ? 'blue'
-            : 'green'
-        }"
+        class="status blue"
         style="
           margin-top:7px;
         "
       >
 
-        ${
-          point.followUpNeeded
-            ? 'FOLLOW-UP NEEDED FROM SHIP'
-            : 'CHECKED — NO SHIP RESPONSE REQUIRED'
-        }
+        FOLLOW-UP NEEDED FROM SHIP
 
       </div>
 
@@ -3648,43 +3531,35 @@ function renderShipResponsePoint(
       }
 
 
-      <!-- SHIP INPUT: ONLY FOR FOLLOW-UP POINTS -->
+      <!-- SHIP INPUT -->
 
-      ${
-        point.followUpNeeded
-          ? `
+      <div
+        class="field"
+        style="
+          margin-top:11px;
+          margin-bottom:0;
+        "
+      >
 
-            <div
-              class="field"
-              style="
-                margin-top:11px;
-                margin-bottom:0;
-              "
-            >
+        <label>
 
-              <label>
+          SHIP COMMENT
 
-                SHIP COMMENT
-
-              </label>
+        </label>
 
 
-              <textarea
-                class="ship-response-input"
-                data-response-report="${escapeHtml(
-                  reportId
-                )}"
-                data-response-key="${escapeHtml(
-                  point.key
-                )}"
-                placeholder="Enter ship response"
-              ></textarea>
+        <textarea
+          class="ship-response-input"
+          data-response-report="${escapeHtml(
+            reportId
+          )}"
+          data-response-key="${escapeHtml(
+            point.key
+          )}"
+          placeholder="Enter ship response"
+        ></textarea>
 
-            </div>
-
-          `
-          : ''
-      }
+      </div>
 
 
     </div>
@@ -3729,6 +3604,17 @@ function bindShipResponseButtons(){
     .forEach(
       button => {
 
+        if(
+          button.dataset.adminDeleteBound === 'true'
+        ){
+
+          return;
+
+        }
+
+
+        button.dataset.adminDeleteBound = 'true';
+
         button.addEventListener(
           'click',
           async function(
@@ -3737,8 +3623,7 @@ function bindShipResponseButtons(){
 
             event.stopPropagation();
 
-
-            await deleteShipResponseReport(
+            await handleAdminDeleteReport(
               button.dataset.responseDeleteId
             );
 
@@ -3858,6 +3743,161 @@ async function deleteShipResponseReport(
 
     console.error(
       'deleteShipResponseReport:',
+      error
+    );
+
+
+    showError(
+      'Could not delete the report.',
+      error
+    );
+
+  }
+
+}
+
+
+/* ============================================================
+   ADMIN DELETE HANDLER
+============================================================ */
+
+function bindAdminDeleteButtons(){
+
+  document
+    .querySelectorAll(
+      '[data-admin-delete]'
+    )
+    .forEach(
+      button => {
+
+        if(
+          button.dataset.adminDeleteBound === 'true'
+        ){
+
+          return;
+
+        }
+
+
+        button.dataset.adminDeleteBound = 'true';
+
+
+        button.addEventListener(
+          'click',
+          async function(event){
+
+            event.stopPropagation();
+
+            await handleAdminDeleteReport(
+              button.dataset.adminDelete
+            );
+
+          }
+        );
+
+      }
+    );
+
+}
+
+
+async function handleAdminDeleteReport(
+  reportId
+){
+
+  if(
+    !isAdmin()
+  ){
+
+    alert(
+      'Administrator access required.'
+    );
+
+    return;
+
+  }
+
+
+  if(
+    !reportId
+  ){
+
+    alert(
+      'Report ID is missing.'
+    );
+
+    return;
+
+  }
+
+
+  if(
+    !window.confirm(
+      'Delete this report permanently?'
+    )
+  ){
+
+    return;
+
+  }
+
+
+  try{
+
+    const module =
+      await import(
+        './supabase.js'
+      );
+
+
+    if(
+      typeof module.deleteReport !==
+      'function'
+    ){
+
+      throw new Error(
+        'deleteReport is not available in supabase.js.'
+      );
+
+    }
+
+
+    const result =
+      await withTimeout(
+        module.deleteReport(reportId),
+        15000,
+        'Delete operation timed out.'
+      );
+
+
+    if(
+      !result ||
+      !result.success
+    ){
+
+      throw (
+        result?.error ||
+        new Error(
+          'Could not delete the report.'
+        )
+      );
+
+    }
+
+
+    showToast(
+      'REPORT DELETED'
+    );
+
+
+    await loadOpenReportsScreen();
+    await loadSubmittedReportsScreen();
+    await loadShipResponsesScreen();
+
+  }catch(error){
+
+    console.error(
+      'handleAdminDeleteReport:',
       error
     );
 
@@ -4332,6 +4372,10 @@ function renderSubmittedReports(
 
             </button>
 
+            ${adminDeleteButton(
+              report.id
+            )}
+
           </div>
 
         `
@@ -4377,6 +4421,9 @@ function renderSubmittedReports(
 
       }
     );
+
+
+  bindAdminDeleteButtons();
 
 }
 
