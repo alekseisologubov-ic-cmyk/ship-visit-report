@@ -3073,17 +3073,16 @@ function renderShipResponseReports(
     The full report is opened only after clicking OPEN REPORT.
   */
 
+  /*
+    EVERY report sent to the ship must appear here.
+    A report does NOT need a Follow-Up Needed point
+    in order to require ship review and submission.
+  */
+
   const waiting =
-    reports.filter(
-      report =>
-        getReportPoints(
-          report,
-          true
-        ).some(
-          point =>
-            point.followUpNeeded
-        )
-    );
+    Array.isArray(reports)
+      ? reports
+      : [];
 
 
   currentShipResponseReport =
@@ -4474,20 +4473,12 @@ async function submitShipResponseForReport(
     );
 
 
-    if(
-      added ===
-      0
-    ){
-
-      alert(
-        'Please enter at least one ship response.'
-      );
-
-
-      return;
-
-    }
-
+    /*
+      Ship responses are required only for points
+      explicitly marked Follow-Up Needed.
+      A report with zero follow-ups can still be
+      submitted after the ship reviews the full report.
+    */
 
     const incomplete =
       Object.values(
