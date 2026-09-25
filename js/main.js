@@ -1987,6 +1987,13 @@ function normalizeShipComment(
 }
 
 
+function getDepartmentGeneralCommentsFromReport(report, sectionId){
+  const state = report?.report_data?.state || {};
+  const value = state[`__department_general__${sectionId}`]?.comments;
+  return Array.isArray(value) ? value : [];
+}
+
+
 /* ============================================================
    SUMMARY RENDERER
 ============================================================ */
@@ -2017,24 +2024,22 @@ function renderCurrentReportSummary(
     );
 
 
+  const departmentsWithComments = SECTIONS.filter(
+    section => getDepartmentGeneralCommentsFromReport(report, section.id).length > 0
+  );
+
   if(
-    points.length ===
-    0
+    points.length === 0 &&
+    departmentsWithComments.length === 0
   ){
 
     container.innerHTML = `
-
       <div class="empty">
-
         No checklist points were checked.
-
       </div>
-
     `;
 
-
     return;
-
   }
 
 
@@ -2128,47 +2133,58 @@ function renderCurrentReportSummary(
 
 
     ${
-      groups
-        .map(
-          group => `
+      SECTIONS.map(section => {
 
+        const group = groups.find(item => item.section === section.title);
+        const generalComments = getDepartmentGeneralCommentsFromReport(report, section.id);
+
+        if((!group || group.points.length === 0) && !generalComments.length){
+          return '';
+        }
+
+        return `
+          <div style="margin-bottom:20px;">
             <div
               style="
-                margin-bottom:20px;
+                margin-bottom:9px;
+                padding-bottom:6px;
+                border-bottom:2px solid var(--vv-red);
+                color:var(--vv-squid);
+                font-size:14px;
+                font-weight:800;
               "
             >
-
-              <div
-                style="
-                  margin-bottom:9px;
-                  padding-bottom:6px;
-                  border-bottom:2px solid var(--vv-red);
-                  color:var(--vv-squid);
-                  font-size:14px;
-                  font-weight:800;
-                "
-              >
-
-                ${escapeHtml(
-                  group.section
-                )}
-
-              </div>
-
-
-              ${
-                group.points
-                  .map(
-                    renderSummaryPoint
-                  )
-                  .join('')
-              }
-
+              ${escapeHtml(section.title)}
             </div>
 
-          `
-        )
-        .join('')
+            ${
+              generalComments.length
+                ? `
+                  <div
+                    style="
+                      margin-bottom:10px;
+                      padding:10px 12px;
+                      border-left:4px solid var(--vv-squid);
+                      border-radius:8px;
+                      background:#F8F5FA;
+                    "
+                  >
+                    <div style="color:var(--vv-squid);font-size:9px;font-weight:800;letter-spacing:.04em;">GENERAL COMMENTS</div>
+                    ${generalComments.map(comment => `
+                      <div style="margin-top:7px;font-size:11px;line-height:1.5;color:var(--vv-body);">
+                        <strong>${escapeHtml(comment.name || 'Reviewer')}:</strong> ${escapeHtml(comment.text || '')}
+                      </div>
+                    `).join('')}
+                  </div>
+                `
+                : ''
+            }
+
+            ${group ? group.points.map(renderSummaryPoint).join('') : ''}
+          </div>
+        `;
+
+      }).join('')
     }
 
   `;
