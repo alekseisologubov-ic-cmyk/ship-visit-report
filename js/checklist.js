@@ -51,6 +51,8 @@ import {
   addReviewerComment,
   addDepartmentGeneralComment,
   getDepartmentGeneralComments,
+  addReportGeneralComment,
+  getReportGeneralComments,
   addPhoto,
   removePhoto,
   setFollowUp,
@@ -612,6 +614,77 @@ function renderDepartmentHome(){
 
 
       <!-- ================================================
+           REPORT GENERAL COMMENTS
+      ================================================= -->
+
+      <div
+        class="report-general-comments"
+        style="
+          margin-top:18px;
+          margin-bottom:22px;
+          padding:16px;
+          background:#FFFFFF;
+          border:1px solid var(--vv-line);
+          border-radius:10px;
+        "
+      >
+
+        <div
+          style="
+            color:var(--vv-squid);
+            font-size:15px;
+            font-weight:800;
+            margin-bottom:8px;
+          "
+        >
+          GENERAL REPORT COMMENTS
+        </div>
+
+        <div
+          id="report-general-comments-list"
+          style="margin-bottom:10px;"
+        ></div>
+
+        <div
+          style="
+            display:flex;
+            gap:10px;
+            align-items:stretch;
+          "
+        >
+          <textarea
+            id="report-general-comment-input"
+            placeholder="Add general comments for the overall ship visit report"
+            style="
+              flex:1;
+              min-height:105px;
+              width:100%;
+              box-sizing:border-box;
+              padding:12px;
+              border:1px solid var(--vv-line);
+              border-radius:8px;
+              resize:vertical;
+              font:inherit;
+            "
+          ></textarea>
+
+          <button
+            type="button"
+            id="report-general-comment-add"
+            class="btn-primary"
+            style="
+              align-self:flex-end;
+              min-width:130px;
+            "
+          >
+            Add Comment
+          </button>
+        </div>
+
+      </div>
+
+
+      <!-- ================================================
            DEPARTMENTS
       ================================================= -->
 
@@ -656,8 +729,61 @@ function renderDepartmentHome(){
   `;
 
 
+  renderReportGeneralComments();
+  bindReportGeneralComment();
   bindDepartmentButtons();
 
+}
+
+
+/* ============================================================
+   REPORT GENERAL COMMENTS
+============================================================ */
+
+function renderReportGeneralComments(){
+  const container = getElement('report-general-comments-list');
+  if(!container) return;
+
+  const comments = getReportGeneralComments();
+
+  container.innerHTML = comments.map(comment => `
+    <div
+      style="
+        margin-bottom:8px;
+        padding:10px 12px;
+        border-left:4px solid var(--vv-squid);
+        border-radius:7px;
+        background:#F8F5FA;
+        font-size:12px;
+        line-height:1.5;
+      "
+    >
+      <strong>${escapeHtml(comment.name || getReviewer() || 'Reviewer')}:</strong>
+      <div style="margin-top:3px;">${escapeHtml(comment.text || '')}</div>
+    </div>
+  `).join('');
+}
+
+function bindReportGeneralComment(){
+  const button = getElement('report-general-comment-add');
+  const input = getElement('report-general-comment-input');
+
+  if(!button || !input) return;
+
+  button.addEventListener('click', async function(){
+    const text = input.value.trim();
+
+    if(!text){
+      input.focus();
+      return;
+    }
+
+    if(!addReportGeneralComment(text)) return;
+
+    input.value = '';
+    renderReportGeneralComments();
+    await saveCurrentReport();
+  });
 }
 
 
