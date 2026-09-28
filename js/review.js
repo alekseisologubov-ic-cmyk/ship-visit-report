@@ -896,23 +896,19 @@ export async function sendCurrentReportToShip(){
 
 
   /*
-    EMAIL TEST MODE
+    The report is now in SHIP REVIEW.
+    Trigger the deployed Supabase Edge Function
+    so the notification email is sent automatically.
 
-    The report has now been moved to ship_review.
-    Call the deployed Supabase Edge Function so the
-    test notification is sent to the configured test email.
-
-    The Edge Function currently sends all test emails to:
-      aleksei.sologubov-ic@virginvoyages.com
-
-    When testing is complete, the Edge Function can be
-    switched back to ship-based recipient routing without
-    changing this review flow.
+    TEST MODE: the Edge Function currently sends
+    the email to Aleksei's test address only.
   */
+
+  let emailResult;
 
   try{
 
-    const emailResult =
+    emailResult =
       await supabase.functions.invoke(
         'send-ship-report',
         {
@@ -922,39 +918,70 @@ export async function sendCurrentReportToShip(){
         }
       );
 
-
-    if(
-      emailResult?.error ||
-      !emailResult?.data?.success
-    ){
-
-      const message =
-        emailResult?.data?.error ||
-        emailResult?.error?.message ||
-        'The report was moved to Ship Response, but the email could not be sent.';
-
-      alert(
-        message
-      );
-
-      return false;
-
-    }
-
   }catch(error){
 
     console.error(
-      'send-ship-report:',
+      'send-ship-report invocation failed:',
       error
     );
+
 
     alert(
       'The report was moved to Ship Response, but the email could not be sent.\n\n' +
       (
         error?.message ||
-        'Unknown email error.'
+        'Unknown email error'
       )
     );
+
+
+    return false;
+
+  }
+
+
+  if(
+    emailResult?.error
+  ){
+
+    console.error(
+      'send-ship-report returned an error:',
+      emailResult.error
+    );
+
+
+    alert(
+      'The report was moved to Ship Response, but the email could not be sent.\n\n' +
+      (
+        emailResult.error.message ||
+        'Unknown email error'
+      )
+    );
+
+
+    return false;
+
+  }
+
+
+  if(
+    !emailResult?.data?.success
+  ){
+
+    console.error(
+      'send-ship-report failed:',
+      emailResult?.data
+    );
+
+
+    alert(
+      'The report was moved to Ship Response, but the email could not be sent.\n\n' +
+      (
+        emailResult?.data?.error ||
+        'Unknown email error'
+      )
+    );
+
 
     return false;
 
