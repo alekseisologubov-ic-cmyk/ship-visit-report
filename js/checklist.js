@@ -648,15 +648,18 @@ function renderDepartmentHome(){
         <div
           style="
             display:flex;
+            flex-direction:column;
             gap:10px;
             align-items:stretch;
+            width:100%;
           "
         >
           <textarea
             id="report-general-comment-input"
             placeholder="Add general comments for the overall ship visit report"
             style="
-              flex:1;
+              display:block;
+              flex:none;
               min-height:105px;
               width:100%;
               box-sizing:border-box;
@@ -673,8 +676,10 @@ function renderDepartmentHome(){
             id="report-general-comment-add"
             class="btn-primary"
             style="
-              align-self:flex-end;
-              min-width:130px;
+              align-self:stretch;
+              width:100%;
+              min-width:0;
+              min-height:44px;
             "
           >
             Add Comment
