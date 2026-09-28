@@ -49,9 +49,12 @@ import {
   getItem,
   toggleChecked,
   addReviewerComment,
+  removeReviewerComment,
   addDepartmentGeneralComment,
+  removeDepartmentGeneralComment,
   getDepartmentGeneralComments,
   addReportGeneralComment,
+  removeReportGeneralComment,
   getReportGeneralComments,
   addPhoto,
   removePhoto,
@@ -751,11 +754,12 @@ function renderReportGeneralComments(){
 
   const comments = getReportGeneralComments();
 
-  container.innerHTML = comments.map(comment => `
+  container.innerHTML = comments.map((comment, index) => `
     <div
       style="
+        position:relative;
         margin-bottom:8px;
-        padding:10px 12px;
+        padding:10px 42px 10px 12px;
         border-left:4px solid var(--vv-squid);
         border-radius:7px;
         background:#F8F5FA;
@@ -763,10 +767,53 @@ function renderReportGeneralComments(){
         line-height:1.5;
       "
     >
+      <button
+        type="button"
+        data-remove-report-general-comment="${index}"
+        aria-label="Delete general report comment"
+        title="Delete comment"
+        style="
+          position:absolute;
+          top:8px;
+          right:8px;
+          width:26px;
+          height:26px;
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          padding:0;
+          border:1px solid rgba(60,16,83,.18);
+          border-radius:50%;
+          background:#FFFFFF;
+          color:var(--vv-squid);
+          font-size:18px;
+          line-height:1;
+          font-weight:800;
+          cursor:pointer;
+        "
+      >×</button>
+
       <strong>${escapeHtml(comment.name || getReviewer() || 'Reviewer')}:</strong>
       <div style="margin-top:3px;">${escapeHtml(comment.text || '')}</div>
     </div>
   `).join('');
+
+  container
+    .querySelectorAll('[data-remove-report-general-comment]')
+    .forEach(button => {
+      button.addEventListener('click', async function(event){
+        event.stopPropagation();
+
+        const index = Number(button.dataset.removeReportGeneralComment);
+
+        if(!Number.isInteger(index)) return;
+        if(!window.confirm('Delete this comment?')) return;
+        if(!removeReportGeneralComment(index)) return;
+
+        renderReportGeneralComments();
+        await saveCurrentReport();
+      });
+    });
 }
 
 function bindReportGeneralComment(){
@@ -1150,12 +1197,58 @@ function renderDepartmentGeneralComments(section){
 
   const comments = getDepartmentGeneralComments(section.id);
 
-  container.innerHTML = comments.map(comment => `
-    <div class="department-general-comment">
+  container.innerHTML = comments.map((comment, index) => `
+    <div
+      class="department-general-comment"
+      style="position:relative;padding-right:42px;"
+    >
+      <button
+        type="button"
+        data-remove-department-general-comment="${index}"
+        aria-label="Delete department general comment"
+        title="Delete comment"
+        style="
+          position:absolute;
+          top:7px;
+          right:7px;
+          width:25px;
+          height:25px;
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          padding:0;
+          border:1px solid rgba(60,16,83,.18);
+          border-radius:50%;
+          background:#FFFFFF;
+          color:var(--vv-squid);
+          font-size:17px;
+          line-height:1;
+          font-weight:800;
+          cursor:pointer;
+        "
+      >×</button>
+
       <strong>${escapeHtml(comment.name || getReviewer() || 'Reviewer')}:</strong>
       <div style="margin-top:3px;">${escapeHtml(comment.text || '')}</div>
     </div>
   `).join('');
+
+  container
+    .querySelectorAll('[data-remove-department-general-comment]')
+    .forEach(button => {
+      button.addEventListener('click', async function(event){
+        event.stopPropagation();
+
+        const index = Number(button.dataset.removeDepartmentGeneralComment);
+
+        if(!Number.isInteger(index)) return;
+        if(!window.confirm('Delete this comment?')) return;
+        if(!removeDepartmentGeneralComment(section.id, index)) return;
+
+        renderDepartmentGeneralComments(section);
+        await saveCurrentReport();
+      });
+    });
 
 }
 
@@ -2035,11 +2128,41 @@ function renderComments(
     ${
       comments
         .map(
-          comment => `
+          (comment, index) => `
 
             <div
               class="comment"
+              style="
+                position:relative;
+                padding-right:42px;
+              "
             >
+
+              <button
+                type="button"
+                data-remove-reviewer-comment="${index}"
+                aria-label="Delete reviewer comment"
+                title="Delete comment"
+                style="
+                  position:absolute;
+                  top:7px;
+                  right:7px;
+                  width:25px;
+                  height:25px;
+                  display:flex;
+                  align-items:center;
+                  justify-content:center;
+                  padding:0;
+                  border:1px solid rgba(60,16,83,.18);
+                  border-radius:50%;
+                  background:#FFFFFF;
+                  color:var(--vv-squid);
+                  font-size:17px;
+                  line-height:1;
+                  font-weight:800;
+                  cursor:pointer;
+                "
+              >×</button>
 
               <strong>
 
@@ -2073,6 +2196,24 @@ function renderComments(
     }
 
   `;
+
+
+  container
+    .querySelectorAll('[data-remove-reviewer-comment]')
+    .forEach(button => {
+      button.addEventListener('click', async function(event){
+        event.stopPropagation();
+
+        const index = Number(button.dataset.removeReviewerComment);
+
+        if(!Number.isInteger(index)) return;
+        if(!window.confirm('Delete this comment?')) return;
+        if(!removeReviewerComment(key, index)) return;
+
+        renderComments(key);
+        await saveCurrentReport();
+      });
+    });
 
 }
 
