@@ -874,6 +874,44 @@ export function addReviewerComment(
 }
 
 
+export function removeReviewerComment(
+  key,
+  index
+) {
+
+  if (
+    !state[key] ||
+    !Array.isArray(
+      state[key].comments
+    )
+  ) {
+
+    return false;
+
+  }
+
+
+  if (
+    index < 0 ||
+    index >= state[key].comments.length
+  ) {
+
+    return false;
+
+  }
+
+
+  state[key].comments.splice(
+    index,
+    1
+  );
+
+
+  return true;
+
+}
+
+
 export function setReviewerComments(
   key,
   comments
@@ -1167,6 +1205,17 @@ export function addReportGeneralComment(text) {
   return true;
 }
 
+export function removeReportGeneralComment(index) {
+  const comments = state[REPORT_GENERAL_KEY]?.comments;
+
+  if (!Array.isArray(comments)) return false;
+  if (index < 0 || index >= comments.length) return false;
+
+  comments.splice(index, 1);
+  return true;
+}
+
+
 export function setReportGeneralComments(comments) {
   state[REPORT_GENERAL_KEY] = {
     isReportGeneral: true,
@@ -1202,6 +1251,18 @@ export function addDepartmentGeneralComment(sectionId, text) {
   });
   return true;
 }
+
+export function removeDepartmentGeneralComment(sectionId, index) {
+  const key = departmentGeneralKey(sectionId);
+  const comments = state[key]?.comments;
+
+  if (!Array.isArray(comments)) return false;
+  if (index < 0 || index >= comments.length) return false;
+
+  comments.splice(index, 1);
+  return true;
+}
+
 
 export function setDepartmentGeneralComments(sectionId, comments) {
   state[departmentGeneralKey(sectionId)] = {
