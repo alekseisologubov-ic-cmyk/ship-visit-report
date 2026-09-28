@@ -74,6 +74,7 @@ import {
   getShipReviewReports,
   getSubmittedReports,
   getReport,
+  getReportByReference,
   submitShipResponse
 } from './supabase.js';
 
@@ -360,6 +361,12 @@ function handleDirectShipResponseLink(){
       window.location.search
     );
 
+  const reportRef =
+    String(
+      params.get('ref') ||
+      ''
+    ).trim();
+
   const reportId =
     String(
       params.get('report') ||
@@ -367,7 +374,7 @@ function handleDirectShipResponseLink(){
       ''
     ).trim();
 
-  if (!reportId) {
+  if (!reportRef && !reportId) {
     return false;
   }
 
@@ -386,6 +393,7 @@ function handleDirectShipResponseLink(){
 
   window.__SHIP_RESPONSE_LINK__ = {
     reportId,
+    reportRef,
     token: params.get('token') || ''
   };
 
@@ -401,7 +409,9 @@ function handleDirectShipResponseLink(){
 
         const result =
           await withTimeout(
-            getReport(reportId),
+            reportRef
+              ? getReportByReference(reportRef)
+              : getReport(reportId),
             15000,
             'Loading linked report timed out.'
           );
@@ -3402,6 +3412,24 @@ function renderShipResponseReportCard(
 
         ${escapeHtml(
           report.reviewer ||
+          ''
+        )}
+
+        <br>
+
+        <b>Report #:</b>
+
+        ${escapeHtml(
+          report.report_data?.reportRef ||
+          ''
+        )}
+
+        <br>
+
+        <b>Report #:</b>
+
+        ${escapeHtml(
+          report.report_data?.reportRef ||
           ''
         )}
 
