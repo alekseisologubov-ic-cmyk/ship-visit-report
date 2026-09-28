@@ -109,6 +109,13 @@ let currentShipResponseReport =
   null;
 
 
+/*
+  TRUE when the app was opened from a Ship Visit Report email link.
+  In this mode the browser is locked to the Ship Response screen.
+*/
+let shipResponseLinkMode = false;
+
+
 /* ============================================================
    ADMIN
 ============================================================ */
@@ -280,6 +287,69 @@ function initializeApp(){
 
 
 /* ============================================================
+   SHIP-ONLY EMAIL MODE
+============================================================ */
+
+function applyShipOnlyUI(){
+
+  if(
+    !shipResponseLinkMode
+  ){
+
+    return;
+
+  }
+
+
+  /* Hide Home cards and Admin control if present. */
+  [
+    'createReport',
+    'openReport',
+    'submittedReports',
+    'shipResponseReport',
+    'adminButton'
+  ].forEach(
+    id => {
+
+      const element =
+        document.getElementById(id);
+
+      if(element){
+        element.style.display = 'none';
+      }
+
+    }
+  );
+
+
+  /* Hide all report navigation buttons/back buttons. */
+  [
+    'setupHeaderBack',
+    'checklistHeaderBack',
+    'reviewHeaderBack',
+    'summaryHeaderBack',
+    'followupsHeaderBack',
+    'openHeaderBack',
+    'submittedHeaderBack',
+    'responsesHeaderBack',
+    'responsesHomeBtn'
+  ].forEach(
+    id => {
+
+      const element =
+        document.getElementById(id);
+
+      if(element){
+        element.style.display = 'none';
+      }
+
+    }
+  );
+
+}
+
+
+/* ============================================================
    DIRECT SHIP RESPONSE LINK
 ============================================================ */
 
@@ -300,6 +370,12 @@ function handleDirectShipResponseLink(){
   if (!reportId) {
     return false;
   }
+
+  shipResponseLinkMode = true;
+
+  applyShipOnlyUI();
+
+  showScreen('responses');
 
   /*
     The email link contains both report and token.
@@ -532,12 +608,26 @@ export function showScreen(
   screen
 ){
 
-  const target =
+  let target =
     SCREENS.includes(
       screen
     )
       ? screen
       : 'home';
+
+
+  /*
+    A direct Ship Response link may only display the responses screen.
+    All normal application navigation is blocked in this mode.
+  */
+  if(
+    shipResponseLinkMode &&
+    target !== 'responses'
+  ){
+
+    target = 'responses';
+
+  }
 
 
   SCREENS.forEach(
@@ -3437,18 +3527,22 @@ function openShipResponseReport(
       "
     >
 
-      <button
-        type="button"
-        class="btn-secondary"
-        id="shipResponseListBackBtn"
-        style="
-          margin-bottom:12px;
-        "
-      >
-
-        ← Back to Reports
-
-      </button>
+      ${
+        shipResponseLinkMode
+          ? ''
+          : `
+            <button
+              type="button"
+              class="btn-secondary"
+              id="shipResponseListBackBtn"
+              style="
+                margin-bottom:12px;
+              "
+            >
+              ← Back to Reports
+            </button>
+          `
+      }
 
 
       <div
@@ -5379,6 +5473,14 @@ function bindHeaderBackButtons(){
   bindClick(
     'responsesHeaderBack',
     function(){
+
+      if(
+        shipResponseLinkMode
+      ){
+
+        return;
+
+      }
 
       showScreen(
         'home'
