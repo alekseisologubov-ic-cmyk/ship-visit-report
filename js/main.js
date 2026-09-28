@@ -258,17 +258,138 @@ function initializeApp(){
 
 
   /*
-    Always start on HOME.
+    If this app was opened from a Ship Visit Report email,
+    open the exact report directly in Ship Response mode.
+    Otherwise start normally on HOME.
   */
 
-  showScreen(
-    'home'
-  );
+  if (!handleDirectShipResponseLink()) {
+
+    showScreen(
+      'home'
+    );
+
+  }
 
 
   console.log(
     'Ship Visit Report ready.'
   );
+
+}
+
+
+/* ============================================================
+   DIRECT SHIP RESPONSE LINK
+============================================================ */
+
+function handleDirectShipResponseLink(){
+
+  const params =
+    new URLSearchParams(
+      window.location.search
+    );
+
+  const reportId =
+    String(
+      params.get('report') ||
+      params.get('reportId') ||
+      ''
+    ).trim();
+
+  if (!reportId) {
+    return false;
+  }
+
+  /*
+    The email link contains both report and token.
+    The token is intentionally not exposed to the normal
+    application state. A later server-side validation step
+    can enforce the token before allowing a public response.
+  */
+
+  window.__SHIP_RESPONSE_LINK__ = {
+    reportId,
+    token: params.get('token') || ''
+  };
+
+  /*
+    Open the report after the normal startup bindings exist.
+    This keeps the existing app flow intact for normal users.
+  */
+
+  Promise.resolve()
+    .then(async function(){
+
+      try {
+
+        const result =
+          await withTimeout(
+            getReport(reportId),
+            15000,
+            'Loading linked report timed out.'
+          );
+
+        if (
+          !result ||
+          !result.success ||
+          !result.data
+        ) {
+
+          throw (
+            result?.error ||
+            new Error(
+              'This report could not be opened.'
+            )
+          );
+
+        }
+
+        const report =
+          result.data;
+
+        if (
+          report.status !==
+          'ship_review'
+        ) {
+
+          showScreen('home');
+
+          alert(
+            'This Ship Visit Report is no longer waiting for ship response.'
+          );
+
+          return;
+
+        }
+
+        openShipResponseReport(
+          report
+        );
+
+        showScreen(
+          'responses'
+        );
+
+      } catch (error) {
+
+        console.error(
+          'Direct Ship Response Link:',
+          error
+        );
+
+        showScreen('home');
+
+        showError(
+          'Could not open the report from the email link.',
+          error
+        );
+
+      }
+
+    });
+
+  return true;
 
 }
 
