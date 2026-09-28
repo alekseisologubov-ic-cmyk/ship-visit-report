@@ -52,6 +52,7 @@ let currentReviewer = '';
 
 
 const DEPARTMENT_GENERAL_PREFIX = '__department_general__';
+const REPORT_GENERAL_KEY = '__report_general__';
 
 let state = emptyState();
 
@@ -525,6 +526,11 @@ function normalizeState(
   const base =
     emptyState();
 
+  base[REPORT_GENERAL_KEY] = {
+    isReportGeneral: true,
+    comments: []
+  };
+
   SECTIONS.forEach(section => {
     base[departmentGeneralKey(section.id)] = {
       isDepartmentGeneral: true,
@@ -546,6 +552,17 @@ function normalizeState(
     base
   ).forEach(
     key => {
+
+      if (key === REPORT_GENERAL_KEY) {
+        base[key] = {
+          isReportGeneral: true,
+          comments: normalizeDepartmentGeneralComments(
+            source[key],
+            reviewerName
+          )
+        };
+        return;
+      }
 
       if (isDepartmentGeneralKey(key)) {
         base[key] = {
@@ -1114,6 +1131,50 @@ export function setShipComments(
       comments
     );
 
+}
+
+
+/* ============================================================
+   REPORT GENERAL COMMENTS
+============================================================ */
+
+export function getReportGeneralComments() {
+  const comments = state[REPORT_GENERAL_KEY]?.comments;
+  return Array.isArray(comments) ? comments : [];
+}
+
+export function addReportGeneralComment(text) {
+  const clean = cleanText(text);
+  if (!clean) return false;
+
+  if (!state[REPORT_GENERAL_KEY]) {
+    state[REPORT_GENERAL_KEY] = {
+      isReportGeneral: true,
+      comments: []
+    };
+  }
+
+  if (!Array.isArray(state[REPORT_GENERAL_KEY].comments)) {
+    state[REPORT_GENERAL_KEY].comments = [];
+  }
+
+  state[REPORT_GENERAL_KEY].comments.push({
+    name: currentReviewer || meta.reviewer || 'Reviewer',
+    text: clean,
+    timestamp: new Date().toISOString()
+  });
+
+  return true;
+}
+
+export function setReportGeneralComments(comments) {
+  state[REPORT_GENERAL_KEY] = {
+    isReportGeneral: true,
+    comments: normalizeDepartmentGeneralComments(
+      comments,
+      currentReviewer || meta.reviewer || 'Reviewer'
+    )
+  };
 }
 
 
@@ -1719,7 +1780,7 @@ export function getSummaryCounts() {
   .forEach(
     item => {
 
-      if (item?.isDepartmentGeneral) {
+      if (item?.isDepartmentGeneral || item?.isReportGeneral) {
         return;
       }
 
