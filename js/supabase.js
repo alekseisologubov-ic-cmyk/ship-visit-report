@@ -599,6 +599,57 @@ export async function getSubmittedReports(){
 
 
 /* =========================================================
+   REPORT BY FRIENDLY REFERENCE
+========================================================= */
+
+export async function getReportByReference(
+  reportRef
+){
+
+  try{
+
+    if(!reportRef){
+      throw new Error('Report reference is required.');
+    }
+
+    const result =
+      await supabase
+        .from(
+          'ship_visit_reports'
+        )
+        .select('*')
+        .eq(
+          'report_data->>reportRef',
+          reportRef
+        )
+        .single();
+
+    if(
+      result.error
+    ){
+      throw result.error;
+    }
+
+    return {
+      success:true,
+      data:result.data,
+      error:null
+    };
+
+  }catch(error){
+
+    return {
+      success:false,
+      data:null,
+      error
+    };
+
+  }
+
+}
+
+
+/* =========================================================
    SINGLE REPORT
 ========================================================= */
 
@@ -775,6 +826,108 @@ export async function submitShipResponse({
       error
     );
 
+
+    return {
+
+      success:false,
+
+      data:null,
+
+      error
+
+    };
+
+  }
+
+}
+
+
+/* =========================================================
+   EMAIL SHIP REPORT
+
+   Calls the Supabase Edge Function that:
+   - identifies the correct ship email
+   - creates the secure response token
+   - sends the report response email
+========================================================= */
+
+export async function sendShipReportEmail({
+  reportId
+}){
+
+  try{
+
+    if(
+      !reportId
+    ){
+
+      throw new Error(
+        'Report ID is required.'
+      );
+
+    }
+
+
+    const response =
+      await fetch(
+        `${SUPABASE_URL}/functions/v1/send-ship-report`,
+        {
+
+          method:'POST',
+
+          headers:{
+            'Content-Type':'application/json',
+            apikey:SUPABASE_KEY
+          },
+
+          body:JSON.stringify({
+            reportId
+          })
+
+        }
+      );
+
+
+    let data = null;
+
+    try{
+      data = await response.json();
+    }catch(
+      _error
+    ){
+      data = null;
+    }
+
+
+    if(
+      !response.ok ||
+      !data?.success
+    ){
+
+      throw new Error(
+        data?.error ||
+        `Email function returned HTTP ${response.status}.`
+      );
+
+    }
+
+
+    return {
+
+      success:true,
+
+      data,
+
+      error:null
+
+    };
+
+  }catch(error){
+
+    console.error(
+      'sendShipReportEmail:',
+      error
+    );
 
     return {
 
@@ -1031,6 +1184,8 @@ export default {
   getReport,
 
   submitShipResponse,
+
+  sendShipReportEmail,
 
   deleteReport,
 
