@@ -1579,7 +1579,6 @@ function createChecklistPoint(
           key
         )}"
         accept="image/*"
-        capture="environment"
       >
 
 
