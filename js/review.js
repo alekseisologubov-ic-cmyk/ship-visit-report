@@ -23,7 +23,8 @@ import {
 
 import {
   saveOpenReport,
-  sendToShipReview
+  sendToShipReview,
+  supabase
 } from './supabase.js';
 
 
@@ -888,6 +889,72 @@ export async function sendCurrentReportToShip(){
       )
     );
 
+
+    return false;
+
+  }
+
+
+  /*
+    EMAIL TEST MODE
+
+    The report has now been moved to ship_review.
+    Call the deployed Supabase Edge Function so the
+    test notification is sent to the configured test email.
+
+    The Edge Function currently sends all test emails to:
+      aleksei.sologubov-ic@virginvoyages.com
+
+    When testing is complete, the Edge Function can be
+    switched back to ship-based recipient routing without
+    changing this review flow.
+  */
+
+  try{
+
+    const emailResult =
+      await supabase.functions.invoke(
+        'send-ship-report',
+        {
+          body:{
+            reportId
+          }
+        }
+      );
+
+
+    if(
+      emailResult?.error ||
+      !emailResult?.data?.success
+    ){
+
+      const message =
+        emailResult?.data?.error ||
+        emailResult?.error?.message ||
+        'The report was moved to Ship Response, but the email could not be sent.';
+
+      alert(
+        message
+      );
+
+      return false;
+
+    }
+
+  }catch(error){
+
+    console.error(
+      'send-ship-report:',
+      error
+    );
+
+    alert(
+      'The report was moved to Ship Response, but the email could not be sent.\n\n' +
+      (
+        error?.message ||
+        'Unknown email error.'
+      )
+    );
 
     return false;
 
