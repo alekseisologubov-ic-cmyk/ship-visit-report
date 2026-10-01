@@ -1950,7 +1950,7 @@ function bindPointEvents(
 
 
   /* ==========================================================
-     PHOTO INPUT
+     PHOTO INPUT & DRAG AND DROP
   ========================================================== */
 
   if(
@@ -2046,11 +2046,29 @@ function bindPointEvents(
     );
 
 
-    if(
-      photoButton
-    ){
+    /*
+      Drag & Drop target binding (Card + Button)
+    */
 
-      photoButton.addEventListener(
+    const dragTargets = [element, photoButton].filter(Boolean);
+
+    dragTargets.forEach(target => {
+
+      target.addEventListener(
+        'dragenter',
+        function(event){
+
+          event.preventDefault();
+
+          event.stopPropagation();
+
+          element.classList.add('drag-over');
+
+        }
+      );
+
+
+      target.addEventListener(
         'dragover',
         function(event){
 
@@ -2058,11 +2076,37 @@ function bindPointEvents(
 
           event.stopPropagation();
 
+          if(event.dataTransfer){
+
+            event.dataTransfer.dropEffect = 'copy';
+
+          }
+
+          element.classList.add('drag-over');
+
         }
       );
 
 
-      photoButton.addEventListener(
+      target.addEventListener(
+        'dragleave',
+        function(event){
+
+          event.preventDefault();
+
+          event.stopPropagation();
+
+          if(!element.contains(event.relatedTarget)){
+
+            element.classList.remove('drag-over');
+
+          }
+
+        }
+      );
+
+
+      target.addEventListener(
         'drop',
         async function(event){
 
@@ -2070,35 +2114,37 @@ function bindPointEvents(
 
           event.stopPropagation();
 
+          element.classList.remove('drag-over');
 
-          const file =
+
+          const files =
             event.dataTransfer &&
-            event.dataTransfer.files &&
-            event.dataTransfer.files[0];
+            event.dataTransfer.files;
 
 
-          if(
-            !file
-          ){
+          if(!files || files.length === 0){
 
             return;
 
           }
 
 
-          openDetails(
-            key
-          );
+          for(let i = 0; i < files.length; i++){
 
+            if(files[i].type.startsWith('image/')){
 
-          await addPhotoFile(
-            file
-          );
+              openDetails(key);
+
+              await addPhotoFile(files[i]);
+
+            }
+
+          }
 
         }
       );
 
-    }
+    });
 
   }
 
