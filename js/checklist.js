@@ -1957,6 +1957,61 @@ function bindPointEvents(
     photoInput
   ){
 
+    const addPhotoFile = async function(file){
+
+      if(
+        !file ||
+        !file.type.startsWith('image/')
+      ){
+
+        return;
+
+      }
+
+
+      try{
+
+        const photo =
+          await readAndResizeImage(
+            file
+          );
+
+
+        addPhoto(
+          key,
+          photo
+        );
+
+
+        openDetails(
+          key
+        );
+
+
+        renderPhotos(
+          key
+        );
+
+
+        await saveCurrentReport();
+
+      }catch(error){
+
+        console.error(
+          'Photo error:',
+          error
+        );
+
+
+        alert(
+          'Could not add the photo.'
+        );
+
+      }
+
+    };
+
+
     photoInput.addEventListener(
       'change',
       async function(
@@ -1977,45 +2032,9 @@ function bindPointEvents(
         }
 
 
-        try{
-
-          const photo =
-            await readAndResizeImage(
-              file
-            );
-
-
-          addPhoto(
-            key,
-            photo
-          );
-
-
-          openDetails(
-            key
-          );
-
-
-          renderPhotos(
-            key
-          );
-
-
-          await saveCurrentReport();
-
-        }catch(error){
-
-          console.error(
-            'Photo error:',
-            error
-          );
-
-
-          alert(
-            'Could not add the photo.'
-          );
-
-        }
+        await addPhotoFile(
+          file
+        );
 
 
         photoInput.value =
@@ -2023,6 +2042,58 @@ function bindPointEvents(
 
       }
     );
+
+
+    const photoArea =
+      element.querySelector(
+        '.photos'
+      );
+
+
+    if(
+      photoArea
+    ){
+
+      photoArea.addEventListener(
+        'dragover',
+        function(event){
+
+          event.preventDefault();
+
+        }
+      );
+
+
+      photoArea.addEventListener(
+        'drop',
+        async function(event){
+
+          event.preventDefault();
+
+
+          const file =
+            event.dataTransfer &&
+            event.dataTransfer.files &&
+            event.dataTransfer.files[0];
+
+
+          if(
+            !file
+          ){
+
+            return;
+
+          }
+
+
+          await addPhotoFile(
+            file
+          );
+
+        }
+      );
+
+    }
 
   }
 
