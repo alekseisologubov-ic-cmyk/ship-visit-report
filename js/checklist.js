@@ -1957,7 +1957,9 @@ function bindPointEvents(
     photoInput
   ){
 
-    const addPhotoFile = async function(file){
+    const addPhotoFile = async function(
+      file
+    ){
 
       if(
         !file ||
@@ -2044,31 +2046,29 @@ function bindPointEvents(
     );
 
 
-    const photoArea =
-      element.querySelector(
-        '.photos'
-      );
-
-
     if(
-      photoArea
+      photoButton
     ){
 
-      photoArea.addEventListener(
+      photoButton.addEventListener(
         'dragover',
         function(event){
 
           event.preventDefault();
 
+          event.stopPropagation();
+
         }
       );
 
 
-      photoArea.addEventListener(
+      photoButton.addEventListener(
         'drop',
         async function(event){
 
           event.preventDefault();
+
+          event.stopPropagation();
 
 
           const file =
@@ -2084,6 +2084,11 @@ function bindPointEvents(
             return;
 
           }
+
+
+          openDetails(
+            key
+          );
 
 
           await addPhotoFile(
