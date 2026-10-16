@@ -884,15 +884,16 @@ function addImageToPDF(
 }
 
 
-/* Resolve private Storage references to temporary data URLs for jsPDF.
-   Only a clone is changed; storage paths remain in the saved report. */
+/* Resolve private Storage and legacy-photo references to temporary data URLs
+   for PDF/print generation. Only a clone is changed; saved report references
+   remain intact. */
 async function stateWithResolvedPhotos(inputState){
   const state = JSON.parse(JSON.stringify(inputState || {}));
   for(const item of Object.values(state)){
     if(!item || !Array.isArray(item.photos)) continue;
     const resolved = [];
     for(const photo of item.photos){
-      if(photo && typeof photo === 'object' && photo.storagePath){
+      if(photo && typeof photo === 'object' && (photo.storagePath || photo.legacyPhotoId)){
         resolved.push(await getPhotoDataUrl(photo));
       }else{
         resolved.push(photo);
