@@ -419,6 +419,44 @@ function normalizePhotos(
           typeof entry === 'object'
         ) {
 
+          /*
+            Keep migrated private-photo references intact. These objects
+            contain a legacyPhotoId or storagePath plus a filename; the
+            image bytes are fetched later only when the user clicks the file.
+            The previous normalizer converted these objects to an empty string,
+            silently removing all migrated photos from application state.
+          */
+          const legacyPhotoId = cleanText(
+            entry.legacyPhotoId ??
+            entry.legacy_photo_id ??
+            ''
+          );
+
+          const storagePath = cleanText(
+            entry.storagePath ??
+            entry.storage_path ??
+            ''
+          );
+
+          if (legacyPhotoId || storagePath) {
+            const filename = cleanText(
+              entry.filename ??
+              entry.fileName ??
+              entry.originalName ??
+              entry.name ??
+              ''
+            );
+
+            return {
+              ...entry,
+              ...(legacyPhotoId ? { legacyPhotoId } : {}),
+              ...(storagePath ? { storagePath } : {}),
+              ...(filename ? { filename } : {})
+            };
+          }
+
+          // Preserve compatibility with older photo objects that stored the
+          // actual image/data URL in one of these fields.
           return cleanText(
             entry.url ??
             entry.src ??
