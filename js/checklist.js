@@ -2348,149 +2348,276 @@ function renderComments(
    PHOTOS
 ============================================================ */
 
+/* ============================================================
+   PHOTO LIGHTBOX + LAZY THUMBNAILS
+============================================================ */
+
+let photoLightbox = null;
+let photoLightboxImage = null;
+let photoLightboxStatus = null;
+let photoLightboxPreviousOverflow = '';
+
+function ensurePhotoLightbox(){
+  if(photoLightbox && photoLightbox.isConnected) return;
+
+  if(!document.getElementById('ship-report-photo-lightbox-style')){
+    const style = document.createElement('style');
+    style.id = 'ship-report-photo-lightbox-style';
+    style.textContent = `
+      .photo img { cursor: zoom-in; }
+      #ship-report-photo-lightbox[hidden] { display: none !important; }
+      #ship-report-photo-lightbox {
+        position: fixed; inset: 0; z-index: 10000;
+        display: flex; align-items: center; justify-content: center;
+        padding: 24px; box-sizing: border-box;
+        background: rgba(12, 5, 18, .94);
+      }
+      #ship-report-photo-lightbox .photo-lightbox-panel {
+        position: relative; display: flex; align-items: center; justify-content: center;
+        width: 100%; height: 100%; min-width: 0; min-height: 0;
+      }
+      #ship-report-photo-lightbox .photo-lightbox-image {
+        display: block; max-width: 96vw; max-height: 90vh; width: auto; height: auto;
+        object-fit: contain; border-radius: 8px; box-shadow: 0 8px 40px rgba(0,0,0,.45);
+      }
+      #ship-report-photo-lightbox .photo-lightbox-close {
+        position: absolute; top: 0; right: 0; z-index: 1;
+        width: 44px; height: 44px; border: 1px solid rgba(255,255,255,.65);
+        border-radius: 50%; background: #fff; color: #3C1053; font-size: 30px;
+        line-height: 1; cursor: pointer;
+      }
+      #ship-report-photo-lightbox .photo-lightbox-status {
+        color: #fff; font: 600 16px/1.5 Arial, sans-serif; text-align: center;
+        padding: 16px; max-width: 80vw;
+      }
+      #ship-report-photo-lightbox .photo-lightbox-status[hidden] { display: none; }
+      @media (max-width: 600px) {
+        #ship-report-photo-lightbox { padding: 10px; }
+        #ship-report-photo-lightbox .photo-lightbox-image { max-width: 98vw; max-height: 86vh; }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  const overlay = document.createElement('div');
+  overlay.id = 'ship-report-photo-lightbox';
+  overlay.hidden = true;
+  overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-modal', 'true');
+  overlay.setAttribute('aria-label', 'Photo preview');
+
+  const panel = document.createElement('div');
+  panel.className = 'photo-lightbox-panel';
+
+  const close = document.createElement('button');
+  close.type = 'button';
+  close.className = 'photo-lightbox-close';
+  close.textContent = '×';
+  close.setAttribute('aria-label', 'Close photo preview');
+
+  const status = document.createElement('div');
+  status.className = 'photo-lightbox-status';
+  status.textContent = 'Loading photo…';
+
+  const preview = document.createElement('img');
+  preview.className = 'photo-lightbox-image';
+  preview.alt = 'Enlarged report photo';
+  preview.hidden = true;
+  preview.decoding = 'async';
+
+  panel.append(close, status, preview);
+  overlay.appendChild(panel);
+  document.body.appendChild(overlay);
+
+  close.addEventListener('click', closePhotoLightbox);
+  overlay.addEventListener('click', event => {
+    if(event.target === overlay) closePhotoLightbox();
+  });
+  panel.addEventListener('click', event => {
+    if(event.target === panel) closePhotoLightbox();
+  });
+
+  document.addEventListener('keydown', event => {
+    if(event.key === 'Escape' && photoLightbox && !photoLightbox.hidden){
+      closePhotoLightbox();
+    }
+  });
+
+  photoLightbox = overlay;
+  photoLightboxImage = preview;
+  photoLightboxStatus = status;
+}
+
+function closePhotoLightbox(){
+  if(!photoLightbox) return;
+  photoLightbox.hidden = true;
+  if(photoLightboxImage){
+    photoLightboxImage.removeAttribute('src');
+    photoLightboxImage.hidden = true;
+    photoLightboxImage.onload = null;
+    photoLightboxImage.onerror = null;
+  }
+  if(photoLightboxStatus){
+    photoLightboxStatus.hidden = false;
+    photoLightboxStatus.textContent = 'Loading photo…';
+  }
+  document.body.style.overflow = photoLightboxPreviousOverflow;
+}
+
+function photoStoragePathForChecklist(source){
+  if(source && typeof source === 'object' && typeof source.storagePath === 'string'){
+    return source.storagePath;
+  }
+  if(typeof source === 'string' && source.startsWith('storage://')){
+    return source.slice('storage://'.length);
+  }
+  return '';
+}
+
+function directPhotoUrlForChecklist(source){
+  if(typeof source === 'string' && !source.startsWith('storage://')) return source;
+  if(source && typeof source === 'object') return source.url || source.src || source.data || '';
+  return '';
+}
+
+async function openPhotoLightbox(source, getThumbnailUrl){
+  ensurePhotoLightbox();
+  photoLightbox.hidden = false;
+  photoLightboxPreviousOverflow = document.body.style.overflow;
+  document.body.style.overflow = 'hidden';
+  photoLightboxImage.hidden = true;
+  photoLightboxImage.removeAttribute('src');
+  photoLightboxStatus.hidden = false;
+  photoLightboxStatus.textContent = 'Loading photo…';
+
+  try{
+    // Reuse the lazy-loaded thumbnail URL when possible. Storage URLs are signed
+    // only when the thumbnail is about to display or the user opens the photo.
+    const url = typeof getThumbnailUrl === 'function'
+      ? await getThumbnailUrl()
+      : (directPhotoUrlForChecklist(source) || await getPhotoDisplayUrl(source));
+    if(!url) throw new Error('Photo reference is missing.');
+    if(!photoLightbox || photoLightbox.hidden) return;
+
+    photoLightboxImage.onload = () => {
+      photoLightboxImage.hidden = false;
+      photoLightboxStatus.hidden = true;
+    };
+    photoLightboxImage.onerror = () => {
+      photoLightboxImage.hidden = true;
+      photoLightboxStatus.hidden = false;
+      photoLightboxStatus.textContent = 'Could not load this photo. Please close and try again.';
+    };
+    photoLightboxImage.src = url;
+    // Data URLs / cached URLs can finish loading before handlers fire in some browsers.
+    if(photoLightboxImage.complete && photoLightboxImage.naturalWidth > 0){
+      photoLightboxImage.hidden = false;
+      photoLightboxStatus.hidden = true;
+    }
+  }catch(error){
+    console.error('Could not open photo preview:', error);
+    if(photoLightbox && !photoLightbox.hidden){
+      photoLightboxStatus.hidden = false;
+      photoLightboxStatus.textContent = 'Could not load this photo. Please close and try again.';
+    }
+  }
+}
+
 function renderPhotos(
   key
 ){
+  const container = getElement(`photos-${key}`);
+  if(!container) return;
 
-  const container =
-    getElement(
-      `photos-${key}`
-    );
+  const item = getItem(key);
+  const photos = Array.isArray(item?.photos) ? item.photos : [];
+  container.innerHTML = '';
 
+  photos.forEach((source, index) => {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'photo';
 
-  if(
-    !container
-  ){
+    const image = document.createElement('img');
+    image.alt = `Reviewer photo ${index + 1}; click to enlarge`;
+    image.loading = 'lazy';
+    image.decoding = 'async';
+    image.fetchPriority = 'low';
+    image.tabIndex = 0;
+    image.setAttribute('role', 'button');
+    image.setAttribute('aria-label', `Open photo ${index + 1}`);
 
-    return;
+    let thumbnailPromise = null;
+    let thumbnailUrl = '';
+    const loadThumbnail = () => {
+      if(thumbnailUrl) return Promise.resolve(thumbnailUrl);
+      if(thumbnailPromise) return thumbnailPromise;
 
-  }
-
-
-  const item =
-    getItem(
-      key
-    );
-
-
-  const photos =
-    Array.isArray(
-      item?.photos
-    )
-      ? item.photos
-      : [];
-
-
-  container.innerHTML =
-    '';
-
-
-  photos.forEach(
-    (
-      source,
-      index
-    ) => {
-
-      const wrapper =
-        document.createElement(
-          'div'
-        );
-
-
-      wrapper.className =
-        'photo';
-
-
-      const image =
-        document.createElement(
-          'img'
-        );
-
-
-      image.alt = 'Reviewer photo';
-      const storagePath = source && typeof source === 'object'
-        ? source.storagePath
-        : (typeof source === 'string' && source.startsWith('storage://') ? source.slice('storage://'.length) : '');
-
-      if(storagePath){
-        image.dataset.storagePath = storagePath;
-        getPhotoDisplayUrl(source).then(url => {
-          if(url && image.isConnected) image.src = url;
-        }).catch(error => {
-          console.error('Could not load stored photo:', error);
-          image.alt = 'Photo could not be loaded';
-        });
-      }else if(typeof source === 'string'){
-        image.src = source;
-      }else if(source && (source.url || source.src || source.data)){
-        image.src = source.url || source.src || source.data;
-      }
-
-
-      wrapper.appendChild(
-        image
-      );
-
-
-      const remove =
-        document.createElement(
-          'button'
-        );
-
-
-      remove.type =
-        'button';
-
-
-      remove.className =
-        'photo-remove';
-
-
-      remove.textContent =
-        '×';
-
-
-      remove.setAttribute(
-        'aria-label',
-        'Remove photo'
-      );
-
-
-      remove.addEventListener(
-        'click',
-        async function(
-          event
-        ){
-
-          event.stopPropagation();
-
-
-          const removedPhoto = getItem(key)?.photos?.[index];
-          removePhoto(key, index);
-          renderPhotos(key);
-
-          const saved = await saveCurrentReport();
-          if(saved && removedPhoto && typeof removedPhoto === 'object' && removedPhoto.storagePath){
-            try { await deleteStoragePhoto(removedPhoto.storagePath); }
-            catch(storageError){ console.warn('Photo reference removed, but Storage cleanup failed:', storageError); }
-          }
-
+      thumbnailPromise = (async () => {
+        const path = photoStoragePathForChecklist(source);
+        const url = path ? await getPhotoDisplayUrl(source) : directPhotoUrlForChecklist(source);
+        if(!url) throw new Error('Photo reference is missing.');
+        thumbnailUrl = url;
+        if(image.isConnected){
+          image.src = url;
+          image.dataset.photoLoaded = 'true';
         }
-      );
+        return url;
+      })().catch(error => {
+        thumbnailPromise = null;
+        console.error('Could not load photo thumbnail:', error);
+        if(image.isConnected) image.alt = `Photo ${index + 1} could not be loaded; click to retry`;
+        throw error;
+      });
 
+      return thumbnailPromise;
+    };
 
-      wrapper.appendChild(
-        remove
-      );
+    const activatePreview = () => openPhotoLightbox(source, loadThumbnail);
+    image.addEventListener('click', activatePreview);
+    image.addEventListener('keydown', event => {
+      if(event.key === 'Enter' || event.key === ' '){
+        event.preventDefault();
+        activatePreview();
+      }
+    });
 
-
-      container.appendChild(
-        wrapper
-      );
-
+    // Only assign image.src when a thumbnail approaches the viewport.
+    // Clicking before it becomes visible will load it on demand for the popup.
+    if('IntersectionObserver' in window){
+      const observer = new IntersectionObserver(entries => {
+        if(entries.some(entry => entry.isIntersecting)){
+          observer.disconnect();
+          loadThumbnail().catch(() => {});
+        }
+      }, { rootMargin: '180px' });
+      observer.observe(image);
+    }else{
+      loadThumbnail().catch(() => {});
     }
-  );
 
+    wrapper.appendChild(image);
+
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'photo-remove';
+    remove.textContent = '×';
+    remove.setAttribute('aria-label', 'Remove photo');
+    remove.addEventListener('click', async function(event){
+      event.stopPropagation();
+      const removedPhoto = getItem(key)?.photos?.[index];
+      removePhoto(key, index);
+      renderPhotos(key);
+
+      const saved = await saveCurrentReport();
+      if(saved && removedPhoto && typeof removedPhoto === 'object' && removedPhoto.storagePath){
+        try{ await deleteStoragePhoto(removedPhoto.storagePath); }
+        catch(storageError){ console.warn('Photo reference removed, but Storage cleanup failed:', storageError); }
+      }
+    });
+
+    wrapper.appendChild(remove);
+    container.appendChild(wrapper);
+  });
 }
 
 
