@@ -69,7 +69,8 @@ import {
   saveOpenReport,
   uploadPhotoDataUrl,
   getPhotoDisplayUrl,
-  deleteStoragePhoto
+  deleteStoragePhoto,
+  deleteLegacyPhotoData
 } from './supabase.js';
 
 
@@ -2630,9 +2631,16 @@ function renderPhotos(
       renderPhotos(key);
 
       const saved = await saveCurrentReport();
-      if(saved && removedPhoto && typeof removedPhoto === 'object' && removedPhoto.storagePath){
-        try{ await deleteStoragePhoto(removedPhoto.storagePath); }
-        catch(storageError){ console.warn('Photo reference removed, but Storage cleanup failed:', storageError); }
+      if(saved && removedPhoto && typeof removedPhoto === 'object'){
+        try{
+          if(removedPhoto.storagePath){
+            await deleteStoragePhoto(removedPhoto.storagePath);
+          }else if(removedPhoto.legacyPhotoId){
+            await deleteLegacyPhotoData(removedPhoto.legacyPhotoId);
+          }
+        }catch(storageError){
+          console.warn('Photo reference removed, but photo cleanup failed:', storageError);
+        }
       }
     });
     wrapper.appendChild(remove);
