@@ -984,47 +984,49 @@ export function addPhoto(
   photo
 ) {
 
-  if (
-    !state[key]
-  ) {
-
+  if (!state[key]) {
     return false;
-
   }
 
+  // New uploads return an object with storagePath/filename; migrated photos
+  // use legacyPhotoId/filename. Never stringify these objects to
+  // "[object Object]", because that destroys the reference needed for preview
+  // and PDF export.
+  let value = null;
 
-  const clean =
-    cleanText(
-      photo
+  if (typeof photo === 'string') {
+    value = cleanText(photo);
+  } else if (photo && typeof photo === 'object' && !Array.isArray(photo)) {
+    const legacyPhotoId = cleanText(
+      photo.legacyPhotoId ?? photo.legacy_photo_id ?? ''
+    );
+    const storagePath = cleanText(
+      photo.storagePath ?? photo.storage_path ?? ''
+    );
+    const directImage = cleanText(
+      photo.url ?? photo.src ?? photo.data ?? photo.image ?? ''
     );
 
+    if (legacyPhotoId || storagePath) {
+      value = {
+        ...photo,
+        ...(legacyPhotoId ? { legacyPhotoId } : {}),
+        ...(storagePath ? { storagePath } : {})
+      };
+    } else if (directImage) {
+      value = directImage;
+    }
+  }
 
-  if (
-    !clean
-  ) {
-
+  if (!value || (typeof value === 'string' && !value.trim())) {
     return false;
-
   }
 
-
-  if (
-    !Array.isArray(
-      state[key].photos
-    )
-  ) {
-
-    state[key].photos =
-      [];
-
+  if (!Array.isArray(state[key].photos)) {
+    state[key].photos = [];
   }
 
-
-  state[key].photos.push(
-    clean
-  );
-
-
+  state[key].photos.push(value);
   return true;
 
 }
