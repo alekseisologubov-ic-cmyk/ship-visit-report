@@ -77,7 +77,7 @@ import {
   getReportByReference,
   submitShipResponse,
   getAuthContext,
-  signInWithPassword,
+  signInWithMagicLink,
   signOutUser,
   getPhotoDisplayUrl,
   migrateEmbeddedPhotosToStorage
@@ -270,6 +270,7 @@ let shipResponseLinkMode = false;
 ============================================================ */
 
 let currentAppRole = null;
+let currentAuthUserId = null;
 let adminMode = false;
 let appBindingsInitialized = false;
 let loginFormBound = false;
@@ -281,6 +282,20 @@ function isAdmin(){
 
 function isReviewer(){
   return currentAppRole === 'reviewer';
+}
+
+function isReportUser(){
+  return currentAppRole === 'user';
+}
+
+function canDeleteReport(report){
+  if(isAdmin()) return true;
+  return Boolean(
+    isReportUser() &&
+    currentAuthUserId &&
+    report?.created_by &&
+    String(report.created_by) === String(currentAuthUserId)
+  );
 }
 
 
@@ -320,49 +335,19 @@ function(){
    ADMIN DELETE BUTTON
 ============================================================ */
 
-function adminDeleteButton(
-  reportId
-){
-
-  if(
-    !isAdmin()
-  ){
-
-    return '';
-
-  }
-
-
+function reportDeleteButton(report){
+  if(!canDeleteReport(report)) return '';
+  const reportId = report?.id;
+  if(!reportId) return '';
   return `
-
     <button
       type="button"
       class="admin-delete"
       data-admin-delete="${escapeHtml(reportId)}"
-      style="
-        width:100%;
-        min-height:38px;
-        margin-top:8px;
-        padding:8px 10px;
-        border:1px solid #CC0000;
-        border-radius:7px;
-        background:#FFFFFF;
-        color:#CC0000;
-        font-family:inherit;
-        font-size:9px;
-        font-weight:800;
-        cursor:pointer;
-      "
-    >
-
-      DELETE REPORT
-
-    </button>
-
+      style="width:100%;min-height:34px;margin-top:8px;padding:7px 10px;border:1px solid #CC0000;border-radius:7px;background:#FFFFFF;color:#CC0000;font-family:inherit;font-size:9px;font-weight:800;cursor:pointer;"
+    >DELETE REPORT</button>
   `;
-
 }
-
 
 /* ============================================================
    START
@@ -389,9 +374,9 @@ async function initializeApp(){
       showScreen('login');
       return;
     }
-    if(!['admin','reviewer'].includes(context.role)){
+    if(!['admin','reviewer','user'].includes(context.role)){
       await signOutUser().catch(() => {});
-      showLoginMessage('Your account has no assigned app role. Ask an administrator to assign Admin or Reviewer access.');
+      showLoginMessage('This email account is not enabled for Ship Visit Report. Contact the administrator.');
       showScreen('login');
       return;
     }
@@ -410,25 +395,18 @@ function bindLoginForm(){
   form.addEventListener('submit', async event => {
     event.preventDefault();
     const email = document.getElementById('loginEmail')?.value || '';
-    const password = document.getElementById('loginPassword')?.value || '';
     const button = document.getElementById('loginSubmit');
-    if(button){ button.disabled = true; button.textContent = 'SIGNING IN…'; }
+    if(button){ button.disabled = true; button.textContent = 'SENDING LINK…'; }
     showLoginMessage('');
     try{
-      const result = await signInWithPassword(email, password);
+      const result = await signInWithMagicLink(email);
       if(result?.error) throw result.error;
-      const context = await getAuthContext();
-      if(!context || !['admin','reviewer'].includes(context.role)){
-        await signOutUser().catch(() => {});
-        throw new Error('Access has not been assigned to this account. Ask an administrator to create your role.');
-      }
-      await initializeAuthorizedApp(context);
-      document.getElementById('loginPassword').value = '';
+      showLoginMessage('If this email is authorized, a secure sign-in link has been sent. Check your inbox and open the link on this device.');
     }catch(error){
-      console.error('Sign in failed:', error);
-      showLoginMessage(error?.message || 'Sign in failed. Check your email and password.');
+      console.error('Magic-link request failed:', error);
+      showLoginMessage(error?.message || 'Could not send the sign-in link. Check the email address and try again.');
     }finally{
-      if(button){ button.disabled = false; button.textContent = 'SIGN IN'; }
+      if(button){ button.disabled = false; button.textContent = 'EMAIL ME A SIGN-IN LINK'; }
     }
   });
 }
@@ -442,11 +420,12 @@ function showLoginMessage(message){
 }
 
 async function initializeAuthorizedApp(context){
-  if(!context || !['admin','reviewer'].includes(context.role)){
+  if(!context || !['admin','reviewer','user'].includes(context.role)){
     showScreen('login');
     return;
   }
   currentAppRole = context.role;
+  currentAuthUserId = context.user?.id || null;
   adminMode = isAdmin();
   applyRoleUI();
 
@@ -471,10 +450,10 @@ async function initializeAuthorizedApp(context){
 }
 
 function applyRoleUI(){
-  const adminOnlyIds = ['createReport','openReport'];
-  adminOnlyIds.forEach(id => {
+  const mayCreateReports = isAdmin() || isReportUser();
+  ['createReport','openReport'].forEach(id => {
     const element = document.getElementById(id);
-    if(element) element.style.display = isAdmin() ? '' : 'none';
+    if(element) element.style.display = mayCreateReports ? '' : 'none';
   });
   ['submittedReports','shipResponseReport'].forEach(id => {
     const element = document.getElementById(id);
@@ -483,7 +462,13 @@ function applyRoleUI(){
   const migration = document.getElementById('migratePhotosButton');
   if(migration) migration.style.display = isAdmin() ? '' : 'none';
   const roleLabel = document.getElementById('authRoleLabel');
-  if(roleLabel) roleLabel.textContent = isAdmin() ? 'SIGNED IN • ADMIN' : 'SIGNED IN • REVIEWER';
+  if(roleLabel){
+    roleLabel.textContent = isAdmin()
+      ? 'SIGNED IN • ADMIN'
+      : isReportUser()
+        ? 'SIGNED IN • USER'
+        : 'SIGNED IN • REVIEWER';
+  }
 }
 
 
@@ -1149,7 +1134,7 @@ function setupDefaultDate(){
 
 async function handleStartReport(){
 
-  if(!isAdmin()){ alert('Admin access is required to create reports.'); return; }
+  if(!isAdmin() && !isReportUser()){ alert('Admin or User access is required to create reports.'); return; }
 
   const ship =
     document
@@ -1518,7 +1503,7 @@ function bindChecklistButtons(){
 
 async function openShipReview(){
 
-  if(!isAdmin()){ alert('Admin access is required to send reports for ship review.'); return; }
+  if(!isAdmin() && !isReportUser()){ alert('Admin or report-owner access is required to send reports for ship review.'); return; }
 
   const saved =
     await saveCurrentReport();
@@ -2485,7 +2470,8 @@ function getDepartmentGeneralCommentsFromReport(report, sectionId){
 ============================================================ */
 
 function renderCurrentReportSummary(
-  report
+  report,
+  includeUnchecked = false
 ){
 
   const container =
@@ -2506,7 +2492,7 @@ function renderCurrentReportSummary(
   const points =
     getReportPoints(
       report,
-      true
+      !includeUnchecked
     );
 
 
@@ -3223,8 +3209,8 @@ function renderOpenReports(
 
             </div>
 
-            ${adminDeleteButton(
-              report.id
+            ${reportDeleteButton(
+              report
             )}
 
           </div>
@@ -3280,6 +3266,36 @@ function renderOpenReports(
 
 
 /* ============================================================
+   READ-ONLY REPORT VIEW FOR STANDARD USERS
+============================================================ */
+
+async function openReadOnlyReport(report, returnScreen = 'submitted'){
+  try{
+    if(report?.id && !report?.report_data?.state){
+      const detailed = await withTimeout(
+        getReport(report.id),
+        60000,
+        'Loading report details timed out after 60 seconds.'
+      );
+      if(!detailed?.success || !detailed.data){
+        throw (detailed?.error || new Error('Could not load report details.'));
+      }
+      report = detailed.data;
+    }
+    currentSubmittedReport = report;
+    summaryReturnScreen = returnScreen;
+    loadReport(report);
+    renderCurrentReportSummary(report, true);
+    setSummaryMode(true);
+    showScreen('summary');
+  }catch(error){
+    console.error('openReadOnlyReport:', error);
+    showError('Could not open this report.', error);
+  }
+}
+
+
+/* ============================================================
    OPEN SAVED REPORT
 ============================================================ */
 
@@ -3293,6 +3309,11 @@ async function openSavedReport(
       const detailed = await withTimeout(getReport(report.id), 60000, 'Loading report details timed out after 60 seconds.');
       if(!detailed?.success || !detailed.data) throw (detailed?.error || new Error('Could not load report details.'));
       report = detailed.data;
+    }
+
+    if(isReportUser() && String(report?.created_by || '') !== String(currentAuthUserId || '')){
+      await openReadOnlyReport(report, 'open');
+      return;
     }
 
     loadReport(
@@ -3628,7 +3649,7 @@ function renderShipResponseReportCard(
         class="response-status"
       >
 
-        IN REVIEW • OPEN TO ADD SHIP COMMENTS AND SUBMIT
+        ${isReportUser() ? 'IN REVIEW • READ ONLY' : 'IN REVIEW • OPEN TO ADD SHIP COMMENTS AND SUBMIT'}
 
       </div>
 
@@ -3644,13 +3665,13 @@ function renderShipResponseReportCard(
         "
       >
 
-        OPEN REPORT
+        ${isReportUser() ? 'VIEW REPORT' : 'OPEN REPORT'}
 
       </button>
 
 
       ${
-        isAdmin()
+        canDeleteReport(report)
           ? `
 
             <button
@@ -4441,9 +4462,13 @@ function bindShipResponseButtons(){
             }
 
 
-            openShipResponseReport(
-              result.data
-            );
+            if(isReportUser()){
+              await openReadOnlyReport(result.data, 'responses');
+            }else{
+              openShipResponseReport(
+                result.data
+              );
+            }
 
           }
         );
@@ -4682,16 +4707,9 @@ async function handleAdminDeleteReport(
   reportId
 ){
 
-  if(
-    !isAdmin()
-  ){
-
-    alert(
-      'Administrator access required.'
-    );
-
+  if(!isAdmin() && !isReportUser()){
+    alert('You do not have permission to delete this report.');
     return;
-
   }
 
 
@@ -4726,6 +4744,12 @@ async function handleAdminDeleteReport(
         './supabase.js'
       );
 
+    if(!isAdmin()){
+      const ownerResult = await module.getReportOwnership(reportId);
+      if(!ownerResult?.success || String(ownerResult.data?.created_by || '') !== String(currentAuthUserId || '')){
+        throw new Error('You can delete only reports you created.');
+      }
+    }
 
     if(
       typeof module.deleteReport !==
@@ -5237,12 +5261,12 @@ function renderSubmittedReports(
               "
             >
 
-              REVIEW REPORT
+              ${isReportUser() ? 'VIEW REPORT' : 'REVIEW REPORT'}
 
             </button>
 
-            ${adminDeleteButton(
-              report.id
+            ${reportDeleteButton(
+              report
             )}
 
           </div>
@@ -5337,7 +5361,8 @@ async function openSubmittedReport(
     ){
 
       renderCurrentReportSummary(
-        report
+        report,
+        isReportUser()
       );
 
     }
@@ -5655,29 +5680,22 @@ function bindHeaderBackButtons(){
   bindClick(
     'summaryHeaderBack',
     async function(){
-
-      if(
-        summaryReturnScreen ===
-        'submitted'
-      ){
-
-        showScreen(
-          'submitted'
-        );
-
-
+      if(summaryReturnScreen === 'submitted'){
+        showScreen('submitted');
         await loadSubmittedReportsScreen();
-
-
         return;
-
       }
-
-
-      showScreen(
-        'checklist'
-      );
-
+      if(summaryReturnScreen === 'open'){
+        showScreen('open');
+        await loadOpenReportsScreen();
+        return;
+      }
+      if(summaryReturnScreen === 'responses'){
+        showScreen('responses');
+        await loadShipResponsesScreen();
+        return;
+      }
+      showScreen('checklist');
     }
   );
 
@@ -5761,12 +5779,13 @@ function bindAdminButton(){
     try{ await signOutUser(); }
     catch(error){ console.error('Sign out failed:', error); }
     currentAppRole = null;
+    currentAuthUserId = null;
     adminMode = false;
     shipResponseLinkMode = false;
     currentSubmittedReport = null;
     currentShipResponseReport = null;
-    const password = document.getElementById('loginPassword');
-    if(password) password.value = '';
+    const email = document.getElementById('loginEmail');
+    if(email) email.value = '';
     showLoginMessage('');
     showScreen('login');
   });
