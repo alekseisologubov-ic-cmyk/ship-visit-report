@@ -422,7 +422,7 @@ export async function getOpenReports(){
         .from(
           'ship_visit_reports'
         )
-        .select('id,ship,date_on,date_off,reviewer,status,created_at,updated_at,submitted_at')
+        .select('id,ship,date_on,date_off,reviewer,status,created_by,created_at,updated_at,submitted_at')
         .eq(
           'status',
           'open'
@@ -486,7 +486,7 @@ export async function getShipReviewReports(){
         .from(
           'ship_visit_reports'
         )
-        .select('id,ship,date_on,date_off,reviewer,status,created_at,updated_at,submitted_at')
+        .select('id,ship,date_on,date_off,reviewer,status,created_by,created_at,updated_at,submitted_at')
         .eq(
           'status',
           'ship_review'
@@ -550,7 +550,7 @@ export async function getSubmittedReports(){
         .from(
           'ship_visit_reports'
         )
-        .select('id,ship,date_on,date_off,reviewer,status,created_at,updated_at,submitted_at')
+        .select('id,ship,date_on,date_off,reviewer,status,created_by,created_at,updated_at,submitted_at')
         .eq(
           'status',
           'submitted'
@@ -759,10 +759,36 @@ export async function getAuthContext(){
   };
 }
 
-export async function signInWithPassword(email, password){
-  return supabase.auth.signInWithPassword({
-    email: String(email || '').trim(),
-    password: String(password || '')
+const APPROVED_SHIP_VISIT_EMAILS = new Set([
+  'levi.mezick@virginvoyages.com',
+  'seidy.soderholm@virginvoyages.com',
+  'don.habets@virginvoyages.com',
+  'eszter.tary@virginvoyages.com',
+  'marin.lukin@virginvoyages.com',
+  'edina.smajic-ic@virginvoyages.com',
+  'andras.rafajlovics@virginvoyages.com',
+  'andrew.diclementi@virginvoyages.com',
+  'jamesadam.noffsinger@virginvoyages.com',
+  'mycca.argawanon-ic@virginvoyages.com',
+  'aleksei.sologubov-ic@virginvoyages.com'
+]);
+
+export async function signInWithMagicLink(email){
+  const cleanEmail = String(email || '').trim().toLowerCase();
+  if(!cleanEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)){
+    throw new Error('Enter a valid work email address.');
+  }
+  if(!APPROVED_SHIP_VISIT_EMAILS.has(cleanEmail)){
+    throw new Error('This email address is not approved for Ship Visit Report access. Contact the administrator if you need access.');
+  }
+  return supabase.auth.signInWithOtp({
+    email: cleanEmail,
+    options: {
+      // Auth trigger assigns app roles only to the approved email addresses.
+      // Unapproved Auth users receive no app role and cannot read report data.
+      shouldCreateUser: true,
+      emailRedirectTo: window.location.origin
+    }
   });
 }
 
@@ -1013,56 +1039,44 @@ export async function sendShipReportEmail({
 
 
 /* =========================================================
+   REPORT OWNER (small query; does not download report photos)
+========================================================= */
+
+export async function getReportOwnership(reportId){
+  try{
+    const { data, error } = await supabase
+      .from('ship_visit_reports')
+      .select('id,created_by,ship,status')
+      .eq('id', reportId)
+      .single();
+    if(error) throw error;
+    return { success:true, data, error:null };
+  }catch(error){
+    return { success:false, data:null, error };
+  }
+}
+
+
+/* =========================================================
    DELETE REPORT
 ========================================================= */
 
-export async function deleteReport(
-  reportId
-){
-
+export async function deleteReport(reportId){
   try{
-
-    const result =
-      await supabase
-        .from(
-          'ship_visit_reports'
-        )
-        .delete()
-        .eq(
-          'id',
-          reportId
-        );
-
-
-    if(
-      result.error
-    ){
-
-      throw result.error;
-
+    const { data, error } = await supabase
+      .from('ship_visit_reports')
+      .delete()
+      .eq('id', reportId)
+      .select('id')
+      .maybeSingle();
+    if(error) throw error;
+    if(!data?.id){
+      throw new Error('Report was not deleted. You may only delete reports you created.');
     }
-
-
-    return {
-
-      success:true,
-
-      error:null
-
-    };
-
+    return { success:true, data, error:null };
   }catch(error){
-
-    return {
-
-      success:false,
-
-      error
-
-    };
-
+    return { success:false, error };
   }
-
 }
 
 
@@ -1256,6 +1270,7 @@ export default {
   sendShipReportEmail,
 
   deleteReport,
+  getReportOwnership,
 
   getReportColor,
 
@@ -1267,7 +1282,7 @@ export default {
 
   reportNeedsFollowUp,
   getAuthContext,
-  signInWithPassword,
+  signInWithMagicLink,
   signOutUser,
   getPhotoDisplayUrl,
   getPhotoDataUrl,
