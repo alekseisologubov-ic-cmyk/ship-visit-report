@@ -2523,6 +2523,37 @@ async function openPhotoLightbox(source, getThumbnailUrl){
   }
 }
 
+function photoFileDisplayNameForChecklist(source, index){
+  // Existing legacy photos are stored as data URLs, so their original upload
+  // filenames were not retained. Use a stored filename/path when available;
+  // otherwise use a stable, human-readable label.
+  let candidate = '';
+  if(source && typeof source === 'object'){
+    candidate = source.fileName || source.filename || source.originalName || source.name || '';
+    if(!candidate && typeof source.storagePath === 'string') candidate = source.storagePath;
+  }else if(typeof source === 'string' && source.startsWith('storage://')){
+    candidate = source.slice('storage://'.length);
+  }
+
+  candidate = String(candidate || '').split(/[?#]/, 1)[0].replace(/\\/g, '/');
+  if(candidate.includes('/')) candidate = candidate.slice(candidate.lastIndexOf('/') + 1);
+  try{ candidate = decodeURIComponent(candidate); }catch(_error){}
+  candidate = candidate.trim();
+  if(candidate && /\.[a-z0-9]{2,5}$/i.test(candidate)) return candidate;
+
+  let extension = 'jpg';
+  const mimeMatch = (typeof source === 'string' ? source : '')
+    .match(/^data:image\/([a-z0-9.+-]+);/i);
+  if(mimeMatch){
+    const mimeExtension = mimeMatch[1].toLowerCase();
+    extension = mimeExtension === 'jpeg' ? 'jpg' : mimeExtension.replace(/^svg\+xml$/, 'svg');
+  }else if(source && typeof source === 'object' && typeof source.type === 'string'){
+    const typeExtension = source.type.split('/')[1];
+    if(typeExtension) extension = typeExtension.toLowerCase() === 'jpeg' ? 'jpg' : typeExtension.toLowerCase();
+  }
+  return `Photo ${String(index + 1).padStart(2, '0')}.${extension}`;
+}
+
 function renderPhotos(
   key
 ){
@@ -2533,75 +2564,65 @@ function renderPhotos(
   const photos = Array.isArray(item?.photos) ? item.photos : [];
   container.innerHTML = '';
 
+  // Display an attachment-style list rather than downloading/rendering every
+  // image inline. Actual image bytes are requested only after a file is clicked.
+  container.style.display = 'flex';
+  container.style.flexDirection = 'column';
+  container.style.alignItems = 'stretch';
+  container.style.gap = '8px';
+
   photos.forEach((source, index) => {
     const wrapper = document.createElement('div');
-    wrapper.className = 'photo';
-
-    const image = document.createElement('img');
-    image.alt = `Reviewer photo ${index + 1}; click to enlarge`;
-    image.loading = 'lazy';
-    image.decoding = 'async';
-    image.fetchPriority = 'low';
-    image.tabIndex = 0;
-    image.setAttribute('role', 'button');
-    image.setAttribute('aria-label', `Open photo ${index + 1}`);
-
-    let thumbnailPromise = null;
-    let thumbnailUrl = '';
-    const loadThumbnail = () => {
-      if(thumbnailUrl) return Promise.resolve(thumbnailUrl);
-      if(thumbnailPromise) return thumbnailPromise;
-
-      thumbnailPromise = (async () => {
-        const path = photoStoragePathForChecklist(source);
-        const url = path ? await getPhotoDisplayUrl(source) : directPhotoUrlForChecklist(source);
-        if(!url) throw new Error('Photo reference is missing.');
-        thumbnailUrl = url;
-        if(image.isConnected){
-          image.src = url;
-          image.dataset.photoLoaded = 'true';
-        }
-        return url;
-      })().catch(error => {
-        thumbnailPromise = null;
-        console.error('Could not load photo thumbnail:', error);
-        if(image.isConnected) image.alt = `Photo ${index + 1} could not be loaded; click to retry`;
-        throw error;
-      });
-
-      return thumbnailPromise;
-    };
-
-    const activatePreview = () => openPhotoLightbox(source, loadThumbnail);
-    image.addEventListener('click', activatePreview);
-    image.addEventListener('keydown', event => {
-      if(event.key === 'Enter' || event.key === ' '){
-        event.preventDefault();
-        activatePreview();
-      }
+    wrapper.className = 'photo photo-file-entry';
+    Object.assign(wrapper.style, {
+      position: 'relative',
+      display: 'flex',
+      alignItems: 'center',
+      width: '100%',
+      maxWidth: '520px',
+      minHeight: '46px',
+      boxSizing: 'border-box',
+      padding: '8px 48px 8px 12px',
+      margin: '0',
+      border: '1px solid rgba(60, 16, 83, 0.22)',
+      borderRadius: '8px',
+      background: '#fff'
     });
 
-    // Only assign image.src when a thumbnail approaches the viewport.
-    // Clicking before it becomes visible will load it on demand for the popup.
-    if('IntersectionObserver' in window){
-      const observer = new IntersectionObserver(entries => {
-        if(entries.some(entry => entry.isIntersecting)){
-          observer.disconnect();
-          loadThumbnail().catch(() => {});
-        }
-      }, { rootMargin: '180px' });
-      observer.observe(image);
-    }else{
-      loadThumbnail().catch(() => {});
-    }
-
-    wrapper.appendChild(image);
+    const fileButton = document.createElement('button');
+    fileButton.type = 'button';
+    fileButton.className = 'photo-file-open';
+    fileButton.textContent = photoFileDisplayNameForChecklist(source, index);
+    fileButton.title = 'Click to open photo preview';
+    fileButton.setAttribute('aria-label', `Open photo ${index + 1}: ${fileButton.textContent}`);
+    Object.assign(fileButton.style, {
+      display: 'block',
+      flex: '1 1 auto',
+      minWidth: '0',
+      padding: '4px 0',
+      border: '0',
+      background: 'transparent',
+      color: '#3C1053',
+      font: '600 14px/1.4 Arial, sans-serif',
+      textAlign: 'left',
+      textDecoration: 'underline',
+      overflowWrap: 'anywhere',
+      cursor: 'pointer'
+    });
+    fileButton.addEventListener('click', () => {
+      openPhotoLightbox(source, async () => {
+        const storagePath = photoStoragePathForChecklist(source);
+        if(storagePath) return await getPhotoDisplayUrl(source);
+        return directPhotoUrlForChecklist(source) || await getPhotoDisplayUrl(source);
+      });
+    });
+    wrapper.appendChild(fileButton);
 
     const remove = document.createElement('button');
     remove.type = 'button';
     remove.className = 'photo-remove';
     remove.textContent = '×';
-    remove.setAttribute('aria-label', 'Remove photo');
+    remove.setAttribute('aria-label', `Remove ${fileButton.textContent}`);
     remove.addEventListener('click', async function(event){
       event.stopPropagation();
       const removedPhoto = getItem(key)?.photos?.[index];
@@ -2614,7 +2635,6 @@ function renderPhotos(
         catch(storageError){ console.warn('Photo reference removed, but Storage cleanup failed:', storageError); }
       }
     });
-
     wrapper.appendChild(remove);
     container.appendChild(wrapper);
   });
