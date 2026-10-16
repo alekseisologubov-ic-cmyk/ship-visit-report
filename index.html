@@ -73,12 +73,29 @@
   class="app"
 >
 
+  <!-- AUTHENTICATION: all report screens stay hidden until Supabase verifies the user's role. -->
+  <section id="login" style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:#F8F6F9;box-sizing:border-box;">
+    <div style="width:100%;max-width:430px;background:#FFFFFF;border:1px solid #E7E1EA;border-radius:16px;padding:28px;box-shadow:0 8px 30px rgba(60,16,83,.08);box-sizing:border-box;">
+      <div style="font-size:11px;font-weight:800;letter-spacing:.08em;color:#3C1053;">— VIRGIN VOYAGES</div>
+      <h1 style="margin:8px 0 5px;color:#3C1053;font-size:27px;">Ship Visit Report</h1>
+      <p style="margin:0 0 22px;color:#666;font-size:13px;line-height:1.5;">Sign in with your assigned work account.</p>
+      <form id="loginForm">
+        <label for="loginEmail" style="display:block;margin:12px 0 6px;font-size:12px;font-weight:700;color:#333;">Email</label>
+        <input id="loginEmail" name="email" type="email" required autocomplete="username" style="width:100%;box-sizing:border-box;padding:12px;border:1px solid #D8D0DD;border-radius:8px;font:inherit;">
+        <label for="loginPassword" style="display:block;margin:14px 0 6px;font-size:12px;font-weight:700;color:#333;">Password</label>
+        <input id="loginPassword" name="password" type="password" required autocomplete="current-password" style="width:100%;box-sizing:border-box;padding:12px;border:1px solid #D8D0DD;border-radius:8px;font:inherit;">
+        <button id="loginSubmit" type="submit" class="btn-primary" style="width:100%;margin-top:20px;min-height:44px;">SIGN IN</button>
+        <div id="loginError" role="alert" aria-live="polite" style="display:none;margin-top:14px;padding:10px;border-radius:8px;background:#FFF0F0;color:#B00020;font-size:12px;line-height:1.5;"></div>
+      </form>
+      <p style="margin:18px 0 0;color:#777;font-size:11px;line-height:1.5;">Access is limited to accounts assigned an Admin or Reviewer role.</p>
+    </div>
+  </section>
 
   <!-- =====================================================
        HOME
   ====================================================== -->
 
-  <section id="home">
+  <section id="home" class="hidden">
 
     <div class="band">
 
@@ -186,15 +203,14 @@
 
           <h2>
 
-            SHIP RESPONSE REPORT
+            IN REVIEW
 
           </h2>
 
 
           <p>
 
-            Respond to checklist points
-            requiring ship follow-up.
+            Open reports awaiting ship response.
 
           </p>
 
@@ -204,25 +220,13 @@
       </div>
 
 
-      <!-- ADMIN -->
-
-      <div
-        style="
-          margin-top:20px;
-          text-align:right;
-        "
-      >
-
-        <button
-          type="button"
-          id="adminButton"
-          class="admin-button"
-        >
-
-          ADMIN
-
-        </button>
-
+      <!-- ACCOUNT / ADMIN TOOLS -->
+      <div style="margin-top:20px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+        <div id="authRoleLabel" style="font-size:10px;font-weight:800;letter-spacing:.05em;color:#3C1053;">SIGNED IN</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;">
+          <button type="button" id="migratePhotosButton" class="btn-secondary" style="display:none;font-size:10px;">MIGRATE LEGACY PHOTOS TO STORAGE</button>
+          <button type="button" id="adminButton" class="admin-button">SIGN OUT</button>
+        </div>
       </div>
 
     </div>
@@ -1035,14 +1039,14 @@
 
       <div class="eyebrow">
 
-        — SHIP RESPONSE REPORT
+        — IN REVIEW
 
       </div>
 
 
       <h1>
 
-        Ship Response Report
+        In Review
 
       </h1>
 
