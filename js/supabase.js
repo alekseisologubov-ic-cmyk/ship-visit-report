@@ -414,55 +414,38 @@ export async function getOpenReports(){
 
   try{
 
+    // Fetch only the fields needed to display the Open Reports list.
+    // The full report_data is loaded separately when a report is opened.
     const result =
       await supabase
-        .from(
-          'ship_visit_reports'
+        .from('ship_visit_reports')
+        .select(
+          'id, ship, date_on, date_off, reviewer, status, updated_at'
         )
-        .select('*')
-        .eq(
-          'status',
-          'open'
-        )
+        .eq('status', 'open')
         .order(
           'updated_at',
-          {
-            ascending:false
-          }
+          { ascending: false }
         );
 
-
-    if(
-      result.error
-    ){
-
+    if(result.error){
       throw result.error;
-
     }
 
-
     return {
-
-      success:true,
-
-      data:
-        result.data ||
-        [],
-
-      error:null
-
+      success: true,
+      data: result.data || [],
+      error: null
     };
 
   }catch(error){
 
+    console.error('getOpenReports:', error);
+
     return {
-
-      success:false,
-
-      data:[],
-
+      success: false,
+      data: [],
       error
-
     };
 
   }
