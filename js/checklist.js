@@ -2570,23 +2570,26 @@ function renderPhotos(
   container.style.display = 'flex';
   container.style.flexDirection = 'column';
   container.style.alignItems = 'stretch';
-  container.style.gap = '8px';
+  container.style.gap = '5px';
 
   photos.forEach((source, index) => {
     const wrapper = document.createElement('div');
-    wrapper.className = 'photo photo-file-entry';
+    // Do not use the generic 'photo' class: its thumbnail styles make these
+    // filename-only attachment rows unnecessarily large.
+    wrapper.className = 'photo-file-entry';
     Object.assign(wrapper.style, {
       position: 'relative',
       display: 'flex',
       alignItems: 'center',
       width: '100%',
-      maxWidth: '520px',
-      minHeight: '46px',
+      maxWidth: '300px',
+      height: '34px',
+      minHeight: '34px',
       boxSizing: 'border-box',
-      padding: '8px 48px 8px 12px',
+      padding: '3px 32px 3px 8px',
       margin: '0',
       border: '1px solid rgba(60, 16, 83, 0.22)',
-      borderRadius: '8px',
+      borderRadius: '6px',
       background: '#fff'
     });
 
@@ -2600,11 +2603,11 @@ function renderPhotos(
       display: 'block',
       flex: '1 1 auto',
       minWidth: '0',
-      padding: '4px 0',
+      padding: '0',
       border: '0',
       background: 'transparent',
       color: '#3C1053',
-      font: '600 14px/1.4 Arial, sans-serif',
+      font: '600 12px/1.2 Arial, sans-serif',
       textAlign: 'left',
       textDecoration: 'underline',
       overflowWrap: 'anywhere',
@@ -2623,6 +2626,25 @@ function renderPhotos(
     remove.type = 'button';
     remove.className = 'photo-remove';
     remove.textContent = '×';
+    Object.assign(remove.style, {
+      position: 'absolute',
+      top: '6px',
+      right: '6px',
+      width: '20px',
+      height: '20px',
+      minWidth: '20px',
+      minHeight: '20px',
+      padding: '0',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      border: '0',
+      borderRadius: '50%',
+      background: '#d71920',
+      color: '#fff',
+      font: '700 15px/20px Arial, sans-serif',
+      cursor: 'pointer'
+    });
     remove.setAttribute('aria-label', `Remove ${fileButton.textContent}`);
     remove.addEventListener('click', async function(event){
       event.stopPropagation();
