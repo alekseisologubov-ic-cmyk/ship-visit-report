@@ -749,138 +749,69 @@ function makeFileName(
 }
 
 
-/* ============================================================
-   PDF IMAGE
-============================================================ */
+/* Embed only actual browser-decoded image data in PDFs. jsPDF needs a supported
+   image format; photo references and unsupported formats are resolved/converted
+   before calling addImage, rather than being silently skipped. */
+function supportedPdfImageFormat(dataUrl){
+  const match = /^data:image\/(jpeg|jpg|png);base64,/i.exec(String(dataUrl || ''));
+  if(!match) return null;
+  return match[1].toLowerCase() === 'png' ? 'PNG' : 'JPEG';
+}
 
-function addImageToPDF(
-  doc,
-  source,
-  x,
-  y,
-  maxWidth,
-  maxHeight
-){
-
-  if(
-    !source
-  ){
-
-    return {
-
-      width:0,
-
-      height:0
-
-    };
-
+async function convertPhotoToPdfDataUrl(source, filename = 'photo'){
+  if(typeof source !== 'string' || !source.startsWith('data:image/')){
+    throw new Error(`${filename}: the photo did not resolve to image data.`);
   }
 
+  if(supportedPdfImageFormat(source)) return source;
 
-  try{
+  // Normalize WebP/GIF/BMP/other browser-supported formats to JPEG for jsPDF.
+  const image = new Image();
+  image.decoding = 'async';
+  await new Promise((resolve, reject) => {
+    image.onload = resolve;
+    image.onerror = () => reject(new Error(`${filename}: the image format could not be decoded for PDF export.`));
+    image.src = source;
+  });
 
-    const properties =
-      doc.getImageProperties(
-        source
-      );
-
-
-    let width =
-      maxWidth;
-
-
-    let height =
-      maxHeight;
-
-
-    if(
-      properties &&
-      properties.width &&
-      properties.height
-    ){
-
-      const ratio =
-        properties.width /
-        properties.height;
-
-
-      width =
-        maxWidth;
-
-
-      height =
-        width /
-        ratio;
-
-
-      if(
-        height > maxHeight
-      ){
-
-        height =
-          maxHeight;
-
-
-        width =
-          height *
-          ratio;
-
-      }
-
-    }
-
-
-    try{
-
-      doc.addImage(
-        source,
-        'JPEG',
-        x,
-        y,
-        width,
-        height
-      );
-
-    }catch(jpegError){
-
-      doc.addImage(
-        source,
-        'PNG',
-        x,
-        y,
-        width,
-        height
-      );
-
-    }
-
-
-    return {
-
-      width,
-
-      height
-
-    };
-
-  }catch(error){
-
-    console.warn(
-      'Could not add report image:',
-      error
-    );
-
-
-    return {
-
-      width:0,
-
-      height:0
-
-    };
-
+  const canvas = document.createElement('canvas');
+  canvas.width = image.naturalWidth || image.width;
+  canvas.height = image.naturalHeight || image.height;
+  if(!canvas.width || !canvas.height){
+    throw new Error(`${filename}: the image has invalid dimensions.`);
   }
 
+  const context = canvas.getContext('2d');
+  if(!context) throw new Error(`${filename}: could not prepare the image for PDF export.`);
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
+  return canvas.toDataURL('image/jpeg', 0.9);
+}
+
+function addImageToPDF(doc, source, x, y, maxWidth, maxHeight){
+  if(typeof source !== 'string' || !source.startsWith('data:image/')){
+    throw new Error('A photo was not loaded before PDF embedding. Please try again and check the photo access permissions.');
+  }
+
+  const format = supportedPdfImageFormat(source);
+  if(!format){
+    throw new Error('A photo is in an unsupported format for PDF embedding.');
+  }
+
+  const properties = doc.getImageProperties(source);
+  if(!properties?.width || !properties?.height){
+    throw new Error('A photo could not be decoded for PDF embedding.');
+  }
+
+  const ratio = properties.width / properties.height;
+  let width = maxWidth;
+  let height = width / ratio;
+  if(height > maxHeight){
+    height = maxHeight;
+    width = height * ratio;
+  }
+
+  doc.addImage(source, format, x, y, width, height);
+  return { width, height };
 }
 
 
@@ -889,18 +820,50 @@ function addImageToPDF(
    remain intact. */
 async function stateWithResolvedPhotos(inputState){
   const state = JSON.parse(JSON.stringify(inputState || {}));
-  for(const item of Object.values(state)){
+
+  for(const [itemKey, item] of Object.entries(state)){
     if(!item || !Array.isArray(item.photos)) continue;
+
     const resolved = [];
-    for(const photo of item.photos){
-      if(photo && typeof photo === 'object' && (photo.storagePath || photo.legacyPhotoId)){
-        resolved.push(await getPhotoDataUrl(photo));
+    for(let index = 0; index < item.photos.length; index++){
+      const photo = item.photos[index];
+      const label = photo?.filename || photo?.name || `Photo ${String(index + 1).padStart(2, '0')}`;
+      let dataUrl = '';
+
+      if(typeof photo === 'string'){
+        if(photo.startsWith('data:image/')){
+          dataUrl = photo;
+        }else if(photo.startsWith('storage://') || /^https?:\/\//i.test(photo)){
+          dataUrl = await getPhotoDataUrl(photo);
+        }else{
+          throw new Error(`${label}: the saved photo entry has no image data or photo reference. Please do not delete it; the report needs a corrected photo reference.`);
+        }
+      }else if(photo && typeof photo === 'object'){
+        const normalizedRef = {
+          ...photo,
+          ...(photo.legacyPhotoId || photo.legacy_photo_id
+            ? { legacyPhotoId: photo.legacyPhotoId || photo.legacy_photo_id }
+            : {}),
+          ...(photo.storagePath || photo.storage_path
+            ? { storagePath: photo.storagePath || photo.storage_path }
+            : {})
+        };
+
+        if(normalizedRef.legacyPhotoId || normalizedRef.storagePath || normalizedRef.url || normalizedRef.src || normalizedRef.data || normalizedRef.image){
+          dataUrl = await getPhotoDataUrl(normalizedRef);
+        }else{
+          throw new Error(`${label}: the saved photo reference is missing its ID or storage path.`);
+        }
       }else{
-        resolved.push(photo);
+        throw new Error(`${label}: the saved photo entry is invalid.`);
       }
+
+      resolved.push(await convertPhotoToPdfDataUrl(dataUrl, label));
     }
+
     item.photos = resolved;
   }
+
   return state;
 }
 
@@ -1648,37 +1611,11 @@ export async function generatePDF(){
       );
 
 
-      point.photos.forEach(
-        photo => {
-
-          ensureSpace(
-            160
-          );
-
-
-          const image =
-            addImageToPDF(
-              doc,
-              photo,
-              margin + 31,
-              y,
-              145,
-              145
-            );
-
-
-          if(
-            image.height > 0
-          ){
-
-            y +=
-              image.height +
-              8;
-
-          }
-
-        }
-      );
+      for(const photo of point.photos){
+        ensureSpace(160);
+        const image = addImageToPDF(doc, photo, margin + 31, y, 145, 145);
+        y += image.height + 8;
+      }
 
     }
 
@@ -4245,37 +4182,11 @@ export async function generateFollowUpPDF(
         );
 
 
-        point.photos.forEach(
-          photo => {
-
-            ensureSpace(
-              155
-            );
-
-
-            const image =
-              addImageToPDF(
-                doc,
-                photo,
-                margin + 7,
-                y,
-                140,
-                140
-              );
-
-
-            if(
-              image.height > 0
-            ){
-
-              y +=
-                image.height +
-                8;
-
-            }
-
-          }
-        );
+        for(const photo of point.photos){
+          ensureSpace(155);
+          const image = addImageToPDF(doc, photo, margin + 7, y, 140, 140);
+          y += image.height + 8;
+        }
 
       }
 
