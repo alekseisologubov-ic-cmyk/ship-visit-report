@@ -84,43 +84,146 @@ import {
 } from './supabase.js';
 
 
-function photoImageAttributes(photo){
-  if(photo && typeof photo === 'object' && photo.storagePath){
-    return `data-photo-storage-path="${escapeHtml(photo.storagePath)}"`;
+// Photo sources stay in memory as references only; image bytes are requested
+// from Supabase only after the user clicks a filename button.
+const responsePhotoSources = new Map();
+let responsePhotoSequence = 0;
+let responsePhotoLightbox = null;
+let responsePhotoLightboxImage = null;
+let responsePhotoLightboxStatus = null;
+let responsePhotoPreviousOverflow = '';
+
+function responsePhotoFilename(photo, index = 0){
+  let name = '';
+  if(photo && typeof photo === 'object'){
+    name = photo.filename || photo.fileName || photo.originalName || photo.name || photo.storagePath || '';
+  }else if(typeof photo === 'string' && photo.startsWith('storage://')){
+    name = photo.slice('storage://'.length);
   }
-  if(typeof photo === 'string' && photo.startsWith('storage://')){
-    return `data-photo-storage-path="${escapeHtml(photo.slice('storage://'.length))}"`;
+  name = String(name || '').split(/[?#]/, 1)[0].replace(/\\/g, '/');
+  if(name.includes('/')) name = name.slice(name.lastIndexOf('/') + 1);
+  try{ name = decodeURIComponent(name); }catch(_error){}
+  return name.trim() || `Photo ${String(index + 1).padStart(2, '0')}.jpg`;
+}
+
+function photoImageAttributes(photo, index = 0){
+  const refId = `response-photo-${++responsePhotoSequence}`;
+  responsePhotoSources.set(refId, photo);
+  const filename = responsePhotoFilename(photo, index);
+  return `data-photo-ref-id="${refId}" data-photo-filename="${escapeHtml(filename)}" aria-label="Open ${escapeHtml(filename)}"`;
+}
+
+function ensureResponsePhotoLightbox(){
+  if(responsePhotoLightbox && responsePhotoLightbox.isConnected) return;
+  if(!document.getElementById('response-photo-lightbox-style')){
+    const style = document.createElement('style');
+    style.id = 'response-photo-lightbox-style';
+    style.textContent = `
+      #response-photo-lightbox[hidden]{display:none!important}
+      #response-photo-lightbox{position:fixed;inset:0;z-index:10001;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;background:rgba(12,5,18,.94)}
+      #response-photo-lightbox .response-photo-panel{position:relative;display:flex;align-items:center;justify-content:center;width:100%;height:100%;min-width:0;min-height:0}
+      #response-photo-lightbox .response-photo-image{max-width:96vw;max-height:90vh;width:auto;height:auto;object-fit:contain;border-radius:8px;box-shadow:0 8px 40px rgba(0,0,0,.45)}
+      #response-photo-lightbox .response-photo-close{position:absolute;top:0;right:0;z-index:2;width:44px;height:44px;border:1px solid #fff;border-radius:50%;background:#fff;color:#3C1053;font-size:30px;line-height:1;cursor:pointer}
+      #response-photo-lightbox .response-photo-status{color:#fff;font:600 16px/1.5 Arial,sans-serif;text-align:center;padding:16px;max-width:80vw}
+      #response-photo-lightbox .response-photo-status[hidden]{display:none}
+      .response-photo-open{display:flex;align-items:center;gap:10px;width:100%;min-height:46px;padding:10px 12px;border:1px solid rgba(60,16,83,.22);border-radius:8px;background:#fff;color:#3C1053;text-align:left;font:600 14px/1.4 Arial,sans-serif;cursor:pointer;overflow-wrap:anywhere}
+      .response-photo-open:hover{background:#f7f2fa}
+      .response-photo-open .response-photo-hint{margin-left:auto;font-size:11px;font-weight:400;white-space:nowrap;color:#6c5a76}
+      @media(max-width:600px){#response-photo-lightbox{padding:10px}#response-photo-lightbox .response-photo-image{max-width:98vw;max-height:86vh}.response-photo-open .response-photo-hint{display:none}}
+    `;
+    document.head.appendChild(style);
   }
-  if(typeof photo === 'string') return `src="${escapeHtml(photo)}"`;
-  const source = photo?.url || photo?.src || photo?.data || '';
-  return `src="${escapeHtml(source)}"`;
+  const overlay=document.createElement('div');
+  overlay.id='response-photo-lightbox';
+  overlay.hidden=true;
+  overlay.setAttribute('role','dialog');
+  overlay.setAttribute('aria-modal','true');
+  overlay.setAttribute('aria-label','Photo preview');
+  const panel=document.createElement('div');
+  panel.className='response-photo-panel';
+  const close=document.createElement('button');
+  close.type='button';
+  close.className='response-photo-close';
+  close.textContent='×';
+  close.setAttribute('aria-label','Close photo preview');
+  const status=document.createElement('div');
+  status.className='response-photo-status';
+  status.textContent='Loading photo…';
+  const img=document.createElement('img');
+  img.className='response-photo-image';
+  img.alt='Enlarged report photo';
+  img.hidden=true;
+  img.decoding='async';
+  panel.append(close,status,img);
+  overlay.appendChild(panel);
+  document.body.appendChild(overlay);
+  const closeLightbox=()=>{
+    overlay.hidden=true;
+    img.removeAttribute('src');
+    img.hidden=true;
+    img.onload=null;
+    img.onerror=null;
+    status.hidden=false;
+    status.textContent='Loading photo…';
+    document.body.style.overflow=responsePhotoPreviousOverflow;
+  };
+  close.addEventListener('click',closeLightbox);
+  overlay.addEventListener('click',event=>{if(event.target===overlay) closeLightbox();});
+  panel.addEventListener('click',event=>{if(event.target===panel) closeLightbox();});
+  document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!overlay.hidden)closeLightbox();});
+  responsePhotoLightbox=overlay;
+  responsePhotoLightboxImage=img;
+  responsePhotoLightboxStatus=status;
+  responsePhotoLightbox._close=closeLightbox;
+}
+
+async function openResponsePhoto(photo){
+  ensureResponsePhotoLightbox();
+  responsePhotoPreviousOverflow=document.body.style.overflow;
+  responsePhotoLightbox.hidden=false;
+  document.body.style.overflow='hidden';
+  responsePhotoLightboxImage.hidden=true;
+  responsePhotoLightboxImage.removeAttribute('src');
+  responsePhotoLightboxStatus.hidden=false;
+  responsePhotoLightboxStatus.textContent='Loading photo…';
+  try{
+    const url=await getPhotoDisplayUrl(photo);
+    if(!url) throw new Error('Photo reference is missing.');
+    if(responsePhotoLightbox.hidden) return;
+    responsePhotoLightboxImage.onload=()=>{
+      responsePhotoLightboxImage.hidden=false;
+      responsePhotoLightboxStatus.hidden=true;
+    };
+    responsePhotoLightboxImage.onerror=()=>{
+      responsePhotoLightboxImage.hidden=true;
+      responsePhotoLightboxStatus.hidden=false;
+      responsePhotoLightboxStatus.textContent='Could not load this photo. Close the preview and try again.';
+    };
+    responsePhotoLightboxImage.src=url;
+    if(responsePhotoLightboxImage.complete&&responsePhotoLightboxImage.naturalWidth>0){
+      responsePhotoLightboxImage.hidden=false;
+      responsePhotoLightboxStatus.hidden=true;
+    }
+  }catch(error){
+    console.error('Could not open report photo:',error);
+    if(!responsePhotoLightbox.hidden){
+      responsePhotoLightboxStatus.hidden=false;
+      responsePhotoLightboxStatus.textContent='Could not load this photo. Close the preview and try again.';
+    }
+  }
 }
 
 async function hydratePhotoElements(root){
   if(!root || typeof root.querySelectorAll !== 'function') return;
-  const images = [...root.querySelectorAll('img[data-photo-storage-path]')];
-  await Promise.all(images.map(async image => {
-    const path = image.dataset.photoStoragePath;
-    if(!path) return;
-    try{
-      let cached = storagePhotoUrlCache.get(path);
-      if(!cached || cached.expiresAt < Date.now()){
-        cached = {
-          expiresAt: Date.now() + 45 * 60 * 1000,
-          promise: getPhotoDisplayUrl({storagePath:path})
-        };
-        storagePhotoUrlCache.set(path, cached);
-      }
-      const url = await cached.promise;
-      if(url && image.isConnected){
-        image.src = url;
-        image.removeAttribute('data-photo-storage-path');
-      }
-    }catch(error){
-      console.error('Could not load report photo:', error);
-      image.alt = 'Photo could not be loaded';
-    }
-  }));
+  const buttons=[...root.querySelectorAll('button[data-photo-ref-id]')];
+  for(const button of buttons){
+    if(button.dataset.photoBound==='true') continue;
+    button.dataset.photoBound='true';
+    button.addEventListener('click',()=>{
+      const photo=responsePhotoSources.get(button.dataset.photoRefId);
+      if(photo) openResponsePhoto(photo);
+    });
+  }
 }
 
 
@@ -2812,17 +2915,14 @@ function renderSummaryPoint(
                 ${
                   point.photos
                     .map(
-                      photo => `
+                      (photo, photoIndex) => `
 
-                        <div
-                          class="response-photo"
-                        >
-
-                          <img
-                            ${photoImageAttributes(photo)}
-                            alt="Reviewer photo"
-                          >
-
+                        <div class="response-photo">
+                          <button type="button" class="response-photo-open" ${photoImageAttributes(photo, photoIndex)}>
+                            <span aria-hidden="true">▧</span>
+                            <span>${escapeHtml(responsePhotoFilename(photo, photoIndex))}</span>
+                            <span class="response-photo-hint">Click to preview</span>
+                          </button>
                         </div>
 
                       `
@@ -4134,17 +4234,14 @@ function renderShipResponsePoint(
                 ${
                   point.photos
                     .map(
-                      photo => `
+                      (photo, photoIndex) => `
 
-                        <div
-                          class="response-photo"
-                        >
-
-                          <img
-                            ${photoImageAttributes(photo)}
-                            alt="Reviewer photo"
-                          >
-
+                        <div class="response-photo">
+                          <button type="button" class="response-photo-open" ${photoImageAttributes(photo, photoIndex)}>
+                            <span aria-hidden="true">▧</span>
+                            <span>${escapeHtml(responsePhotoFilename(photo, photoIndex))}</span>
+                            <span class="response-photo-hint">Click to preview</span>
+                          </button>
                         </div>
 
                       `
@@ -5687,31 +5784,32 @@ function bindPhotoMigrationButton(){
   const button = document.getElementById('migratePhotosButton');
   if(!button || button.dataset.bound === 'true') return;
   button.dataset.bound = 'true';
+  button.textContent = 'OPTIMIZE PHOTOS FOR CLICK-TO-LOAD';
   button.addEventListener('click', async function(){
     if(!isAdmin()){
       alert('Administrator access required.');
       return;
     }
     const defaultId = '9a36fd0b-2bfd-4ced-af6b-abbbd9e640f2';
-    const reportId = window.prompt('Enter the open report ID to migrate its embedded photos into private Storage:', defaultId);
+    const reportId = window.prompt('Enter the open report ID whose embedded photos should be optimized for click-to-load:', defaultId);
     if(!reportId) return;
-    if(!window.confirm('Upload all embedded photos first, then replace the embedded data in this open report with Storage references? The original report is changed only after every upload succeeds.')) return;
+    if(!window.confirm('Move embedded photos into private, access-controlled photo records and replace the large image data in the report with small references? After this, each photo is fetched only when clicked. This change is transactional; continue?')) return;
     const oldText = button.textContent;
     button.disabled = true;
-    button.textContent = 'MIGRATING PHOTOS…';
+    button.textContent = 'OPTIMIZING PHOTOS…';
     try{
       const result = await migrateEmbeddedPhotosToStorage(reportId.trim(), progress => {
-        button.textContent = `UPLOADING ${progress.done}/${progress.total}…`;
+        button.textContent = 'OPTIMIZING PHOTOS…';
       });
       if(!result?.success) throw (result?.error || new Error('Photo migration failed.'));
-      alert(`${result.migrated} photo(s) moved to private Storage. The report data was updated only after uploads succeeded. Open the report and verify every photo before making any other changes.`);
+      alert(`${result.migrated} photo(s) prepared for click-to-load. The report now stores small references rather than full image data. Reopen the report, click several photos, and verify the PDF before making other changes.`);
       await loadOpenReportsScreen();
     }catch(error){
       console.error('Legacy photo migration failed:', error);
       alert('Photo migration failed. The original report data was kept.\n\n' + (error?.message || 'Unknown error'));
     }finally{
       button.disabled = false;
-      button.textContent = oldText;
+      button.textContent = 'OPTIMIZE PHOTOS FOR CLICK-TO-LOAD';
     }
   });
 }
