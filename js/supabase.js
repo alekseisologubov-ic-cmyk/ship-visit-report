@@ -789,6 +789,20 @@ function photoStoragePath(photo){
 
 export async function getPhotoDisplayUrl(photo, expiresIn = 3600){
   if(!photo) return '';
+
+  // Legacy photos are kept in a private table after optimization. This RPC is
+  // called only when a photo is clicked (or deliberately included in a PDF).
+  if(photo && typeof photo === 'object' && photo.legacyPhotoId){
+    const { data, error } = await supabase.rpc('get_legacy_report_photo', {
+      p_photo_id: photo.legacyPhotoId
+    });
+    if(error) throw error;
+    if(typeof data !== 'string' || !data.startsWith('data:image/')){
+      throw new Error('The stored photo data is missing or invalid.');
+    }
+    return data;
+  }
+
   const path = photoStoragePath(photo);
   if(typeof photo === 'string'){
     if(photo.startsWith('data:image/')) return photo;
@@ -861,63 +875,40 @@ export async function deleteStoragePhoto(storagePath){
   return { success:true };
 }
 
-/* One-time admin migration: upload every embedded data-URL photo first,
-   then update the report JSON only after every upload has succeeded. */
+export async function deleteLegacyPhotoData(legacyPhotoId){
+  if(!legacyPhotoId) return { success:true, deleted:false };
+  const { data, error } = await supabase.rpc('delete_legacy_report_photo', {
+    p_photo_id: legacyPhotoId
+  });
+  if(error) throw error;
+  return data || { success:true };
+}
+
+/* One-time Admin optimization. The SQL RPC moves embedded image strings into a
+   private table and replaces them with small references in one database transaction.
+   It avoids downloading and resending the complete multi-megabyte report JSON. */
 export async function migrateEmbeddedPhotosToStorage(reportId, onProgress = null){
-  const uploadedPaths = [];
   try{
     const auth = await getAuthContext();
     if(!auth || auth.role !== 'admin') throw new Error('Administrator access is required.');
-    const result = await getReport(reportId);
-    if(!result?.success || !result.data) throw (result?.error || new Error('Could not load report.'));
-    const report = result.data;
-    if(report.status !== 'open') throw new Error('Only an open report can be migrated with this tool.');
+    if(!reportId) throw new Error('Report ID is required.');
+    if(typeof onProgress === 'function') onProgress({ done:0, total:1, section:'Optimizing report photos' });
 
-    const updatedReportData = JSON.parse(JSON.stringify(report.report_data || {}));
-    const state = updatedReportData.state || {};
-    let total = 0;
-    for(const item of Object.values(state)){
-      if(Array.isArray(item?.photos)){
-        total += item.photos.filter(photo => typeof photo === 'string' && photo.startsWith('data:image/')).length;
-      }
-    }
-    if(total === 0) return { success:true, migrated:0, message:'No embedded photo data was found in this report.' };
-
-    let done = 0;
-    for(const [key, item] of Object.entries(state)){
-      if(!item || !Array.isArray(item.photos)) continue;
-      const nextPhotos = [];
-      for(const photo of item.photos){
-        if(typeof photo === 'string' && photo.startsWith('data:image/')){
-          const ref = await uploadPhotoDataUrl(reportId, key, photo, `legacy-${done + 1}.jpg`);
-          uploadedPaths.push(ref.storagePath);
-          nextPhotos.push(ref);
-          done++;
-          if(typeof onProgress === 'function') onProgress({ done, total, section:key });
-        }else{
-          nextPhotos.push(photo);
-        }
-      }
-      item.photos = nextPhotos;
-    }
-
-    updatedReportData.state = state;
-    const { data, error } = await supabase
-      .from('ship_visit_reports')
-      .update({ report_data:updatedReportData, updated_at:new Date().toISOString() })
-      .eq('id', reportId)
-      .eq('status', 'open')
-      .select('id,status')
-      .single();
+    const { data, error } = await supabase.rpc('prepare_report_photos_for_lazy_loading', {
+      p_report_id: reportId
+    });
     if(error) throw error;
-    if(!data) throw new Error('Report update was not confirmed. The original embedded photos have not been intentionally removed.');
-    return { success:true, migrated:done, uploadedPaths, data };
+    const migrated = Number(data?.migrated || 0);
+    if(typeof onProgress === 'function') onProgress({ done:1, total:1, section:'Complete' });
+    return {
+      success: data?.success !== false,
+      migrated,
+      data,
+      message: data?.message || 'Photo optimization complete.'
+    };
   }catch(error){
-    // Do not delete uploaded objects here. If an update request timed out after the
-    // database committed, automatic cleanup could break photo references in the report.
-    // Unreferenced uploads are safer than deleting a potentially referenced image.
-    console.error('migrateEmbeddedPhotosToStorage:', error, { uploadedPaths });
-    return { success:false, migrated:0, uploadedPaths, error };
+    console.error('prepare report photos for lazy loading:', error);
+    return { success:false, migrated:0, error };
   }
 }
 
