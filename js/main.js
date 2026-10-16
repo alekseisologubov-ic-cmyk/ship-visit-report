@@ -2289,6 +2289,14 @@ function getPhotos(
           'object'
         ){
 
+          // Keep lazy-loaded references intact. The legacyPhotoId is a safe
+          // reference to the private photo table; storagePath points to the
+          // private Storage bucket. Flattening either one to '' hides the
+          // photo from counts and prevents the click-to-preview button.
+          if( photo.legacyPhotoId || photo.storagePath ){
+            return photo;
+          }
+
           return (
             photo.url ||
             photo.src ||
