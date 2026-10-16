@@ -75,8 +75,53 @@ import {
   getSubmittedReports,
   getReport,
   getReportByReference,
-  submitShipResponse
+  submitShipResponse,
+  getAuthContext,
+  signInWithPassword,
+  signOutUser,
+  getPhotoDisplayUrl,
+  migrateEmbeddedPhotosToStorage
 } from './supabase.js';
+
+
+function photoImageAttributes(photo){
+  if(photo && typeof photo === 'object' && photo.storagePath){
+    return `data-photo-storage-path="${escapeHtml(photo.storagePath)}"`;
+  }
+  if(typeof photo === 'string' && photo.startsWith('storage://')){
+    return `data-photo-storage-path="${escapeHtml(photo.slice('storage://'.length))}"`;
+  }
+  if(typeof photo === 'string') return `src="${escapeHtml(photo)}"`;
+  const source = photo?.url || photo?.src || photo?.data || '';
+  return `src="${escapeHtml(source)}"`;
+}
+
+async function hydratePhotoElements(root){
+  if(!root || typeof root.querySelectorAll !== 'function') return;
+  const images = [...root.querySelectorAll('img[data-photo-storage-path]')];
+  await Promise.all(images.map(async image => {
+    const path = image.dataset.photoStoragePath;
+    if(!path) return;
+    try{
+      let cached = storagePhotoUrlCache.get(path);
+      if(!cached || cached.expiresAt < Date.now()){
+        cached = {
+          expiresAt: Date.now() + 45 * 60 * 1000,
+          promise: getPhotoDisplayUrl({storagePath:path})
+        };
+        storagePhotoUrlCache.set(path, cached);
+      }
+      const url = await cached.promise;
+      if(url && image.isConnected){
+        image.src = url;
+        image.removeAttribute('data-photo-storage-path');
+      }
+    }catch(error){
+      console.error('Could not load report photo:', error);
+      image.alt = 'Photo could not be loaded';
+    }
+  }));
+}
 
 
 /* ============================================================
@@ -121,20 +166,20 @@ let shipResponseLinkMode = false;
    ADMIN
 ============================================================ */
 
-const ADMIN_EMAILS = [
-  'alebass80@gmail.com'
-];
+let currentAppRole = null;
+let adminMode = false;
+let appBindingsInitialized = false;
+let loginFormBound = false;
+const storagePhotoUrlCache = new Map();
 
-
-let adminMode =
-  false;
 function isAdmin(){
-
-  return Boolean(
-    adminMode
-  );
-
+  return currentAppRole === 'admin';
 }
+
+function isReviewer(){
+  return currentAppRole === 'reviewer';
+}
+
 
 
 /* ============================================================
@@ -142,6 +187,7 @@ function isAdmin(){
 ============================================================ */
 
 const SCREENS = [
+  'login',
   'home',
   'setup',
   'checklist',
@@ -226,64 +272,115 @@ document.addEventListener(
 
 
 /* ============================================================
-   INITIALIZE
+   INITIALIZE AND AUTHENTICATE
 ============================================================ */
 
-function initializeApp(){
+async function initializeApp(){
+  console.log('Ship Visit Report starting...');
+  window.__SHIP_VISIT_SECTIONS__ = SECTIONS;
+  bindLoginForm();
 
-  console.log(
-    'Ship Visit Report starting...'
-  );
+  try{
+    const context = await getAuthContext();
+    if(!context){
+      showScreen('login');
+      return;
+    }
+    if(!['admin','reviewer'].includes(context.role)){
+      await signOutUser().catch(() => {});
+      showLoginMessage('Your account has no assigned app role. Ask an administrator to assign Admin or Reviewer access.');
+      showScreen('login');
+      return;
+    }
+    await initializeAuthorizedApp(context);
+  }catch(error){
+    console.error('Authentication check failed:', error);
+    showLoginMessage('Could not verify access. Please sign in again. ' + (error?.message || ''));
+    showScreen('login');
+  }
+}
 
+function bindLoginForm(){
+  const form = document.getElementById('loginForm');
+  if(!form || loginFormBound) return;
+  loginFormBound = true;
+  form.addEventListener('submit', async event => {
+    event.preventDefault();
+    const email = document.getElementById('loginEmail')?.value || '';
+    const password = document.getElementById('loginPassword')?.value || '';
+    const button = document.getElementById('loginSubmit');
+    if(button){ button.disabled = true; button.textContent = 'SIGNING IN…'; }
+    showLoginMessage('');
+    try{
+      const result = await signInWithPassword(email, password);
+      if(result?.error) throw result.error;
+      const context = await getAuthContext();
+      if(!context || !['admin','reviewer'].includes(context.role)){
+        await signOutUser().catch(() => {});
+        throw new Error('Access has not been assigned to this account. Ask an administrator to create your role.');
+      }
+      await initializeAuthorizedApp(context);
+      document.getElementById('loginPassword').value = '';
+    }catch(error){
+      console.error('Sign in failed:', error);
+      showLoginMessage(error?.message || 'Sign in failed. Check your email and password.');
+    }finally{
+      if(button){ button.disabled = false; button.textContent = 'SIGN IN'; }
+    }
+  });
+}
 
-  window.__SHIP_VISIT_SECTIONS__ =
-    SECTIONS;
+function showLoginMessage(message){
+  const element = document.getElementById('loginError');
+  if(element){
+    element.textContent = String(message || '');
+    element.style.display = message ? 'block' : 'none';
+  }
+}
 
+async function initializeAuthorizedApp(context){
+  if(!context || !['admin','reviewer'].includes(context.role)){
+    showScreen('login');
+    return;
+  }
+  currentAppRole = context.role;
+  adminMode = isAdmin();
+  applyRoleUI();
 
-  restoreAdminMode();
-
-  setupDefaultDate();
-
-  bindAdminButton();
-
-  bindHomeButtons();
-
-  bindCreateReport();
-
-  bindChecklistButtons();
-
-  bindReviewButtons();
-
-  bindSummaryButtons();
-
-  bindFollowUpButtons();
-
-  bindPDFButtons();
-
-  bindHeaderBackButtons();
-
-  updateAdminButton();
-
-
-  /*
-    If this app was opened from a Ship Visit Report email,
-    open the exact report directly in Ship Response mode.
-    Otherwise start normally on HOME.
-  */
-
-  if (!handleDirectShipResponseLink()) {
-
-    showScreen(
-      'home'
-    );
-
+  if(!appBindingsInitialized){
+    setupDefaultDate();
+    bindAdminButton();
+    bindHomeButtons();
+    bindCreateReport();
+    bindChecklistButtons();
+    bindReviewButtons();
+    bindSummaryButtons();
+    bindFollowUpButtons();
+    bindPDFButtons();
+    bindHeaderBackButtons();
+    bindPhotoMigrationButton();
+    appBindingsInitialized = true;
   }
 
+  updateAdminButton();
+  if(!handleDirectShipResponseLink()) showScreen('home');
+  console.log('Ship Visit Report ready for role:', currentAppRole);
+}
 
-  console.log(
-    'Ship Visit Report ready.'
-  );
-
+function applyRoleUI(){
+  const adminOnlyIds = ['createReport','openReport'];
+  adminOnlyIds.forEach(id => {
+    const element = document.getElementById(id);
+    if(element) element.style.display = isAdmin() ? '' : 'none';
+  });
+  ['submittedReports','shipResponseReport'].forEach(id => {
+    const element = document.getElementById(id);
+    if(element) element.style.display = '';
+  });
+  const migration = document.getElementById('migratePhotosButton');
+  if(migration) migration.style.display = isAdmin() ? '' : 'none';
+  const roleLabel = document.getElementById('authRoleLabel');
+  if(roleLabel) roleLabel.textContent = isAdmin() ? 'SIGNED IN • ADMIN' : 'SIGNED IN • REVIEWER';
 }
 
 
@@ -307,8 +404,7 @@ function applyShipOnlyUI(){
     'createReport',
     'openReport',
     'submittedReports',
-    'shipResponseReport',
-    'adminButton'
+    'shipResponseReport'
   ].forEach(
     id => {
 
@@ -625,6 +721,8 @@ export function showScreen(
       ? screen
       : 'home';
 
+  if(!currentAppRole && target !== 'login') target = 'login';
+  if(isReviewer() && ['setup','open','checklist','review'].includes(target)) target = 'home';
 
   /*
     A direct Ship Response link may only display the responses screen.
@@ -947,6 +1045,8 @@ function setupDefaultDate(){
 ============================================================ */
 
 async function handleStartReport(){
+
+  if(!isAdmin()){ alert('Admin access is required to create reports.'); return; }
 
   const ship =
     document
@@ -1315,6 +1415,8 @@ function bindChecklistButtons(){
 
 async function openShipReview(){
 
+  if(!isAdmin()){ alert('Admin access is required to send reports for ship review.'); return; }
+
   const saved =
     await saveCurrentReport();
 
@@ -1588,7 +1690,7 @@ function bindSummaryButtons(){
         );
 
 
-        pdf.generatePDF();
+        await pdf.generatePDF();
 
       }catch(error){
 
@@ -2717,9 +2819,7 @@ function renderSummaryPoint(
                         >
 
                           <img
-                            src="${escapeHtml(
-                              photo
-                            )}"
+                            ${photoImageAttributes(photo)}
                             alt="Reviewer photo"
                           >
 
@@ -2808,6 +2908,8 @@ function renderSummaryPoint(
     </div>
 
   `;
+
+  hydratePhotoElements(container);
 
 }
 /* ============================================================
@@ -3077,6 +3179,12 @@ async function openSavedReport(
 ){
 
   try{
+
+    if(report?.id && !report?.report_data?.state){
+      const detailed = await withTimeout(getReport(report.id), 15000, 'Loading report details timed out.');
+      if(!detailed?.success || !detailed.data) throw (detailed?.error || new Error('Could not load report details.'));
+      report = detailed.data;
+    }
 
     loadReport(
       report
@@ -3353,20 +3461,6 @@ function renderShipResponseReportCard(
   report
 ){
 
-  const points =
-    getReportPoints(
-      report,
-      true
-    );
-
-
-  const followUpCount =
-    points.filter(
-      point =>
-        point.followUpNeeded
-    ).length;
-
-
   return `
 
     <div
@@ -3417,21 +3511,6 @@ function renderShipResponseReportCard(
 
         <br>
 
-        <b>Report #:</b>
-
-        ${escapeHtml(
-          report.report_data?.reportRef ||
-          ''
-        )}
-
-        <br>
-
-        <b>Report #:</b>
-
-        ${escapeHtml(
-          report.report_data?.reportRef ||
-          ''
-        )}
 
       </div>
 
@@ -3440,9 +3519,7 @@ function renderShipResponseReportCard(
         class="response-status"
       >
 
-        ${points.length} CHECKED POINTS
-        &nbsp;•&nbsp;
-        ${followUpCount} FOLLOW-UPS
+        IN REVIEW • OPEN TO ADD SHIP COMMENTS AND SUBMIT
 
       </div>
 
@@ -3508,9 +3585,18 @@ function renderShipResponseReportCard(
    OPEN FULL SHIP RESPONSE REPORT
 ============================================================ */
 
-function openShipResponseReport(
+async function openShipResponseReport(
   report
 ){
+
+  if(report?.id && !report?.report_data?.state){
+    const detailed = await withTimeout(getReport(report.id), 15000, 'Loading report details timed out.');
+    if(!detailed?.success || !detailed.data){
+      showError('Could not open the ship response report.', detailed?.error || null);
+      return;
+    }
+    report = detailed.data;
+  }
 
   if(
     !report
@@ -4055,9 +4141,7 @@ function renderShipResponsePoint(
                         >
 
                           <img
-                            src="${escapeHtml(
-                              photo
-                            )}"
+                            ${photoImageAttributes(photo)}
                             alt="Reviewer photo"
                           >
 
@@ -4189,6 +4273,8 @@ function renderShipResponsePoint(
     </div>
 
   `;
+
+  hydratePhotoElements(container);
 
 }
 
@@ -5115,6 +5201,12 @@ async function openSubmittedReport(
 
   try{
 
+    if(report?.id && !report?.report_data?.state){
+      const detailed = await withTimeout(getReport(report.id), 15000, 'Loading report details timed out.');
+      if(!detailed?.success || !detailed.data) throw (detailed?.error || new Error('Could not load submitted report details.'));
+      report = detailed.data;
+    }
+
     currentSubmittedReport =
       report;
 
@@ -5181,6 +5273,12 @@ async function openSubmittedFollowUps(
 ){
 
   try{
+
+    if(report?.id && !report?.report_data?.state){
+      const detailed = await withTimeout(getReport(report.id), 15000, 'Loading report details timed out.');
+      if(!detailed?.success || !detailed.data) throw (detailed?.error || new Error('Could not load report details.'));
+      report = detailed.data;
+    }
 
     currentSubmittedReport =
       report;
@@ -5362,7 +5460,7 @@ function bindPDFButtons(){
 
       try{
 
-        pdf.generatePDF();
+        await pdf.generatePDF();
 
       }catch(error){
 
@@ -5549,219 +5647,73 @@ function bindHeaderBackButtons(){
 ============================================================ */
 
 function bindAdminButton(){
-
-  const button =
-    document.getElementById(
-      'adminButton'
-    );
-
-
-  if(
-    !button
-  ){
-
-    return;
-
-  }
-
-
-  button.addEventListener(
-    'click',
-    function(){
-
-      if(
-        adminMode
-      ){
-
-        if(
-          window.confirm(
-            'Disable Admin Mode?'
-          )
-        ){
-
-          adminMode =
-            false;
-
-
-          sessionStorage.removeItem(
-            'ship_visit_admin'
-          );
-
-
-          updateAdminButton();
-
-
-          /*
-            Re-render Ship Response screen
-            so DELETE buttons disappear.
-          */
-
-          if(
-            document
-              .getElementById(
-                'responses'
-              )
-              ?.classList
-              .contains(
-                'hidden'
-              ) === false
-          ){
-
-            loadShipResponsesScreen();
-
-          }
-
-        }
-
-
-        return;
-
-      }
-
-
-      const email =
-        window.prompt(
-          'Enter administrator email:'
-        );
-
-
-      if(
-        !email
-      ){
-
-        return;
-
-      }
-
-
-      if(
-        !ADMIN_EMAILS.includes(
-          email
-            .trim()
-            .toLowerCase()
-        )
-      ){
-
-        alert(
-          'Administrator access denied.'
-        );
-
-
-        return;
-
-      }
-
-
-      adminMode =
-        true;
-
-
-      sessionStorage.setItem(
-        'ship_visit_admin',
-        'true'
-      );
-
-
-      updateAdminButton();
-
-
-      showToast(
-        'Admin mode enabled.'
-      );
-
-
-      /*
-        Refresh Ship Response if it is
-        currently visible.
-      */
-
-      if(
-        document
-          .getElementById(
-            'responses'
-          )
-          ?.classList
-          .contains(
-            'hidden'
-          ) === false
-      ){
-
-        loadShipResponsesScreen();
-
-      }
-
-    }
-  );
-
+  const button = document.getElementById('adminButton');
+  if(!button || button.dataset.authBound === 'true') return;
+  button.dataset.authBound = 'true';
+  button.addEventListener('click', async function(){
+    if(!window.confirm('Sign out of Ship Visit Report?')) return;
+    try{ await signOutUser(); }
+    catch(error){ console.error('Sign out failed:', error); }
+    currentAppRole = null;
+    adminMode = false;
+    shipResponseLinkMode = false;
+    currentSubmittedReport = null;
+    currentShipResponseReport = null;
+    const password = document.getElementById('loginPassword');
+    if(password) password.value = '';
+    showLoginMessage('');
+    showScreen('login');
+  });
 }
-
 
 function updateAdminButton(){
-
-  const button =
-    document.getElementById(
-      'adminButton'
-    );
-
-
-  if(
-    !button
-  ){
-
-    return;
-
+  const button = document.getElementById('adminButton');
+  if(button){
+    button.textContent = 'SIGN OUT';
+    button.style.background = '#FFFFFF';
+    button.style.color = '#3C1053';
+    button.style.borderColor = '#3C1053';
+    button.style.display = currentAppRole ? '' : 'none';
   }
-
-
-  if(
-    adminMode
-  ){
-
-    button.textContent =
-      'ADMIN MODE ON';
-
-
-    button.style.background =
-      '#E10A0A';
-
-
-    button.style.color =
-      '#FFFFFF';
-
-
-    button.style.borderColor =
-      '#E10A0A';
-
-  }else{
-
-    button.textContent =
-      'ADMIN';
-
-
-    button.style.background =
-      '#FFFFFF';
-
-
-    button.style.color =
-      '#3C1053';
-
-
-    button.style.borderColor =
-      '#3C1053';
-
-  }
-
+  applyRoleUI();
 }
 
-
 function restoreAdminMode(){
+  // Access is determined by Supabase Auth and app_user_roles, never sessionStorage.
+  adminMode = isAdmin();
+}
 
-  adminMode =
-    sessionStorage.getItem(
-      'ship_visit_admin'
-    ) ===
-    'true';
-
+function bindPhotoMigrationButton(){
+  const button = document.getElementById('migratePhotosButton');
+  if(!button || button.dataset.bound === 'true') return;
+  button.dataset.bound = 'true';
+  button.addEventListener('click', async function(){
+    if(!isAdmin()){
+      alert('Administrator access required.');
+      return;
+    }
+    const defaultId = '9a36fd0b-2bfd-4ced-af6b-abbbd9e640f2';
+    const reportId = window.prompt('Enter the open report ID to migrate its embedded photos into private Storage:', defaultId);
+    if(!reportId) return;
+    if(!window.confirm('Upload all embedded photos first, then replace the embedded data in this open report with Storage references? The original report is changed only after every upload succeeds.')) return;
+    const oldText = button.textContent;
+    button.disabled = true;
+    button.textContent = 'MIGRATING PHOTOS…';
+    try{
+      const result = await migrateEmbeddedPhotosToStorage(reportId.trim(), progress => {
+        button.textContent = `UPLOADING ${progress.done}/${progress.total}…`;
+      });
+      if(!result?.success) throw (result?.error || new Error('Photo migration failed.'));
+      alert(`${result.migrated} photo(s) moved to private Storage. The report data was updated only after uploads succeeded. Open the report and verify every photo before making any other changes.`);
+      await loadOpenReportsScreen();
+    }catch(error){
+      console.error('Legacy photo migration failed:', error);
+      alert('Photo migration failed. The original report data was kept.\n\n' + (error?.message || 'Unknown error'));
+    }finally{
+      button.disabled = false;
+      button.textContent = oldText;
+    }
+  });
 }
 
 
