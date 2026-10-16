@@ -66,7 +66,10 @@ import {
 
 
 import {
-  saveOpenReport
+  saveOpenReport,
+  uploadPhotoDataUrl,
+  getPhotoDisplayUrl,
+  deleteStoragePhoto
 } from './supabase.js';
 
 
@@ -1973,29 +1976,31 @@ function bindPointEvents(
 
       try{
 
-        const photo =
-          await readAndResizeImage(
-            file
-          );
+        const reportId = getReportId();
+        if(!reportId){
+          throw new Error('Create or open a report before attaching photos.');
+        }
 
+        const dataUrl = await readAndResizeImage(file);
+        const photoRef = await uploadPhotoDataUrl(
+          reportId,
+          key,
+          dataUrl,
+          file.name || 'photo.jpg'
+        );
 
         addPhoto(
           key,
-          photo
+          photoRef
         );
 
+        openDetails(key);
+        renderPhotos(key);
 
-        openDetails(
-          key
-        );
-
-
-        renderPhotos(
-          key
-        );
-
-
-        await saveCurrentReport();
+        const saved = await saveCurrentReport();
+        if(!saved){
+          throw new Error('The photo uploaded, but the report could not be saved. Please retry saving before closing the report.');
+        }
 
       }catch(error){
 
@@ -2402,12 +2407,24 @@ function renderPhotos(
         );
 
 
-      image.src =
-        source;
+      image.alt = 'Reviewer photo';
+      const storagePath = source && typeof source === 'object'
+        ? source.storagePath
+        : (typeof source === 'string' && source.startsWith('storage://') ? source.slice('storage://'.length) : '');
 
-
-      image.alt =
-        'Reviewer photo';
+      if(storagePath){
+        image.dataset.storagePath = storagePath;
+        getPhotoDisplayUrl(source).then(url => {
+          if(url && image.isConnected) image.src = url;
+        }).catch(error => {
+          console.error('Could not load stored photo:', error);
+          image.alt = 'Photo could not be loaded';
+        });
+      }else if(typeof source === 'string'){
+        image.src = source;
+      }else if(source && (source.url || source.src || source.data)){
+        image.src = source.url || source.src || source.data;
+      }
 
 
       wrapper.appendChild(
@@ -2448,18 +2465,15 @@ function renderPhotos(
           event.stopPropagation();
 
 
-          removePhoto(
-            key,
-            index
-          );
+          const removedPhoto = getItem(key)?.photos?.[index];
+          removePhoto(key, index);
+          renderPhotos(key);
 
-
-          renderPhotos(
-            key
-          );
-
-
-          await saveCurrentReport();
+          const saved = await saveCurrentReport();
+          if(saved && removedPhoto && typeof removedPhoto === 'object' && removedPhoto.storagePath){
+            try { await deleteStoragePhoto(removedPhoto.storagePath); }
+            catch(storageError){ console.warn('Photo reference removed, but Storage cleanup failed:', storageError); }
+          }
 
         }
       );
