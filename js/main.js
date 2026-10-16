@@ -2274,8 +2274,7 @@ function getPhotos(
       photo => {
 
         if(
-          typeof photo ===
-          'string'
+          typeof photo === 'string'
         ){
 
           return photo;
@@ -2285,16 +2284,18 @@ function getPhotos(
 
         if(
           photo &&
-          typeof photo ===
-          'object'
+          typeof photo === 'object'
         ){
 
-          // Keep lazy-loaded references intact. The legacyPhotoId is a safe
-          // reference to the private photo table; storagePath points to the
-          // private Storage bucket. Flattening either one to '' hides the
-          // photo from counts and prevents the click-to-preview button.
-          if( photo.legacyPhotoId || photo.storagePath ){
-            return photo;
+          // Keep private photo references as objects so the click handler can
+          // use getPhotoDisplayUrl() to fetch the image only on demand.
+          if(
+            (typeof photo.legacyPhotoId === 'string' && photo.legacyPhotoId.trim()) ||
+            (typeof photo.storagePath === 'string' && photo.storagePath.trim())
+          ){
+
+            return { ...photo };
+
           }
 
           return (
