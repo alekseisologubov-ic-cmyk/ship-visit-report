@@ -3181,7 +3181,7 @@ async function openSavedReport(
   try{
 
     if(report?.id && !report?.report_data?.state){
-      const detailed = await withTimeout(getReport(report.id), 15000, 'Loading report details timed out.');
+      const detailed = await withTimeout(getReport(report.id), 60000, 'Loading report details timed out after 60 seconds.');
       if(!detailed?.success || !detailed.data) throw (detailed?.error || new Error('Could not load report details.'));
       report = detailed.data;
     }
@@ -3590,7 +3590,7 @@ async function openShipResponseReport(
 ){
 
   if(report?.id && !report?.report_data?.state){
-    const detailed = await withTimeout(getReport(report.id), 15000, 'Loading report details timed out.');
+    const detailed = await withTimeout(getReport(report.id), 60000, 'Loading report details timed out after 60 seconds.');
     if(!detailed?.success || !detailed.data){
       showError('Could not open the ship response report.', detailed?.error || null);
       return;
@@ -5202,7 +5202,7 @@ async function openSubmittedReport(
   try{
 
     if(report?.id && !report?.report_data?.state){
-      const detailed = await withTimeout(getReport(report.id), 15000, 'Loading report details timed out.');
+      const detailed = await withTimeout(getReport(report.id), 60000, 'Loading report details timed out after 60 seconds.');
       if(!detailed?.success || !detailed.data) throw (detailed?.error || new Error('Could not load submitted report details.'));
       report = detailed.data;
     }
@@ -5275,7 +5275,7 @@ async function openSubmittedFollowUps(
   try{
 
     if(report?.id && !report?.report_data?.state){
-      const detailed = await withTimeout(getReport(report.id), 15000, 'Loading report details timed out.');
+      const detailed = await withTimeout(getReport(report.id), 60000, 'Loading report details timed out after 60 seconds.');
       if(!detailed?.success || !detailed.data) throw (detailed?.error || new Error('Could not load report details.'));
       report = detailed.data;
     }
