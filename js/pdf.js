@@ -34,6 +34,8 @@ import {
   getReviewer
 } from './state.js';
 
+import { getPhotoDataUrl } from './supabase.js';
+
 
 /* ============================================================
    BASIC HELPERS
@@ -882,11 +884,31 @@ function addImageToPDF(
 }
 
 
+/* Resolve private Storage references to temporary data URLs for jsPDF.
+   Only a clone is changed; storage paths remain in the saved report. */
+async function stateWithResolvedPhotos(inputState){
+  const state = JSON.parse(JSON.stringify(inputState || {}));
+  for(const item of Object.values(state)){
+    if(!item || !Array.isArray(item.photos)) continue;
+    const resolved = [];
+    for(const photo of item.photos){
+      if(photo && typeof photo === 'object' && photo.storagePath){
+        resolved.push(await getPhotoDataUrl(photo));
+      }else{
+        resolved.push(photo);
+      }
+    }
+    item.photos = resolved;
+  }
+  return state;
+}
+
+
 /* ============================================================
    GENERATE PDF
 ============================================================ */
 
-export function generatePDF(){
+export async function generatePDF(){
 
   const jsPDF =
     getJsPDF();
@@ -910,8 +932,9 @@ export function generatePDF(){
     getMeta() || {};
 
 
-  const state =
-    getState() || {};
+  const state = await stateWithResolvedPhotos(
+    getState() || {}
+  );
 
 
   const reviewer =
@@ -2211,14 +2234,15 @@ export function generatePDF(){
    SAME CONTENT + SAME TEMPLATE
 ============================================================ */
 
-export function printReport(){
+export async function printReport(){
 
   const meta =
     getMeta() || {};
 
 
-  const state =
-    getState() || {};
+  const state = await stateWithResolvedPhotos(
+    getState() || {}
+  );
 
 
   const reviewer =
@@ -3723,7 +3747,7 @@ function renderPrintPoint(
    FOLLOW-UP PDF
 ============================================================ */
 
-export function generateFollowUpPDF(
+export async function generateFollowUpPDF(
   report
 ){
 
@@ -3780,11 +3804,9 @@ export function generateFollowUpPDF(
   };
 
 
-  const state =
-    report
-      ?.report_data
-      ?.state ||
-    {};
+  const state = await stateWithResolvedPhotos(
+    report?.report_data?.state || {}
+  );
 
 
   const allPoints =
