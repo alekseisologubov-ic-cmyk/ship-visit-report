@@ -828,43 +828,58 @@ export async function signOutUser(){
 ========================================================= */
 
 function photoStoragePath(photo){
-  if(photo && typeof photo === 'object' && typeof photo.storagePath === 'string'){
-    return photo.storagePath;
+  let path = null;
+  if(photo && typeof photo === 'object'){
+    path = photo.storagePath || photo.storage_path || photo.path || null;
+  }else if(typeof photo === 'string' && photo.startsWith('storage://')){
+    path = photo.slice('storage://'.length);
   }
-  if(typeof photo === 'string' && photo.startsWith('storage://')){
-    return photo.slice('storage://'.length);
-  }
-  return null;
+  if(typeof path !== 'string') return null;
+  path = path.trim();
+  if(path.startsWith('storage://')) path = path.slice('storage://'.length);
+  if(path.startsWith(`${PHOTO_BUCKET}/`)) path = path.slice(PHOTO_BUCKET.length + 1);
+  return path || null;
 }
 
 export async function getPhotoDisplayUrl(photo, expiresIn = 3600){
   if(!photo) return '';
 
-  // Legacy photos are kept in a private table after optimization. This RPC is
-  // called only when a photo is clicked (or deliberately included in a PDF).
-  if(photo && typeof photo === 'object' && photo.legacyPhotoId){
-    const { data, error } = await supabase.rpc('get_legacy_report_photo', {
-      p_photo_id: photo.legacyPhotoId
-    });
-    if(error) throw error;
-    if(typeof data !== 'string' || !data.startsWith('data:image/')){
-      throw new Error('The stored photo data is missing or invalid.');
-    }
-    return data;
-  }
-
-  const path = photoStoragePath(photo);
   if(typeof photo === 'string'){
     if(photo.startsWith('data:image/')) return photo;
     if(/^https?:\/\//i.test(photo)) return photo;
-    if(!path) return '';
   }
-  if(!path) return String(photo.url || photo.src || photo.data || '');
+
+  if(photo && typeof photo === 'object'){
+    const legacyPhotoId = photo.legacyPhotoId || photo.legacy_photo_id || photo.photoId || photo.photo_id || null;
+    if(legacyPhotoId){
+      const { data, error } = await supabase.rpc('get_legacy_report_photo', {
+        p_photo_id: String(legacyPhotoId)
+      });
+      if(error) throw error;
+      if(typeof data !== 'string' || !data.startsWith('data:image/')){
+        throw new Error('Supabase returned no valid image data for the legacy photo reference.');
+      }
+      return data;
+    }
+  }
+
+  const path = photoStoragePath(photo);
+  if(typeof photo === 'string' && !path) return '';
+
+  if(!path){
+    const directSource = typeof photo === 'object'
+      ? (photo.url || photo.src || photo.data || photo.image || '')
+      : '';
+    if(typeof directSource === 'string' && (directSource.startsWith('data:image/') || /^https?:\/\//i.test(directSource))) return directSource;
+    return '';
+  }
+
   const { data, error } = await supabase.storage
     .from(PHOTO_BUCKET)
     .createSignedUrl(path, expiresIn);
-  if(error) throw error;
-  return data?.signedUrl || '';
+  if(error) throw new Error(`Could not create a photo link for '${path}': ${error.message || error}`);
+  if(!data?.signedUrl) throw new Error(`Supabase did not return a photo link for '${path}'.`);
+  return data.signedUrl;
 }
 
 function blobToDataUrl(blob){
