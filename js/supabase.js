@@ -760,6 +760,10 @@ export async function getAuthContext(){
 }
 
 const APPROVED_SHIP_VISIT_EMAILS = new Set([
+  // Admin
+  'aleksei.sologubov-ic@virginvoyages.com',
+
+  // Report users / named reviewers
   'levi.mezick@virginvoyages.com',
   'seidy.soderholm@virginvoyages.com',
   'don.habets@virginvoyages.com',
@@ -770,7 +774,28 @@ const APPROVED_SHIP_VISIT_EMAILS = new Set([
   'andrew.diclementi@virginvoyages.com',
   'jamesadam.noffsinger@virginvoyages.com',
   'mycca.argawanon-ic@virginvoyages.com',
-  'aleksei.sologubov-ic@virginvoyages.com'
+
+  // Shipboard users
+  'val.htl.fbdirector@virginvoyages.com',
+  'brl.htl.fbdirector@virginvoyages.com',
+  'scl.htl.fbdirector@virginvoyages.com',
+  'res.htl.fbdirector@virginvoyages.com',
+  'scl.cul.srexecchef@virginvoyages.com',
+  'val.cul.srexecchef@virginvoyages.com',
+  'res.cul.srexecchef@virginvoyages.com',
+  'brl.cul.srexecchef@virginvoyages.com',
+  'scl.restaurantoperationsmanager@virginvoyages.com',
+  'val.rst.operationsmgr@virginvoyages.com',
+  'brl.rst.operationsmgr@virginvoyages.com',
+  'scl.beverageoperationsmanager@virginvoyages.com',
+  'brl.bev.operationsmgr@virginvoyages.com',
+  'res.rst.operationsmgr@virginvoyages.com',
+  'val.bev.operationsmgr@virginvoyages.com',
+  'res.bev.operationsmgr@virginvoyages.com',
+  'scl.htl.sanitationofficer@virginvoyages.com',
+  'res.htl.sanitationofficer@virginvoyages.com',
+  'val.htl.sanitationoff@virginvoyages.com',
+  'brl.htl.sanitationofficer@virginvoyages.com'
 ]);
 
 export async function signInWithPassword(email, password){
