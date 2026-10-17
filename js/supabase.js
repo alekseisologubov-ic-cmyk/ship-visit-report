@@ -773,22 +773,21 @@ const APPROVED_SHIP_VISIT_EMAILS = new Set([
   'aleksei.sologubov-ic@virginvoyages.com'
 ]);
 
-export async function signInWithMagicLink(email){
+export async function signInWithPassword(email, password){
   const cleanEmail = String(email || '').trim().toLowerCase();
+  const cleanPassword = String(password || '');
   if(!cleanEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)){
     throw new Error('Enter a valid work email address.');
   }
   if(!APPROVED_SHIP_VISIT_EMAILS.has(cleanEmail)){
     throw new Error('This email address is not approved for Ship Visit Report access. Contact the administrator if you need access.');
   }
-  return supabase.auth.signInWithOtp({
+  if(!cleanPassword){
+    throw new Error('Enter your password.');
+  }
+  return supabase.auth.signInWithPassword({
     email: cleanEmail,
-    options: {
-      // Auth trigger assigns app roles only to the approved email addresses.
-      // Unapproved Auth users receive no app role and cannot read report data.
-      shouldCreateUser: true,
-      emailRedirectTo: window.location.origin
-    }
+    password: cleanPassword
   });
 }
 
@@ -1282,7 +1281,7 @@ export default {
 
   reportNeedsFollowUp,
   getAuthContext,
-  signInWithMagicLink,
+  signInWithPassword,
   signOutUser,
   getPhotoDisplayUrl,
   getPhotoDataUrl,
