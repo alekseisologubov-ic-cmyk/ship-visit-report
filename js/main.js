@@ -271,6 +271,8 @@ let shipResponseLinkMode = false;
 
 let currentAppRole = null;
 let currentAuthUserId = null;
+let currentAuthUserEmail = '';
+let activeReportRecord = null;
 let adminMode = false;
 let appBindingsInitialized = false;
 let loginFormBound = false;
@@ -296,6 +298,70 @@ function canDeleteReport(report){
     report?.created_by &&
     String(report.created_by) === String(currentAuthUserId)
   );
+}
+
+
+// A standard User may edit/submit an OPEN report if they created it or their
+// approved login email corresponds to a name in the report's Reviewer field.
+// The name-to-email mapping is explicit so a similar/partial name cannot grant access.
+const REVIEWER_NAME_ALIASES_BY_EMAIL = Object.freeze({
+  'levi.mezick@virginvoyages.com': ['Levi Mezick'],
+  'seidy.soderholm@virginvoyages.com': ['Seidy Soderholm'],
+  'don.habets@virginvoyages.com': ['Don Habets'],
+  'eszter.tary@virginvoyages.com': ['Eszter Tary'],
+  'marin.lukin@virginvoyages.com': ['Marin Lukin'],
+  'edina.smajic-ic@virginvoyages.com': ['Edina Smajic-IC', 'Edina Smajic IC'],
+  'andras.rafajlovics@virginvoyages.com': ['Andras Rafajlovics'],
+  'andrew.diclementi@virginvoyages.com': ['Andrew Di Clementi', 'Andrew Diclementi'],
+  'jamesadam.noffsinger@virginvoyages.com': ['Adam Noffsinger', 'James Adam Noffsinger'],
+  'mycca.argawanon-ic@virginvoyages.com': ['Mycca Argawanon-IC', 'Mycca Argawanon IC']
+});
+
+function normalizeReviewerIdentity(value){
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '');
+}
+
+function isNamedReviewerForReport(report){
+  if(!isReportUser()) return false;
+  const aliases = REVIEWER_NAME_ALIASES_BY_EMAIL[currentAuthUserEmail] || [];
+  if(aliases.length === 0) return false;
+  const rawReviewerText = [
+    report?.reviewer,
+    report?.report_data?.meta?.reviewer
+  ].filter(Boolean).join(', ');
+  const normalizedNames = normalizeReviewerIdentity(rawReviewerText);
+  return aliases.some(alias => normalizedNames.includes(normalizeReviewerIdentity(alias)));
+}
+
+function canEditReport(report){
+  if(isAdmin()) return true;
+  if(!isReportUser() || String(report?.status || 'open') !== 'open') return false;
+  const isOwner = Boolean(
+    currentAuthUserId && report?.created_by &&
+    String(report.created_by) === String(currentAuthUserId)
+  );
+  return isOwner || isNamedReviewerForReport(report);
+}
+
+function canEditActiveReport(){
+  if(isAdmin()) return true;
+  const meta = getMeta() || {};
+  const active = activeReportRecord || {};
+  const candidate = {
+    ...active,
+    id: getReportId() || active.id,
+    status: active.status || 'open',
+    reviewer: meta.reviewer || active.reviewer || '',
+    report_data: {
+      ...(active.report_data || {}),
+      meta: { ...(active.report_data?.meta || {}), ...meta }
+    }
+  };
+  return canEditReport(candidate);
 }
 
 
@@ -436,6 +502,7 @@ async function initializeAuthorizedApp(context){
   }
   currentAppRole = context.role;
   currentAuthUserId = context.user?.id || null;
+  currentAuthUserEmail = String(context.user?.email || '').trim().toLowerCase();
   adminMode = isAdmin();
   applyRoleUI();
 
@@ -1276,6 +1343,7 @@ async function handleStartReport(){
     setReportId(
       result.data.id
     );
+    activeReportRecord = result.data;
 
 
     const checklist =
@@ -1349,6 +1417,11 @@ async function saveCurrentReport(){
 
   }
 
+  if(!canEditActiveReport()){
+    alert('You can only edit reports you created or Open reports that list your name as Reviewer.');
+    return false;
+  }
+
 
   try{
 
@@ -1369,6 +1442,10 @@ async function saveCurrentReport(){
         'Saving report timed out.'
       );
 
+
+    if(result?.success && result.data){
+      activeReportRecord = result.data;
+    }
 
     return Boolean(
       result &&
@@ -1513,7 +1590,7 @@ function bindChecklistButtons(){
 
 async function openShipReview(){
 
-  if(!isAdmin() && !isReportUser()){ alert('Admin or report-owner access is required to send reports for ship review.'); return; }
+  if(!isAdmin() && !canEditActiveReport()){ alert('You can send a report to Ship Review only if you created it or your name is listed as Reviewer on this Open report.'); return; }
 
   const saved =
     await saveCurrentReport();
@@ -3213,7 +3290,7 @@ function renderOpenReports(
                 )}"
               >
 
-                OPEN REPORT
+                ${canEditReport(report) ? 'OPEN REPORT' : 'VIEW REPORT'}
 
               </button>
 
@@ -3293,6 +3370,7 @@ async function openReadOnlyReport(report, returnScreen = 'submitted'){
       report = detailed.data;
     }
     currentSubmittedReport = report;
+    activeReportRecord = report;
     summaryReturnScreen = returnScreen;
     loadReport(report);
     renderCurrentReportSummary(report, true);
@@ -3321,11 +3399,12 @@ async function openSavedReport(
       report = detailed.data;
     }
 
-    if(isReportUser() && String(report?.created_by || '') !== String(currentAuthUserId || '')){
+    if(isReportUser() && !canEditReport(report)){
       await openReadOnlyReport(report, 'open');
       return;
     }
 
+    activeReportRecord = report;
     loadReport(
       report
     );
@@ -5790,6 +5869,8 @@ function bindAdminButton(){
     catch(error){ console.error('Sign out failed:', error); }
     currentAppRole = null;
     currentAuthUserId = null;
+    currentAuthUserEmail = '';
+    activeReportRecord = null;
     adminMode = false;
     shipResponseLinkMode = false;
     currentSubmittedReport = null;
