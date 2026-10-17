@@ -197,7 +197,7 @@ async function openResponsePhoto(photo){
     responsePhotoLightboxImage.onerror=()=>{
       responsePhotoLightboxImage.hidden=true;
       responsePhotoLightboxStatus.hidden=false;
-      responsePhotoLightboxStatus.textContent='Could not load this photo. Close the preview and try again.';
+      responsePhotoLightboxStatus.textContent='The photo link was created, but the browser could not display the image. Close this preview and retry.';
     };
     responsePhotoLightboxImage.src=url;
     if(responsePhotoLightboxImage.complete&&responsePhotoLightboxImage.naturalWidth>0){
@@ -208,7 +208,7 @@ async function openResponsePhoto(photo){
     console.error('Could not open report photo:',error);
     if(!responsePhotoLightbox.hidden){
       responsePhotoLightboxStatus.hidden=false;
-      responsePhotoLightboxStatus.textContent='Could not load this photo. Close the preview and try again.';
+      responsePhotoLightboxStatus.textContent='Could not load this photo: ' + String(error?.message || 'unknown photo-access error');
     }
   }
 }
@@ -2351,52 +2351,29 @@ function getPhotos(
 
 
   return item.photos
-    .map(
-      photo => {
+    .map(photo => {
+      if(typeof photo === 'string') return photo;
 
-        if(
-          typeof photo === 'string'
-        ){
+      if(photo && typeof photo === 'object'){
+        // Accept references saved by either the current or older naming format.
+        const legacyPhotoId = photo.legacyPhotoId || photo.legacy_photo_id || photo.photoId || photo.photo_id || null;
+        const storagePath = photo.storagePath || photo.storage_path || photo.path || null;
 
-          return photo;
-
+        if(legacyPhotoId || storagePath){
+          return {
+            ...photo,
+            ...(legacyPhotoId ? { legacyPhotoId: String(legacyPhotoId) } : {}),
+            ...(storagePath ? { storagePath: String(storagePath) } : {})
+          };
         }
 
-
-        if(
-          photo &&
-          typeof photo === 'object'
-        ){
-
-          // Keep private photo references as objects so the click handler can
-          // use getPhotoDisplayUrl() to fetch the image only on demand.
-          if(
-            (typeof photo.legacyPhotoId === 'string' && photo.legacyPhotoId.trim()) ||
-            (typeof photo.storagePath === 'string' && photo.storagePath.trim())
-          ){
-
-            return { ...photo };
-
-          }
-
-          return (
-            photo.url ||
-            photo.src ||
-            photo.data ||
-            photo.image ||
-            ''
-          );
-
-        }
-
-
-        return '';
-
+        const directSource = photo.url || photo.src || photo.data || photo.image || '';
+        if(directSource) return directSource;
       }
-    )
-    .filter(
-      Boolean
-    );
+
+      return '';
+    })
+    .filter(Boolean);
 
 }
 
@@ -2756,6 +2733,10 @@ function renderCurrentReportSummary(
     }
 
   `;
+
+  // The read-only report summary is the screen used by Shipboard and Reviewers.
+  // Bind photo buttons after the markup has been inserted into the page.
+  hydratePhotoElements(container);
 
 }
 
