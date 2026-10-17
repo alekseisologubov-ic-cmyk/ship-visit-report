@@ -77,7 +77,7 @@ import {
   getReportByReference,
   submitShipResponse,
   getAuthContext,
-  signInWithMagicLink,
+  signInWithPassword,
   signOutUser,
   getPhotoDisplayUrl,
   migrateEmbeddedPhotosToStorage
@@ -271,8 +271,6 @@ let shipResponseLinkMode = false;
 
 let currentAppRole = null;
 let currentAuthUserId = null;
-let currentAuthUserEmail = '';
-let activeReportRecord = null;
 let adminMode = false;
 let appBindingsInitialized = false;
 let loginFormBound = false;
@@ -298,85 +296,6 @@ function canDeleteReport(report){
     report?.created_by &&
     String(report.created_by) === String(currentAuthUserId)
   );
-}
-
-
-// Standard Users can edit/submit an OPEN report only when they created it
-// or their work email maps to a name explicitly listed in that report's
-// Reviewer field. Viewing all other reports remains read-only.
-const REVIEWER_NAME_ALIASES_BY_EMAIL = Object.freeze({
-  'levi.mezick@virginvoyages.com': ['Levi Mezick'],
-  'seidy.soderholm@virginvoyages.com': ['Seidy Soderholm'],
-  'don.habets@virginvoyages.com': ['Don Habets'],
-  'eszter.tary@virginvoyages.com': ['Eszter Tary'],
-  'marin.lukin@virginvoyages.com': ['Marin Lukin'],
-  'edina.smajic-ic@virginvoyages.com': ['Edina Smajic-IC', 'Edina Smajic IC'],
-  'andras.rafajlovics@virginvoyages.com': ['Andras Rafajlovics'],
-  'andrew.diclementi@virginvoyages.com': ['Andrew Di Clementi', 'Andrew Diclementi'],
-  'jamesadam.noffsinger@virginvoyages.com': ['Adam Noffsinger', 'James Adam Noffsinger'],
-  'mycca.argawanon-ic@virginvoyages.com': ['Mycca Argawanon-IC', 'Mycca Argawanon IC']
-});
-
-function normalizeReviewerIdentity(value){
-  return String(value || '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]/g, '');
-}
-
-function isNamedReviewerForReport(report){
-  if(!isReportUser()) return false;
-  const aliases = REVIEWER_NAME_ALIASES_BY_EMAIL[currentAuthUserEmail] || [];
-  if(aliases.length === 0) return false;
-
-  const rawReviewerText = [
-    report?.reviewer,
-    report?.report_data?.meta?.reviewer
-  ].filter(Boolean).join(', ');
-
-  // Reviewer fields are commonly comma-separated. Split them into distinct
-  // names and compare normalized full names to avoid substring false matches.
-  const listedNames = rawReviewerText
-    .split(/[,;\n/&]+|\band\b/i)
-    .map(normalizeReviewerIdentity)
-    .filter(Boolean);
-
-  return aliases.some(alias => listedNames.includes(normalizeReviewerIdentity(alias)));
-}
-
-function canEditReport(report){
-  if(isAdmin()) return true;
-  if(!isReportUser()) return false;
-  if(String(report?.status || 'open') !== 'open') return false;
-
-  const isOwner = Boolean(
-    currentAuthUserId &&
-    report?.created_by &&
-    String(report.created_by) === String(currentAuthUserId)
-  );
-  return isOwner || isNamedReviewerForReport(report);
-}
-
-function canEditActiveReport(){
-  if(isAdmin()) return true;
-  if(!isReportUser()) return false;
-  const meta = getMeta() || {};
-  const active = activeReportRecord || {};
-  const candidate = {
-    ...active,
-    id: getReportId() || active.id,
-    status: active.status || 'open',
-    reviewer: meta.reviewer || active.reviewer || '',
-    report_data: {
-      ...(active.report_data || {}),
-      meta: {
-        ...(active.report_data?.meta || {}),
-        ...meta
-      }
-    }
-  };
-  return canEditReport(candidate);
 }
 
 
@@ -410,11 +329,6 @@ function(){
     adminMode
   );
 
-};
-
-
-window.shipVisitCanSubmitCurrentReport = function(){
-  return Boolean(isAdmin() || canEditActiveReport());
 };
 
 /* ============================================================
@@ -481,18 +395,28 @@ function bindLoginForm(){
   form.addEventListener('submit', async event => {
     event.preventDefault();
     const email = document.getElementById('loginEmail')?.value || '';
+    const password = document.getElementById('loginPassword')?.value || '';
     const button = document.getElementById('loginSubmit');
-    if(button){ button.disabled = true; button.textContent = 'SENDING LINK…'; }
+    if(button){ button.disabled = true; button.textContent = 'SIGNING IN…'; }
     showLoginMessage('');
     try{
-      const result = await signInWithMagicLink(email);
+      const result = await signInWithPassword(email, password);
       if(result?.error) throw result.error;
-      showLoginMessage('If this email is authorized, a secure sign-in link has been sent. Check your inbox and open the link on this device.');
+
+      // Confirm the authenticated account has an assigned app role before exposing any app screens.
+      const context = await getAuthContext();
+      if(!context || !['admin','reviewer','user'].includes(context.role)){
+        await signOutUser().catch(() => {});
+        throw new Error('This account is not enabled for Ship Visit Report. Contact the administrator.');
+      }
+      const passwordField = document.getElementById('loginPassword');
+      if(passwordField) passwordField.value = '';
+      await initializeAuthorizedApp(context);
     }catch(error){
-      console.error('Magic-link request failed:', error);
-      showLoginMessage(error?.message || 'Could not send the sign-in link. Check the email address and try again.');
+      console.error('Password sign-in failed:', error);
+      showLoginMessage(error?.message || 'Could not sign in. Check your email and password, then try again.');
     }finally{
-      if(button){ button.disabled = false; button.textContent = 'EMAIL ME A SIGN-IN LINK'; }
+      if(button){ button.disabled = false; button.textContent = 'SIGN IN'; }
     }
   });
 }
@@ -512,7 +436,6 @@ async function initializeAuthorizedApp(context){
   }
   currentAppRole = context.role;
   currentAuthUserId = context.user?.id || null;
-  currentAuthUserEmail = String(context.user?.email || '').trim().toLowerCase();
   adminMode = isAdmin();
   applyRoleUI();
 
@@ -1353,7 +1276,6 @@ async function handleStartReport(){
     setReportId(
       result.data.id
     );
-    activeReportRecord = result.data;
 
 
     const checklist =
@@ -1591,10 +1513,7 @@ function bindChecklistButtons(){
 
 async function openShipReview(){
 
-  if(!isAdmin() && !canEditActiveReport()){
-    alert('You can submit only an open report you created or one that lists your name in the Reviewer field.');
-    return;
-  }
+  if(!isAdmin() && !isReportUser()){ alert('Admin or report-owner access is required to send reports for ship review.'); return; }
 
   const saved =
     await saveCurrentReport();
@@ -3294,7 +3213,7 @@ function renderOpenReports(
                 )}"
               >
 
-                ${canEditReport(report) ? 'OPEN REPORT' : 'VIEW REPORT'}
+                OPEN REPORT
 
               </button>
 
@@ -3362,7 +3281,6 @@ function renderOpenReports(
 
 async function openReadOnlyReport(report, returnScreen = 'submitted'){
   try{
-    activeReportRecord = null;
     if(report?.id && !report?.report_data?.state){
       const detailed = await withTimeout(
         getReport(report.id),
@@ -3403,13 +3321,11 @@ async function openSavedReport(
       report = detailed.data;
     }
 
-    if(isReportUser() && !canEditReport(report)){
-      activeReportRecord = null;
+    if(isReportUser() && String(report?.created_by || '') !== String(currentAuthUserId || '')){
       await openReadOnlyReport(report, 'open');
       return;
     }
 
-    activeReportRecord = report;
     loadReport(
       report
     );
@@ -5425,8 +5341,6 @@ async function openSubmittedReport(
 
   try{
 
-    activeReportRecord = null;
-
     if(report?.id && !report?.report_data?.state){
       const detailed = await withTimeout(getReport(report.id), 60000, 'Loading report details timed out after 60 seconds.');
       if(!detailed?.success || !detailed.data) throw (detailed?.error || new Error('Could not load submitted report details.'));
@@ -5882,6 +5796,8 @@ function bindAdminButton(){
     currentShipResponseReport = null;
     const email = document.getElementById('loginEmail');
     if(email) email.value = '';
+    const password = document.getElementById('loginPassword');
+    if(password) password.value = '';
     showLoginMessage('');
     showScreen('login');
   });
