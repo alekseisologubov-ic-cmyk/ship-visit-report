@@ -536,7 +536,7 @@ function applyRoleUI(){
   const createCard = document.getElementById('createReport');
   if(createCard) createCard.style.display = mayCreateReports ? '' : 'none';
   const openCard = document.getElementById('openReport');
-  if(openCard) openCard.style.display = (isAdmin() || isReportUser() || isShipboard()) ? '' : 'none';
+  if(openCard) openCard.style.display = (isAdmin() || isReportUser() || isReviewer() || isShipboard()) ? '' : 'none';
   ['submittedReports','shipResponseReport'].forEach(id => {
     const element = document.getElementById(id);
     if(element) element.style.display = '';
@@ -894,7 +894,7 @@ export function showScreen(
       : 'home';
 
   if(!currentAppRole && target !== 'login') target = 'login';
-  if(isReviewer() && ['setup','open','checklist','review'].includes(target)) target = 'home';
+  if(isReviewer() && ['setup','checklist','review'].includes(target)) target = 'home';
   if(isShipboard() && ['setup','checklist','review','followups'].includes(target)) target = 'home';
 
   /*
@@ -3408,7 +3408,7 @@ async function openSavedReport(
       report = detailed.data;
     }
 
-    if(isShipboard()){
+    if(isShipboard() || isReviewer()){
       await openReadOnlyReport(report, 'open');
       return;
     }
