@@ -134,23 +134,31 @@ export async function createOpenReport({
 
   try{
 
+    // Explicitly stamp the authenticated creator on INSERT only.
+    // UPDATE operations never change created_by, so editing does not transfer ownership.
+    const { data: authData, error: authError } =
+      await supabase.auth.getUser();
+
+    if(authError) throw authError;
+
+    const creatorId = authData?.user?.id;
+    if(!creatorId){
+      throw new Error('Please sign in again before creating a report.');
+    }
+
+    const payload = buildPayload({
+      meta,
+      state,
+      status: 'open'
+    });
+    payload.created_by = creatorId;
+
     const result =
       await supabase
         .from(
           'ship_visit_reports'
         )
-        .insert(
-          buildPayload({
-
-            meta,
-
-            state,
-
-            status:
-              'open'
-
-          })
-        )
+        .insert(payload)
         .select()
         .single();
 
