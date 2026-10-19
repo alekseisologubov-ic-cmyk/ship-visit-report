@@ -2596,6 +2596,15 @@ function renderCurrentReportSummary(
       points
     );
 
+  // When a read-only user is allowed to see unchecked checklist items,
+  // consistently keep checked findings first and leave unchecked items unchecked.
+  groups.forEach(group => {
+    group.points.sort((a, b) => Number(Boolean(b.checked)) - Number(Boolean(a.checked)));
+  });
+
+  const checkedPointCount = points.filter(point => point.checked).length;
+  const uncheckedPointCount = points.length - checkedPointCount;
+
 
   const meta =
     report
@@ -2677,6 +2686,13 @@ function renderCurrentReportSummary(
 
       </div>
 
+      ${includeUnchecked ? `
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:11px;">
+          <span style="display:inline-block;padding:6px 10px;border-radius:6px;background:#FCEBEC;color:#9D1010;font-size:11px;font-weight:800;">${checkedPointCount} CHECKED</span>
+          <span style="display:inline-block;padding:6px 10px;border-radius:6px;background:#F0EDF3;color:#554760;font-size:11px;font-weight:800;">${uncheckedPointCount} NOT YET CHECKED</span>
+        </div>
+      ` : ''}
+
     </div>
 
 
@@ -2685,6 +2701,10 @@ function renderCurrentReportSummary(
 
         const group = groups.find(item => item.section === section.title);
         const generalComments = getDepartmentGeneralCommentsFromReport(report, section.id);
+        const checkedPoints = group ? group.points.filter(point => point.checked) : [];
+        const uncheckedPoints = includeUnchecked && group
+          ? group.points.filter(point => !point.checked)
+          : [];
 
         if((!group || group.points.length === 0) && !generalComments.length){
           return '';
@@ -2728,7 +2748,14 @@ function renderCurrentReportSummary(
                 : ''
             }
 
-            ${group ? group.points.map(renderSummaryPoint).join('') : ''}
+            ${checkedPoints.map(renderSummaryPoint).join('')}
+
+            ${uncheckedPoints.length ? `
+              <div style="margin:14px 0 8px;padding-top:9px;border-top:1px dashed var(--vv-line);color:var(--vv-gray);font-size:11px;font-weight:800;letter-spacing:.02em;">
+                NOT YET CHECKED (${uncheckedPoints.length})
+              </div>
+              ${uncheckedPoints.map(renderSummaryPoint).join('')}
+            ` : ''}
           </div>
         `;
 
@@ -2814,9 +2841,9 @@ function renderSummaryPoint(
         margin-bottom:11px;
         padding:12px;
         border:1px solid var(--vv-line);
-        border-left:4px solid var(--vv-squid);
+        border-left:4px solid ${point.checked ? 'var(--vv-squid)' : '#9B91A2'};
         border-radius:8px;
-        background:#FFFFFF;
+        background:${point.checked ? '#FFFFFF' : '#F7F6F8'};
       "
     >
 
@@ -2837,14 +2864,16 @@ function renderSummaryPoint(
             align-items:center;
             justify-content:center;
             border-radius:50%;
-            background:var(--vv-red);
-            color:#FFFFFF;
+            box-sizing:border-box;
+            border:${point.checked ? '0' : '2px solid #9B91A2'};
+            background:${point.checked ? 'var(--vv-red)' : '#FFFFFF'};
+            color:${point.checked ? '#FFFFFF' : '#9B91A2'};
             font-size:11px;
             font-weight:800;
           "
         >
 
-          ✓
+          ${point.checked ? '✓' : ''}
 
         </div>
 
@@ -2858,9 +2887,8 @@ function renderSummaryPoint(
           "
         >
 
-          ${escapeHtml(
-            point.text
-          )}
+          ${escapeHtml(point.text)}
+          ${!point.checked ? '<span style="display:inline-block;margin-left:7px;padding:2px 6px;border-radius:4px;background:#ECE8F0;color:#6E6278;font-size:9px;font-weight:800;vertical-align:middle;">NOT CHECKED</span>' : ''}
 
         </div>
 
@@ -3366,7 +3394,8 @@ async function openReadOnlyReport(report, returnScreen = 'submitted'){
     activeReportRecord = report;
     summaryReturnScreen = returnScreen;
     loadReport(report);
-    renderCurrentReportSummary(report, true);
+    const showUncheckedPoints = isShipboard() && String(report?.status || 'open') === 'open';
+    renderCurrentReportSummary(report, showUncheckedPoints);
     setSummaryMode(true);
     showScreen('summary');
   }catch(error){
