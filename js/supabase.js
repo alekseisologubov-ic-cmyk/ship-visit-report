@@ -1099,7 +1099,7 @@ export async function getReportOwnership(reportId){
   try{
     const { data, error } = await supabase
       .from('ship_visit_reports')
-      .select('id,created_by,ship,status')
+      .select('id,created_by,ship,status,reviewer')
       .eq('id', reportId)
       .single();
     if(error) throw error;
