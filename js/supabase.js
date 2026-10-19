@@ -6,6 +6,8 @@
   ============================================================
 */
 
+import { getActiveChecklistVersion, getLegacyChecklistArchive } from './data.js';
+
 
 /* =========================================================
    CONFIG
@@ -78,6 +80,10 @@ function buildPayload({
       'open',
 
     report_data:{
+
+      checklistVersion: getActiveChecklistVersion(),
+
+      ...(getLegacyChecklistArchive() ? { legacyChecklistArchive: getLegacyChecklistArchive() } : {}),
 
       meta:{
 
