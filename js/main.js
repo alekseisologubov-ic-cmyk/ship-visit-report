@@ -51,11 +51,7 @@
 ============================================================ */
 
 import {
-  SECTIONS,
-  CURRENT_CHECKLIST_VERSION,
-  setActiveChecklistVersion,
-  clearLegacyChecklistArchive,
-  prepareReportForChecklist
+  SECTIONS
 } from './data.js';
 
 
@@ -554,7 +550,7 @@ function applyRoleUI(){
       : isShipboard()
         ? 'SIGNED IN • SHIPBOARD'
         : isReportUser()
-          ? 'SIGNED IN • USER'
+          ? 'SIGNED IN • SHORESIDE'
           : 'SIGNED IN • REVIEWER';
   }
 }
@@ -1223,7 +1219,7 @@ function setupDefaultDate(){
 
 async function handleStartReport(){
 
-  if(!isAdmin() && !isReportUser()){ alert('Admin or User access is required to create reports.'); return; }
+  if(!isAdmin() && !isReportUser()){ alert('Admin or Shoreside access is required to create reports.'); return; }
 
   const ship =
     document
@@ -1292,9 +1288,6 @@ async function handleStartReport(){
 
 
   try{
-
-    setActiveChecklistVersion(CURRENT_CHECKLIST_VERSION);
-    clearLegacyChecklistArchive();
 
     startNewReport({
 
@@ -1876,8 +1869,9 @@ function bindSummaryButtons(){
 
       try{
 
-        currentSubmittedReport = prepareReportForChecklist(currentSubmittedReport);
-        loadReport(currentSubmittedReport);
+        loadReport(
+          currentSubmittedReport
+        );
 
 
         await pdf.generatePDF();
@@ -3365,7 +3359,6 @@ async function openReadOnlyReport(report, returnScreen = 'submitted'){
       }
       report = detailed.data;
     }
-    report = prepareReportForChecklist(report);
     currentSubmittedReport = report;
     activeReportRecord = report;
     summaryReturnScreen = returnScreen;
@@ -3406,7 +3399,6 @@ async function openSavedReport(
       return;
     }
 
-    report = prepareReportForChecklist(report);
     activeReportRecord = report;
     loadReport(
       report
@@ -3829,7 +3821,6 @@ async function openShipResponseReport(
   }
 
 
-  report = prepareReportForChecklist(report);
   currentShipResponseReport =
     report;
 
@@ -5430,7 +5421,6 @@ async function openSubmittedReport(
       report = detailed.data;
     }
 
-    report = prepareReportForChecklist(report);
     currentSubmittedReport =
       report;
 
@@ -5505,7 +5495,6 @@ async function openSubmittedFollowUps(
       report = detailed.data;
     }
 
-    report = prepareReportForChecklist(report);
     currentSubmittedReport =
       report;
 
