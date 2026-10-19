@@ -296,12 +296,15 @@ function isReportUser(){
 
 function canDeleteReport(report){
   if(isAdmin()) return true;
-  return Boolean(
-    isReportUser() &&
+  if(!isReportUser()) return false;
+  const isOwner = Boolean(
     currentAuthUserId &&
     report?.created_by &&
     String(report.created_by) === String(currentAuthUserId)
   );
+  // Shoreside users may also delete a report assigned to them by name,
+  // using the explicit authenticated-email-to-reviewer-name mapping below.
+  return isOwner || isNamedReviewerForReport(report);
 }
 
 
@@ -4830,8 +4833,14 @@ async function handleAdminDeleteReport(
 
     if(!isAdmin()){
       const ownerResult = await module.getReportOwnership(reportId);
-      if(!ownerResult?.success || String(ownerResult.data?.created_by || '') !== String(currentAuthUserId || '')){
-        throw new Error('You can delete only reports you created.');
+      const reportForAccessCheck = ownerResult?.data || null;
+      const isOwner = Boolean(
+        reportForAccessCheck?.created_by &&
+        String(reportForAccessCheck.created_by) === String(currentAuthUserId || '')
+      );
+      const isAssignedReviewer = isNamedReviewerForReport(reportForAccessCheck);
+      if(!ownerResult?.success || (!isOwner && !isAssignedReviewer)){
+        throw new Error('You can delete only a report you created or one assigned to you in the Reviewer field.');
       }
     }
 
