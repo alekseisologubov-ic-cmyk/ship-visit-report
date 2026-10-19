@@ -51,7 +51,11 @@
 ============================================================ */
 
 import {
-  SECTIONS
+  SECTIONS,
+  CURRENT_CHECKLIST_VERSION,
+  setActiveChecklistVersion,
+  clearLegacyChecklistArchive,
+  prepareReportForChecklist
 } from './data.js';
 
 
@@ -1289,6 +1293,9 @@ async function handleStartReport(){
 
   try{
 
+    setActiveChecklistVersion(CURRENT_CHECKLIST_VERSION);
+    clearLegacyChecklistArchive();
+
     startNewReport({
 
       ship,
@@ -1869,9 +1876,8 @@ function bindSummaryButtons(){
 
       try{
 
-        loadReport(
-          currentSubmittedReport
-        );
+        currentSubmittedReport = prepareReportForChecklist(currentSubmittedReport);
+        loadReport(currentSubmittedReport);
 
 
         await pdf.generatePDF();
@@ -3359,6 +3365,7 @@ async function openReadOnlyReport(report, returnScreen = 'submitted'){
       }
       report = detailed.data;
     }
+    report = prepareReportForChecklist(report);
     currentSubmittedReport = report;
     activeReportRecord = report;
     summaryReturnScreen = returnScreen;
@@ -3399,6 +3406,7 @@ async function openSavedReport(
       return;
     }
 
+    report = prepareReportForChecklist(report);
     activeReportRecord = report;
     loadReport(
       report
@@ -3821,6 +3829,7 @@ async function openShipResponseReport(
   }
 
 
+  report = prepareReportForChecklist(report);
   currentShipResponseReport =
     report;
 
@@ -5421,6 +5430,7 @@ async function openSubmittedReport(
       report = detailed.data;
     }
 
+    report = prepareReportForChecklist(report);
     currentSubmittedReport =
       report;
 
@@ -5495,6 +5505,7 @@ async function openSubmittedFollowUps(
       report = detailed.data;
     }
 
+    report = prepareReportForChecklist(report);
     currentSubmittedReport =
       report;
 
