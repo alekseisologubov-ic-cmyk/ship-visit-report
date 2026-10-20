@@ -2771,6 +2771,129 @@ function renderCurrentReportSummary(
 }
 
 
+/* ============================================================
+   SHIPBOARD READ-ONLY OPEN REPORT — DEPARTMENT HOME
+   Mirrors the Shoreside department-card layout without exposing
+   checklist edit controls to Shipboard users.
+============================================================ */
+
+function renderShipboardOpenReportDepartments(report){
+  const container = document.getElementById('report-overall-content');
+  if(!container) return;
+
+  const points = getReportPoints(report, false);
+  const checkedPoints = points.filter(point => Boolean(point.checked));
+  const uncheckedPoints = points.filter(point => !point.checked);
+  const followUpCount = points.filter(point => Boolean(point.followUpNeeded)).length;
+  const meta = report?.report_data?.meta || {};
+
+  container.innerHTML = `
+    <div style="margin-bottom:20px;">
+      <div style="color:var(--vv-squid);font-size:16px;font-weight:800;">REPORT OVERALL</div>
+      <div style="margin-top:6px;color:var(--vv-gray);font-size:11px;line-height:1.7;">
+        <b>Ship:</b> ${escapeHtml(report.ship || meta.ship || '')}<br>
+        <b>Visit:</b> ${escapeHtml(report.date_on || meta.dateOn || '')}
+        ${(report.date_off || meta.dateOff) ? ` → ${escapeHtml(report.date_off || meta.dateOff || '')}` : ''}<br>
+        <b>Reviewer:</b> ${escapeHtml(report.reviewer || meta.reviewer || '')}
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;">
+        <span style="display:inline-block;padding:7px 11px;border-radius:7px;background:#FCEBEC;color:#9D1010;font-size:11px;font-weight:800;">${checkedPoints.length} CHECKED</span>
+        <span style="display:inline-block;padding:7px 11px;border-radius:7px;background:#F0EDF3;color:#554760;font-size:11px;font-weight:800;">${uncheckedPoints.length} NOT YET CHECKED</span>
+        <span style="display:inline-block;padding:7px 11px;border-radius:7px;background:#EAF2FC;color:#234A78;font-size:11px;font-weight:800;">${followUpCount} SHIP FOLLOW-UPS</span>
+      </div>
+    </div>
+
+    <div style="margin-bottom:10px;color:var(--vv-squid);font-size:15px;font-weight:800;">DEPARTMENTS</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;">
+      ${SECTIONS.map(section => {
+        const departmentPoints = points.filter(point => point.section === section.title);
+        const departmentChecked = departmentPoints.filter(point => Boolean(point.checked)).length;
+        const departmentFollowUps = departmentPoints.filter(point => Boolean(point.followUpNeeded)).length;
+        return `
+          <button type="button" data-shipboard-department="${escapeHtml(section.id)}"
+            style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:150px;padding:20px 16px;border:1px solid var(--vv-line);border-radius:14px;background:#FFFFFF;color:var(--vv-squid);text-align:center;cursor:pointer;font-family:inherit;">
+            <span style="font-size:14px;font-weight:800;line-height:1.45;">${escapeHtml(section.title)}</span>
+            <span style="font-size:26px;font-weight:800;line-height:1;">${departmentChecked}/${departmentPoints.length}</span>
+            <span style="font-size:9px;font-weight:800;color:var(--vv-gray);">POINTS CHECKED</span>
+            <span style="font-size:10px;color:var(--vv-gray);">${departmentFollowUps} ship follow-up${departmentFollowUps === 1 ? '' : 's'}</span>
+            <span style="font-size:10px;font-weight:800;">OPEN DEPARTMENT →</span>
+          </button>
+        `;
+      }).join('')}
+    </div>
+    <div style="margin-top:12px;color:var(--vv-gray);font-size:11px;line-height:1.5;">Select a department to review checked findings, unchecked points, reviewer comments, photos, and ship follow-ups. This view is read-only.</div>
+  `;
+
+  container.querySelectorAll('[data-shipboard-department]').forEach(button => {
+    button.addEventListener('click', () => {
+      renderShipboardOpenReportDepartment(report, button.dataset.shipboardDepartment);
+    });
+  });
+}
+
+
+/* ============================================================
+   SHIPBOARD READ-ONLY OPEN REPORT — DEPARTMENT DETAIL
+============================================================ */
+
+function renderShipboardOpenReportDepartment(report, departmentId){
+  const container = document.getElementById('report-overall-content');
+  if(!container) return;
+
+  const section = SECTIONS.find(item => item.id === departmentId);
+  if(!section){
+    renderShipboardOpenReportDepartments(report);
+    return;
+  }
+
+  const points = getReportPoints(report, false).filter(point => point.section === section.title);
+  const checkedPoints = points.filter(point => Boolean(point.checked));
+  const uncheckedPoints = points.filter(point => !point.checked);
+  const generalComments = getDepartmentGeneralCommentsFromReport(report, section.id);
+  const meta = report?.report_data?.meta || {};
+
+  container.innerHTML = `
+    <div style="margin-bottom:16px;">
+      <button type="button" data-shipboard-back-departments
+        style="min-height:38px;margin-bottom:15px;padding:8px 13px;border:1px solid var(--vv-squid);border-radius:8px;background:#FFFFFF;color:var(--vv-squid);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;">
+        ← Back to Departments
+      </button>
+      <div style="color:var(--vv-squid);font-size:16px;font-weight:800;">${escapeHtml(section.title)}</div>
+      <div style="margin-top:6px;color:var(--vv-gray);font-size:11px;line-height:1.7;">
+        <b>Ship:</b> ${escapeHtml(report.ship || meta.ship || '')}<br>
+        <b>Visit:</b> ${escapeHtml(report.date_on || meta.dateOn || '')}
+        ${(report.date_off || meta.dateOff) ? ` → ${escapeHtml(report.date_off || meta.dateOff || '')}` : ''}<br>
+        <b>Reviewer:</b> ${escapeHtml(report.reviewer || meta.reviewer || '')}
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;">
+        <span style="display:inline-block;padding:6px 10px;border-radius:6px;background:#FCEBEC;color:#9D1010;font-size:11px;font-weight:800;">${checkedPoints.length} CHECKED</span>
+        <span style="display:inline-block;padding:6px 10px;border-radius:6px;background:#F0EDF3;color:#554760;font-size:11px;font-weight:800;">${uncheckedPoints.length} NOT YET CHECKED</span>
+      </div>
+    </div>
+
+    ${generalComments.length ? `
+      <div style="margin-bottom:12px;padding:10px 12px;border-left:4px solid var(--vv-squid);border-radius:8px;background:#F8F5FA;">
+        <div style="color:var(--vv-squid);font-size:10px;font-weight:800;letter-spacing:.04em;">DEPARTMENT GENERAL COMMENTS</div>
+        ${generalComments.map(comment => `<div style="margin-top:7px;font-size:11px;line-height:1.5;color:var(--vv-body);"><strong>${escapeHtml(comment.name || 'Reviewer')}:</strong> ${escapeHtml(comment.text || '')}</div>`).join('')}
+      </div>
+    ` : ''}
+
+    <div style="margin:12px 0 8px;padding-bottom:6px;border-bottom:2px solid var(--vv-red);color:var(--vv-squid);font-size:13px;font-weight:800;">CHECKED POINTS${checkedPoints.length ? ` (${checkedPoints.length})` : ''}</div>
+    ${checkedPoints.length ? checkedPoints.map(renderSummaryPoint).join('') : '<div class="empty" style="margin-bottom:12px;">No points have been checked in this department.</div>'}
+
+    <div style="margin:16px 0 8px;padding:9px 0 6px;border-bottom:1px dashed var(--vv-line);color:var(--vv-gray);font-size:12px;font-weight:800;">NOT YET CHECKED (${uncheckedPoints.length})</div>
+    ${uncheckedPoints.length ? uncheckedPoints.map(renderSummaryPoint).join('') : '<div class="empty">All points in this department have been checked.</div>'}
+  `;
+
+  const backButton = container.querySelector('[data-shipboard-back-departments]');
+  if(backButton){
+    backButton.addEventListener('click', () => renderShipboardOpenReportDepartments(report));
+  }
+
+  hydratePhotoElements(container);
+}
+
+
 function groupPoints(
   points
 ){
@@ -2832,6 +2955,10 @@ function renderSummaryPoint(
     point.followUpNeeded &&
     point.shipComments.length >
       0;
+
+  const pointChecked = Boolean(point.checked);
+  const markerBackground = pointChecked ? 'var(--vv-red)' : '#F0EDF3';
+  const markerColor = pointChecked ? '#FFFFFF' : '#655A70';
 
 
   return `
@@ -3394,8 +3521,22 @@ async function openReadOnlyReport(report, returnScreen = 'submitted'){
     activeReportRecord = report;
     summaryReturnScreen = returnScreen;
     loadReport(report);
-    const showUncheckedPoints = isShipboard() && String(report?.status || 'open') === 'open';
-    renderCurrentReportSummary(report, showUncheckedPoints);
+    const isShipboardOpenReport = isShipboard() && String(report?.status || 'open') === 'open';
+    if(isShipboardOpenReport){
+      // Normalize the report state against the active checklist without saving it.
+      // This ensures every current point is shown while preserving each stored checked flag.
+      const normalizedState = JSON.parse(JSON.stringify(getState() || {}));
+      const shipboardDisplayReport = {
+        ...report,
+        report_data: {
+          ...(report.report_data || {}),
+          state: normalizedState
+        }
+      };
+      renderShipboardOpenReportDepartments(shipboardDisplayReport);
+    }else{
+      renderCurrentReportSummary(report, false);
+    }
     setSummaryMode(true);
     showScreen('summary');
   }catch(error){
