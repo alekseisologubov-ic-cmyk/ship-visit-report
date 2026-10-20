@@ -5623,9 +5623,13 @@ async function openSubmittedReport(
       container
     ){
 
+      // FINAL SUBMITTED REPORTS show checked findings only.
+      // This keeps reviewer comments, attached photos, follow-up flags, and
+      // ship response comments attached to checked points, while fully omitting
+      // unchecked points and their point-level details from the final view.
       renderCurrentReportSummary(
         report,
-        (isReportUser() || isShipboard())
+        false
       );
 
     }
