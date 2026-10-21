@@ -59,6 +59,7 @@ import {
   addPhoto,
   removePhoto,
   setFollowUp,
+  setShoreFollowUp,
   getMeta,
   getReviewer,
   getReportId
@@ -341,7 +342,7 @@ export function getChecklistCounts(){
 
 
           if(
-            item.followUpNeeded
+            item.followUpNeeded || item.shoreFollowUpNeeded
           ){
 
             followUps++;
@@ -608,7 +609,7 @@ function renderDepartmentHome(){
 
             <small>
 
-              FOLLOW-UPS
+              SHIP / SHORESIDE FOLLOW-UPS
 
             </small>
 
@@ -1524,40 +1525,44 @@ function createChecklistPoint(
       ></div>
 
 
-      <!-- FOLLOW-UP -->
+      <!-- SHIP FOLLOW-UP -->
 
       <div
         class="followup-row"
       >
 
+        <input
+          type="checkbox"
+          id="followup-${escapeHtml(key)}"
+          class="followup-check"
+          data-key="${escapeHtml(key)}"
+          ${item.followUpNeeded ? 'checked' : ''}
+        >
+
+        <label for="followup-${escapeHtml(key)}">
+          Follow-Up Needed from Ship
+        </label>
+
+      </div>
+
+
+      <!-- SHORESIDE FOLLOW-UP -->
+
+      <div
+        class="followup-row shore-followup-row"
+      >
 
         <input
           type="checkbox"
-          id="followup-${escapeHtml(
-            key
-          )}"
-          class="followup-check"
-          data-key="${escapeHtml(
-            key
-          )}"
-          ${
-            item.followUpNeeded
-              ? 'checked'
-              : ''
-          }
+          id="shore-followup-${escapeHtml(key)}"
+          class="shore-followup-check"
+          data-key="${escapeHtml(key)}"
+          ${item.shoreFollowUpNeeded ? 'checked' : ''}
         >
 
-
-        <label
-          for="followup-${escapeHtml(
-            key
-          )}"
-        >
-
-          Follow-Up Needed from Ship
-
+        <label for="shore-followup-${escapeHtml(key)}">
+          Follow-Up Needed from Shoreside
         </label>
-
 
       </div>
 
@@ -1655,7 +1660,7 @@ function hasDetails(
     ||
 
     Boolean(
-      item.followUpNeeded
+      item.followUpNeeded || item.shoreFollowUpNeeded
     )
 
     ||
@@ -1708,6 +1713,12 @@ function bindPointEvents(
   const followUp =
     element.querySelector(
       '.followup-check'
+    );
+
+
+  const shoreFollowUp =
+    element.querySelector(
+      '.shore-followup-check'
     );
 
 
@@ -1944,6 +1955,35 @@ function bindPointEvents(
           key
         );
 
+
+        await saveCurrentReport();
+
+      }
+    );
+
+  }
+
+
+  /* ==========================================================
+     SHORESIDE FOLLOW-UP
+  ========================================================== */
+
+  if(
+    shoreFollowUp
+  ){
+
+    shoreFollowUp.addEventListener(
+      'change',
+      async function(event){
+
+        event.stopPropagation();
+
+        setShoreFollowUp(
+          key,
+          shoreFollowUp.checked
+        );
+
+        openDetails(key);
 
         await saveCurrentReport();
 
@@ -3405,6 +3445,11 @@ export function getAllChecklistPoints(){
             followUpNeeded:
               Boolean(
                 item.followUpNeeded
+              ),
+
+            shoreFollowUpNeeded:
+              Boolean(
+                item.shoreFollowUpNeeded
               ),
 
             shipComments:
