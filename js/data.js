@@ -236,6 +236,8 @@ function hasSavedPointData(item) {
       item.checked ||
       item.followUpNeeded ||
       item.follow_up_needed ||
+      item.shoreFollowUpNeeded ||
+      item.shore_follow_up_needed ||
       (Array.isArray(item.comments) && item.comments.length) ||
       (Array.isArray(item.photos) && item.photos.length) ||
       (Array.isArray(item.shipComments) && item.shipComments.length) ||
@@ -248,6 +250,7 @@ function mergePointData(target, source) {
   if (!target || !source || typeof source !== 'object') return;
   target.checked = Boolean(target.checked || source.checked);
   target.followUpNeeded = Boolean(target.followUpNeeded || source.followUpNeeded || source.follow_up_needed);
+  target.shoreFollowUpNeeded = Boolean(target.shoreFollowUpNeeded || source.shoreFollowUpNeeded || source.shore_follow_up_needed);
   for (const [targetKey, sourceKeys] of Object.entries({
     comments: ['comments'],
     photos: ['photos'],
@@ -398,6 +401,7 @@ export function emptyState() {
         comments: [],
         photos: [],
         followUpNeeded: false,
+        shoreFollowUpNeeded: false,
         shipComments: []
       };
     });
