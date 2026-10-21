@@ -539,6 +539,14 @@ function normalizeItem(
       ),
 
 
+    shoreFollowUpNeeded:
+      Boolean(
+        source.shoreFollowUpNeeded ??
+        source.shore_follow_up_needed ??
+        false
+      ),
+
+
     shipComments:
       normalizeShipComments(
         source.shipComments ??
@@ -1119,6 +1127,32 @@ export function setFollowUp(
 
 
   state[key].followUpNeeded =
+    Boolean(
+      needed
+    );
+
+}
+
+
+/* ============================================================
+   SHORESIDE FOLLOW-UP
+============================================================ */
+
+export function setShoreFollowUp(
+  key,
+  needed
+) {
+
+  if (
+    !state[key]
+  ) {
+
+    return;
+
+  }
+
+
+  state[key].shoreFollowUpNeeded =
     Boolean(
       needed
     );
