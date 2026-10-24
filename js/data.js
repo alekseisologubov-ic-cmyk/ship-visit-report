@@ -33,7 +33,8 @@ const CURRENT_SECTIONS = [
       'Crew Appreciation: Verified recognition and crew appreciation initiatives for the Culinary team are actively in place.',
       'Uniforms & Safety Shoes: Checked the condition and availability of uniforms and safety shoes for the Culinary crew.',
       'Training Records: Verified the monthly training file for regularity and confirmed Galley Fire Safety Training is complete for all culinary crew.',
-      'AIMS Maintenance & Report Follow-up: Reviewed previous ship visit reports, meeting notes with the Hotel Service Engineer, and outstanding AIMS maintenance reports to ensure repeat findings are resolved.'
+      'AIMS Maintenance & Report Follow-up: Reviewed previous ship visit reports, meeting notes with the Hotel Service Engineer, and outstanding AIMS maintenance reports to ensure repeat findings are resolved.',
+      'Kitchen Table — Food Variety, Vegan Options & Sea Day Lunch Specials: Verified that the minimum food variety matrix is followed, vegan options are available as required by the matrix, and specials are actively implemented during sea-day lunch.'
     ]
   },
   {
@@ -63,7 +64,8 @@ const CURRENT_SECTIONS = [
       'Specialty Equipment (Gunbae Grills): Audited Gunbae grills to ensure all units are clean, fully functional, and in good operating condition.',
       '"Treat Yourself" Revenue & Execution: Verified proper waiter explanations, upselling, proper charging, and correct entry in the Chargeable Tracker for the "Treat Yourself" program.',
       'Ship Eats (Room Service): Checked food quality, preparation, and presentation for Ship Eats orders.',
-      'Venue Standards: Audited menu variety, overall station cleanliness, and proper labeling in The Kitchen Table area.'
+      'Venue Standards: Audited menu variety, overall station cleanliness, and proper labeling in The Kitchen Table area.',
+      'Kitchen Table — Labels, Allergens & Dietary Identification: Verified that Kitchen Table labelling requirements are followed, allergen information is visible on labels, and vegan and vegetarian items are clearly identified.'
     ]
   },
   {
