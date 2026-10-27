@@ -727,6 +727,27 @@ export async function getReport(
 
 
 /* =========================================================
+   SAVE SHIPBOARD COMMENTS ON OPEN REPORTS
+========================================================= */
+
+export async function saveShipboardOpenUpdates({ reportId, comments = {}, focusRequests = {} }){
+  try{
+    if(!reportId) throw new Error('Report ID is required.');
+    const { data, error } = await supabase.rpc('save_shipboard_open_updates', {
+      p_report_id: reportId,
+      p_comments: comments || {},
+      p_focus_requests: focusRequests || {}
+    });
+    if(error) throw error;
+    return { success:true, data, error:null };
+  }catch(error){
+    console.error('saveShipboardOpenUpdates:', error);
+    return { success:false, data:null, error };
+  }
+}
+
+
+/* =========================================================
    SHIP SUBMITS FINAL RESPONSE
 ========================================================= */
 
