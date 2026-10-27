@@ -1765,9 +1765,23 @@ export async function generatePDF(){
     reviewer
   );
 
+  const shipFocusRequestsForPDF = window.__shipVisitShipFocusRequests || {};
+  const shipFocusEntriesForPDF = Object.entries(shipFocusRequestsForPDF)
+    .map(([sectionId, value]) => ({
+      section: SECTIONS.find(item => item.id === sectionId)?.title || sectionId,
+      text: typeof value === 'string' ? value : (value?.text || '')
+    }))
+    .filter(entry => String(entry.text || '').trim());
 
-  y +=
-    5;
+  if(shipFocusEntriesForPDF.length){
+    y += 5;
+    addText('SHIP FOCUS REQUESTS', { size:9, color:squid, bold:true });
+    shipFocusEntriesForPDF.forEach(entry => {
+      addText(`${entry.section}: ${entry.text}`, { size:8.5, color:dark });
+    });
+  }
+
+  y += 5;
 
 
   /* REPORT SUMMARY */
@@ -4069,8 +4083,24 @@ export async function generateFollowUpPDF(
   );
 
 
-  y +=
-    8;
+  const focusRequests = report?.report_data?.shipFocusRequests || {};
+  const focusEntries = Object.entries(focusRequests)
+    .map(([sectionId, value]) => ({
+      sectionId,
+      text: typeof value === 'string' ? value : (value?.text || ''),
+      name: typeof value === 'object' && value ? (value.name || value.email || 'Ship') : 'Ship'
+    }))
+    .filter(entry => String(entry.text || '').trim());
+
+  if(focusEntries.length){
+    y += 6;
+    addText('SHIP FOCUS REQUESTS', 10, squid, margin, width, true);
+    focusEntries.forEach(entry => {
+      addText(`${SECTIONS.find(item => item.id === entry.sectionId)?.title || entry.sectionId}: ${entry.text}`, 9, dark, margin + 5, width - 5, true);
+    });
+  }
+
+  y += 8;
 
 
   addText(
