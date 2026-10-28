@@ -1365,3 +1365,24 @@ export default {
   migrateEmbeddedPhotosToStorage
 
 };
+
+/* =========================================================
+   SHORESIDE SHIP FOCUS REQUEST MANAGEMENT
+   Changes only report_data.shipFocusRequests via a restricted RPC.
+========================================================= */
+
+export async function manageShipFocusRequest({ reportId, sectionId, text }) {
+  try {
+    if (!reportId || !sectionId) throw new Error('Report and department are required.');
+    const { data, error } = await supabase.rpc('manage_ship_focus_request', {
+      p_report_id: reportId,
+      p_section_id: sectionId,
+      p_request_text: text || ''
+    });
+    if (error) throw error;
+    return { success: true, data, error: null };
+  } catch (error) {
+    console.error('manageShipFocusRequest:', error);
+    return { success: false, data: null, error };
+  }
+}
