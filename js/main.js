@@ -2523,9 +2523,6 @@ function normalizeShipComment(
       value.ship ||
       'Ship',
 
-    // Keep the author email so shipboard users can edit/delete only their own response.
-    email: String(value.email || '').trim().toLowerCase(),
-
     text,
 
     timestamp:
@@ -2571,6 +2568,8 @@ function renderCurrentReportSummary(
 
   // Keep the current report's saved ship focus requests available to the PDF/print module.
   window.__shipVisitShipFocusRequests = report?.report_data?.shipFocusRequests || {};
+  window.__shipVisitCanManageShipFocus = !isShipboard() && String(report?.status || 'open') === 'open';
+  window.__shipVisitActiveReportId = report?.id || null;
 
   const points =
     getReportPoints(
@@ -2867,30 +2866,16 @@ function renderShipboardOpenReportDepartments(report){
 ============================================================ */
 
 function renderShipboardShipCommentField(point){
-  if(!point.followUpNeeded || !isShipboard()) return '';
-
-  // Only expose the authenticated shipboard user's own response in the editable
-  // field. Other ship users' responses remain visible in the report summary but
-  // are never included in this user's delete/save payload.
-  const comments = Array.isArray(point.shipComments) ? point.shipComments : [];
-  // Older saved responses may have the user's email in `name` but no `email` field.
-  // Treat that legacy format as owned by the signed-in user too.
-  const ownComments = comments.filter(comment => {
-    const authorEmail = String(comment?.email || '').trim().toLowerCase();
-    const legacyName = String(comment?.name || '').trim().toLowerCase();
-    return authorEmail === currentAuthUserEmail || legacyName === currentAuthUserEmail;
-  });
-  const existing = ownComments.map(comment => comment?.text || '').join('\n');
-  const canDeleteOwnComment = ownComments.length > 0;
-
+  const existing = Array.isArray(point.shipComments) ? point.shipComments.map(c => c?.text || '').join('\n') : '';
+  if(!point.followUpNeeded) return '';
   return `
     <div style="margin:-4px 0 12px 30px;padding:10px;border:1px solid #D9D3E0;border-radius:8px;background:#FBFAFC;">
-      <label style="display:block;margin-bottom:6px;font-size:10px;font-weight:800;color:var(--vv-squid);">YOUR SHIP TEAM COMMENT</label>
+      <label style="display:block;margin-bottom:6px;font-size:10px;font-weight:800;color:var(--vv-squid);">SHIP TEAM COMMENT</label>
       <textarea data-ship-comment-key="${escapeHtml(point.key)}" rows="3" maxlength="3000"
-        placeholder="Add your ship-side response for this follow-up..."
+        placeholder="Add the ship-side response for this follow-up..."
         style="width:100%;box-sizing:border-box;padding:9px;border:1px solid var(--vv-line);border-radius:6px;font:inherit;font-size:12px;resize:vertical;">${escapeHtml(existing)}</textarea>
-      ${canDeleteOwnComment ? `<button type="button" data-delete-ship-comment-key="${escapeHtml(point.key)}"
-        style="margin-top:7px;padding:6px 10px;border:1px solid #B4232D;border-radius:6px;background:#fff;color:#B4232D;font:inherit;font-size:10px;font-weight:800;cursor:pointer;">DELETE MY SAVED SHIP COMMENT</button>` : ''}
+      <button type="button" data-delete-ship-comment-key="${escapeHtml(point.key)}"
+        style="margin-top:7px;padding:6px 10px;border:1px solid #B4232D;border-radius:6px;background:#fff;color:#B4232D;font:inherit;font-size:10px;font-weight:800;cursor:pointer;">DELETE MY SAVED SHIP COMMENT</button>
     </div>`;
 }
 
@@ -2992,12 +2977,22 @@ function renderShipboardOpenReportDepartment(report, departmentId){
       }
     };
     saveButtons.forEach(button => button.addEventListener('click', handleShipboardSave));
-    container.querySelectorAll('[data-delete-ship-comment-key]').forEach(button => {
+    container.querySelectorAll('[data-delete-green-ship-comment-key]').forEach(button => {
       button.addEventListener('click', async () => {
-        if(!isShipboard() || !currentAuthUserEmail){
-          showError('Only the signed-in shipboard user can delete their own ship comment.');
+        const key = button.dataset.deleteGreenShipCommentKey;
+        const input = [...container.querySelectorAll('[data-ship-comment-key]')]
+          .find(item => item.dataset.shipCommentKey === key);
+        if(!input){
+          if(status) status.textContent = 'Open this follow-up response field to manage the saved comment.';
           return;
         }
+        if(!window.confirm('Delete your saved ship comment for this checklist point? This cannot be undone.')) return;
+        input.value = '';
+        await handleShipboardSave();
+      });
+    });
+    container.querySelectorAll('[data-delete-ship-comment-key]').forEach(button => {
+      button.addEventListener('click', async () => {
         const key = button.dataset.deleteShipCommentKey;
         const input = [...container.querySelectorAll('[data-ship-comment-key]')]
           .find(item => item.dataset.shipCommentKey === key);
@@ -3319,6 +3314,7 @@ function renderSummaryPoint(
 
                       <div
                         class="ship-response-display"
+                        style="position:relative;padding-right:${isShipboard() && String(activeReportRecord?.status || 'open') === 'open' ? '38px' : '10px'};"
                       >
 
                         <strong>
@@ -3329,19 +3325,14 @@ function renderSummaryPoint(
 
                         </strong>
 
-
-                        <div
-                          style="
-                            margin-top:3px;
-                          "
-                        >
-
-                          ${escapeHtml(
-                            comment.text
-                          )}
-
+                        <div style="margin-top:3px;">
+                          ${escapeHtml(comment.text)}
                         </div>
-
+                        ${isShipboard() && String(activeReportRecord?.status || 'open') === 'open' ? `
+                          <button type="button" data-delete-green-ship-comment-key="${escapeHtml(point.key)}"
+                            aria-label="Delete your ship comment" title="Delete your saved ship comment"
+                            style="position:absolute;top:7px;right:7px;width:24px;height:24px;border:1px solid #E4D8E8;border-radius:50%;background:#fff;color:#C41425;font-size:18px;line-height:1;font-weight:800;cursor:pointer;">×</button>
+                        ` : ''}
                       </div>
 
                     `
@@ -3642,6 +3633,8 @@ async function openReadOnlyReport(report, returnScreen = 'submitted'){
     activeReportRecord = report;
     // PDF/print templates can include the saved ship-side focus requests for this report.
     window.__shipVisitShipFocusRequests = report?.report_data?.shipFocusRequests || {};
+  window.__shipVisitCanManageShipFocus = !isShipboard() && String(report?.status || 'open') === 'open';
+  window.__shipVisitActiveReportId = report?.id || null;
     summaryReturnScreen = returnScreen;
     loadReport(report);
     const isShipboardOpenReport = isShipboard() && String(report?.status || 'open') === 'open';
@@ -3699,6 +3692,8 @@ async function openSavedReport(
     // Make the persisted ship focus requests available to checklist.js when
     // a shoreside reviewer opens the report in the editable checklist view.
     window.__shipVisitShipFocusRequests = report?.report_data?.shipFocusRequests || {};
+  window.__shipVisitCanManageShipFocus = !isShipboard() && String(report?.status || 'open') === 'open';
+  window.__shipVisitActiveReportId = report?.id || null;
     loadReport(
       report
     );
