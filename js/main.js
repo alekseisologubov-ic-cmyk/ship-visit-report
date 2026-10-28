@@ -2873,9 +2873,13 @@ function renderShipboardShipCommentField(point){
   // field. Other ship users' responses remain visible in the report summary but
   // are never included in this user's delete/save payload.
   const comments = Array.isArray(point.shipComments) ? point.shipComments : [];
-  const ownComments = comments.filter(comment =>
-    String(comment?.email || '').trim().toLowerCase() === currentAuthUserEmail
-  );
+  // Older saved responses may have the user's email in `name` but no `email` field.
+  // Treat that legacy format as owned by the signed-in user too.
+  const ownComments = comments.filter(comment => {
+    const authorEmail = String(comment?.email || '').trim().toLowerCase();
+    const legacyName = String(comment?.name || '').trim().toLowerCase();
+    return authorEmail === currentAuthUserEmail || legacyName === currentAuthUserEmail;
+  });
   const existing = ownComments.map(comment => comment?.text || '').join('\n');
   const canDeleteOwnComment = ownComments.length > 0;
 
