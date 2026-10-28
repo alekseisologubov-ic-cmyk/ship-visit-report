@@ -71,7 +71,8 @@ import {
   uploadPhotoDataUrl,
   getPhotoDisplayUrl,
   deleteStoragePhoto,
-  deleteLegacyPhotoData
+  deleteLegacyPhotoData,
+  manageShipFocusRequest
 } from './supabase.js';
 
 
@@ -1211,18 +1212,82 @@ function renderShipFocusRequestForDepartment(section){
   const requests = window.__shipVisitShipFocusRequests || {};
   const raw = requests[section.id];
   const text = typeof raw === 'string' ? raw : String(raw?.text || raw?.request || '').trim();
+  const canManage = Boolean(window.__shipVisitCanManageShipFocus);
 
-  if(!text){
+  if(!text && !canManage){
     container.style.display = 'none';
     container.innerHTML = '';
     return;
   }
 
   container.style.display = 'block';
+  if(canManage){
+    container.innerHTML = `
+      <div style="margin-bottom:6px;color:#087443;font-size:11px;font-weight:800;letter-spacing:.04em;">SHIP FOCUS REQUEST</div>
+      <div style="position:relative;width:100%;">
+        <textarea data-ship-focus-edit="${escapeHtml(section.id)}"
+          aria-label="Ship Focus Request for ${escapeHtml(section.title || section.name || section.id)}"
+          placeholder="Add or update the ship focus request for this department..."
+          style="display:block;width:100%;min-height:76px;box-sizing:border-box;padding:10px 44px 10px 10px;border:1px solid var(--vv-line);border-radius:8px;font:inherit;resize:vertical;">${escapeHtml(text)}</textarea>
+        ${text ? `<button type="button" data-delete-ship-focus="${escapeHtml(section.id)}" aria-label="Delete Ship Focus Request" title="Delete Ship Focus Request" style="position:absolute;top:8px;right:8px;width:27px;height:27px;display:flex;align-items:center;justify-content:center;padding:0;border:1px solid rgba(60,16,83,.18);border-radius:50%;background:#fff;color:#c41425;font-size:19px;line-height:1;font-weight:800;cursor:pointer;">×</button>` : ''}
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px;">
+        <button type="button" data-save-ship-focus="${escapeHtml(section.id)}" class="btn-primary">SAVE SHIP FOCUS REQUEST</button>
+        <span data-ship-focus-status="${escapeHtml(section.id)}" role="status" style="font-size:12px;color:#655A70;"></span>
+      </div>
+      <div style="margin-top:6px;color:#47715e;font-size:10px;">Shoreside can add, update, or delete this request while the report is open.</div>
+    `;
+    const input = container.querySelector('[data-ship-focus-edit]');
+    const status = container.querySelector('[data-ship-focus-status]');
+    const save = container.querySelector('[data-save-ship-focus]');
+    const remove = container.querySelector('[data-delete-ship-focus]');
+
+    const saveValue = async (value) => {
+      if(save) save.disabled = true;
+      if(remove) remove.disabled = true;
+      if(status) status.textContent = 'Saving...';
+      try{
+        const result = await manageShipFocusRequest({
+          reportId: window.__shipVisitActiveReportId,
+          sectionId: section.id,
+          text: value
+        });
+        if(!result?.success) throw (result?.error || new Error('Could not save Ship Focus Request.'));
+        const next = { ...(window.__shipVisitShipFocusRequests || {}) };
+        if(String(value || '').trim()){
+          next[section.id] = result.data?.request || {
+            sectionId: section.id,
+            text: String(value).trim(),
+            name: result.data?.name || 'Shoreside',
+            timestamp: new Date().toISOString()
+          };
+        } else {
+          delete next[section.id];
+        }
+        window.__shipVisitShipFocusRequests = next;
+        if(status) status.textContent = 'Saved successfully';
+        renderShipFocusRequestForDepartment(section);
+      }catch(error){
+        console.error('manageShipFocusRequest failed:', error);
+        if(status) status.textContent = `Save failed: ${error?.message || 'Please try again.'}`;
+      }finally{
+        if(save) save.disabled = false;
+        if(remove) remove.disabled = false;
+      }
+    };
+
+    if(save) save.addEventListener('click', () => saveValue(input?.value || ''));
+    if(remove) remove.addEventListener('click', async () => {
+      if(!window.confirm('Delete this Ship Focus Request for this department?')) return;
+      await saveValue('');
+    });
+    return;
+  }
+
   container.innerHTML = `
     <div style="margin-bottom:6px;color:#087443;font-size:11px;font-weight:800;letter-spacing:.04em;">SHIP FOCUS REQUEST</div>
     <div style="color:#173d2d;font-size:13px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere;">${escapeHtml(text)}</div>
-    <div style="margin-top:6px;color:#47715e;font-size:10px;">Submitted by the ship team · read-only</div>
+    <div style="margin-top:6px;color:#47715e;font-size:10px;">Submitted by the ship team</div>
   `;
 }
 
