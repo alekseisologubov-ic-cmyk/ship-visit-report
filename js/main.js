@@ -2523,6 +2523,9 @@ function normalizeShipComment(
       value.ship ||
       'Ship',
 
+    // Keep the author email so shipboard users can edit/delete only their own response.
+    email: String(value.email || '').trim().toLowerCase(),
+
     text,
 
     timestamp:
@@ -2864,16 +2867,26 @@ function renderShipboardOpenReportDepartments(report){
 ============================================================ */
 
 function renderShipboardShipCommentField(point){
-  const existing = Array.isArray(point.shipComments) ? point.shipComments.map(c => c?.text || '').join('\n') : '';
-  if(!point.followUpNeeded) return '';
+  if(!point.followUpNeeded || !isShipboard()) return '';
+
+  // Only expose the authenticated shipboard user's own response in the editable
+  // field. Other ship users' responses remain visible in the report summary but
+  // are never included in this user's delete/save payload.
+  const comments = Array.isArray(point.shipComments) ? point.shipComments : [];
+  const ownComments = comments.filter(comment =>
+    String(comment?.email || '').trim().toLowerCase() === currentAuthUserEmail
+  );
+  const existing = ownComments.map(comment => comment?.text || '').join('\n');
+  const canDeleteOwnComment = ownComments.length > 0;
+
   return `
     <div style="margin:-4px 0 12px 30px;padding:10px;border:1px solid #D9D3E0;border-radius:8px;background:#FBFAFC;">
-      <label style="display:block;margin-bottom:6px;font-size:10px;font-weight:800;color:var(--vv-squid);">SHIP TEAM COMMENT</label>
+      <label style="display:block;margin-bottom:6px;font-size:10px;font-weight:800;color:var(--vv-squid);">YOUR SHIP TEAM COMMENT</label>
       <textarea data-ship-comment-key="${escapeHtml(point.key)}" rows="3" maxlength="3000"
-        placeholder="Add the ship-side response for this follow-up..."
+        placeholder="Add your ship-side response for this follow-up..."
         style="width:100%;box-sizing:border-box;padding:9px;border:1px solid var(--vv-line);border-radius:6px;font:inherit;font-size:12px;resize:vertical;">${escapeHtml(existing)}</textarea>
-      <button type="button" data-delete-ship-comment-key="${escapeHtml(point.key)}"
-        style="margin-top:7px;padding:6px 10px;border:1px solid #B4232D;border-radius:6px;background:#fff;color:#B4232D;font:inherit;font-size:10px;font-weight:800;cursor:pointer;">DELETE MY SAVED SHIP COMMENT</button>
+      ${canDeleteOwnComment ? `<button type="button" data-delete-ship-comment-key="${escapeHtml(point.key)}"
+        style="margin-top:7px;padding:6px 10px;border:1px solid #B4232D;border-radius:6px;background:#fff;color:#B4232D;font:inherit;font-size:10px;font-weight:800;cursor:pointer;">DELETE MY SAVED SHIP COMMENT</button>` : ''}
     </div>`;
 }
 
@@ -2977,6 +2990,10 @@ function renderShipboardOpenReportDepartment(report, departmentId){
     saveButtons.forEach(button => button.addEventListener('click', handleShipboardSave));
     container.querySelectorAll('[data-delete-ship-comment-key]').forEach(button => {
       button.addEventListener('click', async () => {
+        if(!isShipboard() || !currentAuthUserEmail){
+          showError('Only the signed-in shipboard user can delete their own ship comment.');
+          return;
+        }
         const key = button.dataset.deleteShipCommentKey;
         const input = [...container.querySelectorAll('[data-ship-comment-key]')]
           .find(item => item.dataset.shipCommentKey === key);
