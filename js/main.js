@@ -2866,17 +2866,40 @@ function renderShipboardOpenReportDepartments(report){
 ============================================================ */
 
 function renderShipboardShipCommentField(point){
-  const existing = Array.isArray(point.shipComments) ? point.shipComments.map(c => c?.text || '').join('\n') : '';
   if(!point.followUpNeeded) return '';
+  const comments = Array.isArray(point.shipComments) ? point.shipComments : [];
+  const current = comments.find(c =>
+    String(c?.email || '').toLowerCase() === String(currentAuthUserEmail || '').toLowerCase()
+  ) || comments[comments.length - 1] || null;
+  const text = current?.text || '';
+  const key = escapeHtml(point.key);
   return `
-    <div style="margin:-4px 0 12px 30px;padding:10px;border:1px solid #D9D3E0;border-radius:8px;background:#FBFAFC;">
-      <label style="display:block;margin-bottom:6px;font-size:10px;font-weight:800;color:var(--vv-squid);">SHIP TEAM COMMENT</label>
-      <textarea data-ship-comment-key="${escapeHtml(point.key)}" rows="3" maxlength="3000"
+    <section data-ship-comment-panel="${key}"
+      style="margin:-4px 0 12px 30px;padding:12px;border:1px solid #D9D3E0;border-radius:9px;background:#fff;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;">
+        <strong style="font-size:11px;color:var(--vv-squid);">SHIP TEAM COMMENT</strong>
+        <div style="display:flex;gap:7px;">
+          <button type="button" data-ship-comment-focus="${key}"
+            style="padding:8px 11px;border:1px solid #D9D3E0;border-radius:7px;background:#fff;color:var(--vv-squid);font:inherit;font-size:11px;font-weight:800;cursor:pointer;">Comment</button>
+          <button type="button" data-ship-photo-notice="${key}"
+            style="padding:8px 11px;border:1px solid #D9D3E0;border-radius:7px;background:#fff;color:var(--vv-squid);font:inherit;font-size:11px;font-weight:800;cursor:pointer;">Photo</button>
+        </div>
+      </div>
+      ${text ? `
+        <article style="position:relative;margin-bottom:10px;padding:11px 44px 11px 12px;border-left:3px solid var(--vv-squid);border-radius:7px;background:#F8F5FA;">
+          <strong style="display:block;margin-bottom:5px;font-size:11px;color:var(--vv-squid);">${escapeHtml(current?.name || 'Ship team')}</strong>
+          <div style="font-size:12px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere;">${escapeHtml(text)}</div>
+          <button type="button" data-delete-ship-comment-key="${key}" aria-label="Delete my saved ship comment" title="Delete comment"
+            style="position:absolute;top:8px;right:8px;width:29px;height:29px;border:1px solid #D9D3E0;border-radius:50%;background:#fff;color:#B4232D;font-size:20px;font-weight:800;cursor:pointer;">×</button>
+        </article>` : ''}
+      <textarea data-ship-comment-key="${key}" rows="3" maxlength="3000"
         placeholder="Add the ship-side response for this follow-up..."
-        style="width:100%;box-sizing:border-box;padding:9px;border:1px solid var(--vv-line);border-radius:6px;font:inherit;font-size:12px;resize:vertical;">${escapeHtml(existing)}</textarea>
-      <button type="button" data-delete-ship-comment-key="${escapeHtml(point.key)}"
-        style="margin-top:7px;padding:6px 10px;border:1px solid #B4232D;border-radius:6px;background:#fff;color:#B4232D;font:inherit;font-size:10px;font-weight:800;cursor:pointer;">DELETE MY SAVED SHIP COMMENT</button>
-    </div>`;
+        style="display:block;width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--vv-line);border-radius:7px;font:inherit;font-size:12px;resize:vertical;">${escapeHtml(text)}</textarea>
+      <button type="button" data-add-ship-comment-key="${key}"
+        style="display:block;width:100%;min-height:40px;margin-top:8px;padding:9px;border:0;border-radius:7px;background:var(--vv-squid);color:#fff;font:inherit;font-size:12px;font-weight:800;cursor:pointer;">Add</button>
+      <div data-ship-comment-local-status="${key}" role="status" aria-live="polite"
+        style="margin-top:6px;font-size:11px;color:var(--vv-gray);"></div>
+    </section>`;
 }
 
 function renderShipboardOpenReportDepartment(report, departmentId){
@@ -2977,18 +3000,37 @@ function renderShipboardOpenReportDepartment(report, departmentId){
       }
     };
     saveButtons.forEach(button => button.addEventListener('click', handleShipboardSave));
-    container.querySelectorAll('[data-delete-green-ship-comment-key]').forEach(button => {
+    container.querySelectorAll('[data-add-ship-comment-key]').forEach(button => {
       button.addEventListener('click', async () => {
-        const key = button.dataset.deleteGreenShipCommentKey;
+        const key = button.dataset.addShipCommentKey;
         const input = [...container.querySelectorAll('[data-ship-comment-key]')]
           .find(item => item.dataset.shipCommentKey === key);
-        if(!input){
-          if(status) status.textContent = 'Open this follow-up response field to manage the saved comment.';
+        if(!input) return;
+        if(!input.value.trim()){
+          const local = container.querySelector(`[data-ship-comment-local-status="${CSS.escape(key)}"]`);
+          if(local) local.textContent = 'Enter a comment before saving.';
+          input.focus();
           return;
         }
-        if(!window.confirm('Delete your saved ship comment for this checklist point? This cannot be undone.')) return;
-        input.value = '';
         await handleShipboardSave();
+        // Refresh this report's saved representation after the secure RPC completes.
+        const local = container.querySelector(`[data-ship-comment-local-status="${CSS.escape(key)}"]`);
+        const status = container.querySelector('[data-shipboard-save-status]');
+        if(local && status) local.textContent = status.textContent;
+      });
+    });
+    container.querySelectorAll('[data-ship-comment-focus]').forEach(button => {
+      button.addEventListener('click', () => {
+        const input = [...container.querySelectorAll('[data-ship-comment-key]')]
+          .find(item => item.dataset.shipCommentKey === button.dataset.shipCommentFocus);
+        input?.focus();
+      });
+    });
+    container.querySelectorAll('[data-ship-photo-notice]').forEach(button => {
+      button.addEventListener('click', () => {
+        const key = button.dataset.shipPhotoNotice;
+        const local = container.querySelector(`[data-ship-comment-local-status="${CSS.escape(key)}"]`);
+        if(local) local.textContent = 'Photo attachments need the matching Supabase comment-photo migration before they can be saved.';
       });
     });
     container.querySelectorAll('[data-delete-ship-comment-key]').forEach(button => {
@@ -2997,10 +3039,8 @@ function renderShipboardOpenReportDepartment(report, departmentId){
         const input = [...container.querySelectorAll('[data-ship-comment-key]')]
           .find(item => item.dataset.shipCommentKey === key);
         if(!input) return;
-        if(!window.confirm('Delete your saved ship comment for this checklist point? This cannot be undone.')) return;
+        if(!window.confirm('Delete your saved ship comment for this checklist point?')) return;
         input.value = '';
-        // A blank value tells the secure RPC to remove this authenticated shipboard user's
-        // saved comment for this point; other users' responses are preserved server-side.
         await handleShipboardSave();
       });
     });
