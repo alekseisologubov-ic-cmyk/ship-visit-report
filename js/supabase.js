@@ -747,41 +747,6 @@ export async function saveShipboardOpenUpdates({ reportId, comments = {}, focusR
 }
 
 
-
-/* =========================================================
-   MANAGE SHIP FOCUS REQUEST (SHORESIDE / ADMIN)
-========================================================= */
-
-export async function manageShipFocusRequest({
-  reportId,
-  sectionId,
-  text = ''
-} = {}) {
-  try {
-    if (!reportId) throw new Error('Report ID is required.');
-    if (!sectionId || !/^[A-Za-z0-9_-]+$/.test(String(sectionId))) {
-      throw new Error('A valid department ID is required.');
-    }
-
-    const value = String(text ?? '').trim();
-    if (value.length > 3000) {
-      throw new Error('Ship Focus Request must be 3000 characters or fewer.');
-    }
-
-    const { data, error } = await supabase.rpc('manage_ship_focus_request', {
-      p_report_id: reportId,
-      p_section_id: String(sectionId),
-      p_text: value
-    });
-
-    if (error) throw error;
-    return { success: true, data, error: null };
-  } catch (error) {
-    console.error('manageShipFocusRequest:', error);
-    return { success: false, data: null, error };
-  }
-}
-
 /* =========================================================
    SHIP SUBMITS FINAL RESPONSE
 ========================================================= */
