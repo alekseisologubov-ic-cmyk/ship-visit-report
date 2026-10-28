@@ -3675,6 +3675,9 @@ async function openSavedReport(
     }
 
     activeReportRecord = report;
+    // Make the persisted ship focus requests available to checklist.js when
+    // a shoreside reviewer opens the report in the editable checklist view.
+    window.__shipVisitShipFocusRequests = report?.report_data?.shipFocusRequests || {};
     loadReport(
       report
     );
