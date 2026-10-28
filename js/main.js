@@ -427,12 +427,10 @@ function reportDeleteButton(report){
    START
 ============================================================ */
 
-// Start reliably whether this module finishes loading before or after DOMContentLoaded.
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initializeApp, { once: true });
-} else {
-  initializeApp();
-}
+document.addEventListener(
+  'DOMContentLoaded',
+  initializeApp
+);
 
 
 /* ============================================================
@@ -468,7 +466,6 @@ function bindLoginForm(){
   const form = document.getElementById('loginForm');
   if(!form || loginFormBound) return;
   loginFormBound = true;
-  window.__SHIP_VISIT_LOGIN_BOUND__ = true;
   form.addEventListener('submit', async event => {
     event.preventDefault();
     const email = document.getElementById('loginEmail')?.value || '';
