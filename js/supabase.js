@@ -1,1388 +1,186 @@
-/*
-  ============================================================
-  VIRGIN VOYAGES
-  SHIP VISIT REPORT
-  supabase.js
-  ============================================================
-*/
+-- Virgin Voyages Ship Visit Report
+-- Secure RPC for shipboard comments and department Ship Focus Requests on OPEN reports.
+-- Run this migration in Supabase SQL Editor, preferably in staging first.
+-- This function does not accept reviewer findings, checklist status, or follow-up flags from the client.
 
-import { getActiveChecklistVersion, getLegacyChecklistArchive } from './data.js';
+BEGIN;
 
+CREATE OR REPLACE FUNCTION public.save_shipboard_open_updates(
+  p_report_id uuid,
+  p_comments jsonb DEFAULT '{}'::jsonb,
+  p_focus_requests jsonb DEFAULT '{}'::jsonb
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, public, pg_temp
+AS $function$
+DECLARE
+  v_report public.ship_visit_reports%ROWTYPE;
+  v_state jsonb;
+  v_focus jsonb;
+  v_key text;
+  v_text text;
+  v_item jsonb;
+  v_comments jsonb;
+  v_comment jsonb;
+  v_email text;
+  v_name text;
+  v_entry record;
+  v_request jsonb;
+  v_updated_rows integer;
+BEGIN
+  -- Only authenticated shipboard-role users may use this RPC.
+  IF auth.uid() IS NULL OR public.current_app_role() IS DISTINCT FROM 'shipboard' THEN
+    RAISE EXCEPTION 'Authenticated shipboard access is required.' USING errcode = '42501';
+  END IF;
 
-/* =========================================================
-   CONFIG
-========================================================= */
+  IF jsonb_typeof(COALESCE(p_comments, '{}'::jsonb)) IS DISTINCT FROM 'object'
+     OR jsonb_typeof(COALESCE(p_focus_requests, '{}'::jsonb)) IS DISTINCT FROM 'object' THEN
+    RAISE EXCEPTION 'Comments and focus requests must be JSON objects.' USING errcode = '22023';
+  END IF;
 
-export const SUPABASE_URL =
-  'https://jpvtqvzsyqqawfenseua.supabase.co';
+  -- Lock only a report that is still open. Shipboard inputs are not accepted after status changes.
+  SELECT * INTO v_report
+  FROM public.ship_visit_reports
+  WHERE id = p_report_id AND status = 'open'
+  FOR UPDATE;
 
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'The report is not open or does not exist.' USING errcode = 'P0002';
+  END IF;
 
-export const SUPABASE_KEY =
-  'sb_publishable_2U4FJYEvgBYwfkUfJ768Qw_XtyshTJz';
+  v_state := COALESCE(v_report.report_data -> 'state', '{}'::jsonb);
+  IF jsonb_typeof(v_state) IS DISTINCT FROM 'object' THEN
+    RAISE EXCEPTION 'Report state has an unexpected format.' USING errcode = '22023';
+  END IF;
 
+  v_focus := COALESCE(v_report.report_data -> 'shipFocusRequests', '{}'::jsonb);
+  IF jsonb_typeof(v_focus) IS DISTINCT FROM 'object' THEN
+    v_focus := '{}'::jsonb;
+  END IF;
 
-export const PHOTO_BUCKET = 'ship-report-photos';
-
-
-/* =========================================================
-   CLIENT
-========================================================= */
-
-if(
-  !window.supabase ||
-  typeof window.supabase.createClient !== 'function'
-){
-
-  throw new Error(
-    'Supabase library did not load.'
+  v_email := lower(COALESCE(auth.jwt() ->> 'email', ''));
+  v_name := COALESCE(
+    NULLIF(auth.jwt() ->> 'full_name', ''),
+    NULLIF(auth.jwt() ->> 'name', ''),
+    NULLIF(v_email, ''),
+    'Shipboard'
   );
 
-}
+  -- Only update shipComments on existing points whose saved reviewer flag is true.
+  -- The client cannot set or change followUpNeeded, checked, comments, or photos through this RPC.
+  FOR v_entry IN
+    SELECT key, value FROM jsonb_each(COALESCE(p_comments, '{}'::jsonb))
+  LOOP
+    v_key := v_entry.key;
 
+    IF v_key !~ '^[A-Za-z0-9_-]+__[0-9]+$' THEN
+      RAISE EXCEPTION 'Invalid checklist point key.' USING errcode = '22023';
+    END IF;
 
-export const supabase =
-  window.supabase.createClient(
-    SUPABASE_URL,
-    SUPABASE_KEY
+    IF jsonb_typeof(v_entry.value) NOT IN ('string', 'null') THEN
+      RAISE EXCEPTION 'Each ship comment must be a string or null.' USING errcode = '22023';
+    END IF;
+
+    v_text := btrim(COALESCE(v_entry.value #>> '{}', ''));
+    IF length(v_text) > 3000 THEN
+      RAISE EXCEPTION 'Ship comment must be 3000 characters or fewer.' USING errcode = '22023';
+    END IF;
+
+    v_item := v_state -> v_key;
+    IF v_item IS NULL OR jsonb_typeof(v_item) IS DISTINCT FROM 'object' THEN
+      RAISE EXCEPTION 'Checklist point was not found in this report.' USING errcode = '22023';
+    END IF;
+
+    IF COALESCE((v_item ->> 'followUpNeeded')::boolean, false) IS NOT TRUE THEN
+      RAISE EXCEPTION 'Ship comments are allowed only when Follow-Up Needed from Ship is enabled.' USING errcode = '42501';
+    END IF;
+
+    v_comments := COALESCE(v_item -> 'shipComments', '[]'::jsonb);
+    IF jsonb_typeof(v_comments) IS DISTINCT FROM 'array' THEN
+      v_comments := '[]'::jsonb;
+    END IF;
+
+    -- Replace this user's previous response for this point; preserve responses from other users.
+    SELECT COALESCE(jsonb_agg(entry.value), '[]'::jsonb)
+      INTO v_comments
+    FROM jsonb_array_elements(v_comments) AS entry(value)
+    WHERE lower(COALESCE(entry.value ->> 'email', '')) <> v_email;
+
+    IF v_text <> '' THEN
+      v_comment := jsonb_build_object(
+        'name', v_name,
+        'email', v_email,
+        'text', v_text,
+        'timestamp', now()
+      );
+      v_comments := v_comments || jsonb_build_array(v_comment);
+    END IF;
+
+    v_item := jsonb_set(v_item, '{shipComments}', v_comments, true);
+    v_state := jsonb_set(v_state, ARRAY[v_key], v_item, true);
+  END LOOP;
+
+  -- Store the latest request per department without touching other report fields.
+  FOR v_entry IN
+    SELECT key, value FROM jsonb_each(COALESCE(p_focus_requests, '{}'::jsonb))
+  LOOP
+    v_key := v_entry.key;
+
+    IF v_key !~ '^[A-Za-z0-9_-]+$' THEN
+      RAISE EXCEPTION 'Invalid department ID.' USING errcode = '22023';
+    END IF;
+
+    IF jsonb_typeof(v_entry.value) NOT IN ('string', 'null') THEN
+      RAISE EXCEPTION 'Each Ship Focus Request must be a string or null.' USING errcode = '22023';
+    END IF;
+
+    v_text := btrim(COALESCE(v_entry.value #>> '{}', ''));
+    IF length(v_text) > 3000 THEN
+      RAISE EXCEPTION 'Ship Focus Request must be 3000 characters or fewer.' USING errcode = '22023';
+    END IF;
+
+    IF v_text = '' THEN
+      v_focus := v_focus - v_key;
+    ELSE
+      v_request := jsonb_build_object(
+        'sectionId', v_key,
+        'text', v_text,
+        'name', v_name,
+        'email', v_email,
+        'timestamp', now()
+      );
+      v_focus := jsonb_set(v_focus, ARRAY[v_key], v_request, true);
+    END IF;
+  END LOOP;
+
+  UPDATE public.ship_visit_reports AS r
+  SET report_data = jsonb_set(
+        jsonb_set(COALESCE(r.report_data, '{}'::jsonb), '{state}', v_state, true),
+        '{shipFocusRequests}', v_focus, true
+      ),
+      updated_at = now()
+  WHERE r.id = p_report_id AND r.status = 'open';
+
+  GET DIAGNOSTICS v_updated_rows = ROW_COUNT;
+  IF v_updated_rows <> 1 THEN
+    RAISE EXCEPTION 'The report is no longer open; shipboard updates were not saved.' USING errcode = 'P0002';
+  END IF;
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'report_id', p_report_id,
+    'status', 'open'
   );
+END;
+$function$;
 
+-- Do not expose this RPC to anonymous/public callers.
+REVOKE ALL ON FUNCTION public.save_shipboard_open_updates(uuid, jsonb, jsonb) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.save_shipboard_open_updates(uuid, jsonb, jsonb) TO authenticated;
 
-/* =========================================================
-   PAYLOAD
-========================================================= */
+COMMENT ON FUNCTION public.save_shipboard_open_updates(uuid, jsonb, jsonb) IS
+  'Allows shipboard-role users to save ship comments only on reviewer-flagged follow-up points and department Ship Focus Requests while a report is open.';
 
-function buildPayload({
-  meta,
-  state,
-  status
-}){
-
-  return {
-
-    ship:
-      meta?.ship ||
-      '',
-
-    date_on:
-      meta?.dateOn ||
-      null,
-
-    date_off:
-      meta?.dateOff ||
-      null,
-
-    reviewer:
-      meta?.reviewer ||
-      '',
-
-    status:
-      status ||
-      'open',
-
-    report_data:{
-
-      checklistVersion: getActiveChecklistVersion(),
-
-      ...(getLegacyChecklistArchive() ? { legacyChecklistArchive: getLegacyChecklistArchive() } : {}),
-
-      meta:{
-
-        ship:
-          meta?.ship ||
-          '',
-
-        dateOn:
-          meta?.dateOn ||
-          '',
-
-        dateOff:
-          meta?.dateOff ||
-          '',
-
-        reviewer:
-          meta?.reviewer ||
-          ''
-
-      },
-
-      state:
-        JSON.parse(
-          JSON.stringify(
-            state ||
-            {}
-          )
-        )
-
-    },
-
-    updated_at:
-      new Date().toISOString()
-
-  };
-
-}
-
-
-/* =========================================================
-   CREATE OPEN REPORT
-========================================================= */
-
-export async function createOpenReport({
-  meta,
-  state
-}){
-
-  try{
-
-    // Explicitly stamp the authenticated creator on INSERT only.
-    // UPDATE operations never change created_by, so editing does not transfer ownership.
-    const { data: authData, error: authError } =
-      await supabase.auth.getUser();
-
-    if(authError) throw authError;
-
-    const creatorId = authData?.user?.id;
-    if(!creatorId){
-      throw new Error('Please sign in again before creating a report.');
-    }
-
-    const payload = buildPayload({
-      meta,
-      state,
-      status: 'open'
-    });
-    payload.created_by = creatorId;
-
-    const result =
-      await supabase
-        .from(
-          'ship_visit_reports'
-        )
-        .insert(payload)
-        .select()
-        .single();
-
-
-    if(
-      result.error
-    ){
-
-      throw result.error;
-
-    }
-
-
-    return {
-
-      success:true,
-
-      data:
-        result.data,
-
-      error:null
-
-    };
-
-  }catch(error){
-
-    console.error(
-      'createOpenReport:',
-      error
-    );
-
-
-    return {
-
-      success:false,
-
-      data:null,
-
-      error
-
-    };
-
-  }
-
-}
-
-
-/* =========================================================
-   UPDATE OPEN REPORT
-========================================================= */
-
-export async function updateOpenReport({
-  reportId,
-  meta,
-  state
-}){
-
-  try{
-
-    const result =
-      await supabase
-        .from(
-          'ship_visit_reports'
-        )
-        .update(
-          buildPayload({
-
-            meta,
-
-            state,
-
-            status:
-              'open'
-
-          })
-        )
-        .eq(
-          'id',
-          reportId
-        )
-        .eq(
-          'status',
-          'open'
-        )
-        .select()
-        .single();
-
-
-    if(
-      result.error
-    ){
-
-      throw result.error;
-
-    }
-
-
-    return {
-
-      success:true,
-
-      data:
-        result.data,
-
-      error:null
-
-    };
-
-  }catch(error){
-
-    console.error(
-      'updateOpenReport:',
-      error
-    );
-
-
-    return {
-
-      success:false,
-
-      data:null,
-
-      error
-
-    };
-
-  }
-
-}
-
-
-/* =========================================================
-   SAVE OPEN REPORT
-========================================================= */
-
-export async function saveOpenReport({
-  reportId,
-  meta,
-  state
-}){
-
-  if(
-    reportId
-  ){
-
-    return updateOpenReport({
-
-      reportId,
-
-      meta,
-
-      state
-
-    });
-
-  }
-
-
-  return createOpenReport({
-
-    meta,
-
-    state
-
-  });
-
-}
-
-
-/* =========================================================
-   SEND TO SHIP REVIEW
-========================================================= */
-
-export async function sendToShipReview({
-  reportId,
-  meta,
-  state
-}){
-
-  try{
-
-    if(
-      !reportId
-    ){
-
-      throw new Error(
-        'Report ID is required.'
-      );
-
-    }
-
-
-    const result =
-      await supabase
-        .from(
-          'ship_visit_reports'
-        )
-        .update(
-          buildPayload({
-
-            meta,
-
-            state,
-
-            status:
-              'ship_review'
-
-          })
-        )
-        .eq(
-          'id',
-          reportId
-        )
-        .eq(
-          'status',
-          'open'
-        )
-        .select()
-        .single();
-
-
-    if(
-      result.error
-    ){
-
-      throw result.error;
-
-    }
-
-
-    return {
-
-      success:true,
-
-      data:
-        result.data,
-
-      error:null
-
-    };
-
-  }catch(error){
-
-    console.error(
-      'sendToShipReview:',
-      error
-    );
-
-
-    return {
-
-      success:false,
-
-      data:null,
-
-      error
-
-    };
-
-  }
-
-}
-
-
-/* =========================================================
-   OPEN REPORTS
-========================================================= */
-
-export async function getOpenReports(){
-
-  try{
-
-    const result =
-      await supabase
-        .from(
-          'ship_visit_reports'
-        )
-        .select('id,ship,date_on,date_off,reviewer,status,created_by,created_at,updated_at,submitted_at')
-        .eq(
-          'status',
-          'open'
-        )
-        .order(
-          'updated_at',
-          {
-            ascending:false
-          }
-        );
-
-
-    if(
-      result.error
-    ){
-
-      throw result.error;
-
-    }
-
-
-    return {
-
-      success:true,
-
-      data:
-        result.data ||
-        [],
-
-      error:null
-
-    };
-
-  }catch(error){
-
-    return {
-
-      success:false,
-
-      data:[],
-
-      error
-
-    };
-
-  }
-
-}
-
-
-/* =========================================================
-   SHIP REVIEW REPORTS
-========================================================= */
-
-export async function getShipReviewReports(){
-
-  try{
-
-    const result =
-      await supabase
-        .from(
-          'ship_visit_reports'
-        )
-        .select('id,ship,date_on,date_off,reviewer,status,created_by,created_at,updated_at,submitted_at')
-        .eq(
-          'status',
-          'ship_review'
-        )
-        .order(
-          'updated_at',
-          {
-            ascending:false
-          }
-        );
-
-
-    if(
-      result.error
-    ){
-
-      throw result.error;
-
-    }
-
-
-    return {
-
-      success:true,
-
-      data:
-        result.data ||
-        [],
-
-      error:null
-
-    };
-
-  }catch(error){
-
-    return {
-
-      success:false,
-
-      data:[],
-
-      error
-
-    };
-
-  }
-
-}
-
-
-/* =========================================================
-   SUBMITTED REPORTS
-========================================================= */
-
-export async function getSubmittedReports(){
-
-  try{
-
-    const result =
-      await supabase
-        .from(
-          'ship_visit_reports'
-        )
-        .select('id,ship,date_on,date_off,reviewer,status,created_by,created_at,updated_at,submitted_at')
-        .eq(
-          'status',
-          'submitted'
-        )
-        .order(
-          'updated_at',
-          {
-            ascending:false
-          }
-        );
-
-
-    if(
-      result.error
-    ){
-
-      throw result.error;
-
-    }
-
-
-    return {
-
-      success:true,
-
-      data:
-        result.data ||
-        [],
-
-      error:null
-
-    };
-
-  }catch(error){
-
-    return {
-
-      success:false,
-
-      data:[],
-
-      error
-
-    };
-
-  }
-
-}
-
-
-/* =========================================================
-   REPORT BY FRIENDLY REFERENCE
-========================================================= */
-
-export async function getReportByReference(
-  reportRef
-){
-
-  try{
-
-    if(!reportRef){
-      throw new Error('Report reference is required.');
-    }
-
-    const result =
-      await supabase
-        .from(
-          'ship_visit_reports'
-        )
-        .select('*')
-        .eq(
-          'report_data->>reportRef',
-          reportRef
-        )
-        .single();
-
-    if(
-      result.error
-    ){
-      throw result.error;
-    }
-
-    return {
-      success:true,
-      data:result.data,
-      error:null
-    };
-
-  }catch(error){
-
-    return {
-      success:false,
-      data:null,
-      error
-    };
-
-  }
-
-}
-
-
-/* =========================================================
-   SINGLE REPORT
-========================================================= */
-
-export async function getReport(
-  reportId
-){
-
-  try{
-
-    const result =
-      await supabase
-        .from(
-          'ship_visit_reports'
-        )
-        .select('*')
-        .eq(
-          'id',
-          reportId
-        )
-        .single();
-
-
-    if(
-      result.error
-    ){
-
-      throw result.error;
-
-    }
-
-
-    return {
-
-      success:true,
-
-      data:
-        result.data,
-
-      error:null
-
-    };
-
-  }catch(error){
-
-    return {
-
-      success:false,
-
-      data:null,
-
-      error
-
-    };
-
-  }
-
-}
-
-
-/* =========================================================
-   SAVE SHIPBOARD COMMENTS ON OPEN REPORTS
-========================================================= */
-
-export async function saveShipboardOpenUpdates({ reportId, comments = {}, focusRequests = {} }){
-  try{
-    if(!reportId) throw new Error('Report ID is required.');
-    const { data, error } = await supabase.rpc('save_shipboard_open_updates', {
-      p_report_id: reportId,
-      p_comments: comments || {},
-      p_focus_requests: focusRequests || {}
-    });
-    if(error) throw error;
-    return { success:true, data, error:null };
-  }catch(error){
-    console.error('saveShipboardOpenUpdates:', error);
-    return { success:false, data:null, error };
-  }
-}
-
-
-/* =========================================================
-   SHIP SUBMITS FINAL RESPONSE
-========================================================= */
-
-export async function submitShipResponse({
-  reportId,
-  state
-}){
-  try{
-    if(!reportId) throw new Error('Report ID is required.');
-    const { data, error } = await supabase.rpc('submit_ship_response', {
-      p_report_id: reportId,
-      p_state: state || {}
-    });
-    if(error) throw error;
-    return { success:true, data, error:null };
-  }catch(error){
-    console.error('submitShipResponse:', error);
-    return { success:false, data:null, error };
-  }
-}
-
-
-/* =========================================================
-   AUTHENTICATION AND ROLE
-========================================================= */
-
-export async function getAuthContext(){
-  const { data: sessionResult, error: sessionError } = await supabase.auth.getSession();
-  if(sessionError) throw sessionError;
-  const session = sessionResult?.session || null;
-  if(!session) return null;
-
-  const { data: roleRow, error: roleError } = await supabase
-    .from('app_user_roles')
-    .select('role')
-    .eq('user_id', session.user.id)
-    .maybeSingle();
-  if(roleError) throw roleError;
-
-  return {
-    session,
-    user: session.user,
-    role: roleRow?.role || null
-  };
-}
-
-const APPROVED_SHIP_VISIT_EMAILS = new Set([
-  // Admin
-  'aleksei.sologubov-ic@virginvoyages.com',
-
-  // Report users / named reviewers
-  'levi.mezick@virginvoyages.com',
-  'seidy.soderholm@virginvoyages.com',
-  'don.habets@virginvoyages.com',
-  'eszter.tary@virginvoyages.com',
-  'marin.lukin@virginvoyages.com',
-  'edina.smajic-ic@virginvoyages.com',
-  'andras.rafajlovics@virginvoyages.com',
-  'andrew.diclementi@virginvoyages.com',
-  'jamesadam.noffsinger@virginvoyages.com',
-  'mycca.argawanon-ic@virginvoyages.com',
-
-  // Shipboard users
-  'val.htl.fbdirector@virginvoyages.com',
-  'brl.htl.fbdirector@virginvoyages.com',
-  'scl.htl.fbdirector@virginvoyages.com',
-  'res.htl.fbdirector@virginvoyages.com',
-  'scl.cul.srexecchef@virginvoyages.com',
-  'val.cul.srexecchef@virginvoyages.com',
-  'res.cul.srexecchef@virginvoyages.com',
-  'brl.cul.srexecchef@virginvoyages.com',
-  'scl.restaurantoperationsmanager@virginvoyages.com',
-  'val.rst.operationsmgr@virginvoyages.com',
-  'brl.rst.operationsmgr@virginvoyages.com',
-  'scl.beverageoperationsmanager@virginvoyages.com',
-  'brl.bev.operationsmgr@virginvoyages.com',
-  'res.rst.operationsmgr@virginvoyages.com',
-  'val.bev.operationsmgr@virginvoyages.com',
-  'res.bev.operationsmgr@virginvoyages.com',
-  'scl.htl.sanitationofficer@virginvoyages.com',
-  'res.htl.sanitationofficer@virginvoyages.com',
-  'val.htl.sanitationoff@virginvoyages.com',
-  'brl.htl.sanitationofficer@virginvoyages.com'
-]);
-
-export async function signInWithPassword(email, password){
-  const cleanEmail = String(email || '').trim().toLowerCase();
-  const cleanPassword = String(password || '');
-  if(!cleanEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)){
-    throw new Error('Enter a valid work email address.');
-  }
-  if(!APPROVED_SHIP_VISIT_EMAILS.has(cleanEmail)){
-    throw new Error('This email address is not approved for Ship Visit Report access. Contact the administrator if you need access.');
-  }
-  if(!cleanPassword){
-    throw new Error('Enter your password.');
-  }
-  return supabase.auth.signInWithPassword({
-    email: cleanEmail,
-    password: cleanPassword
-  });
-}
-
-export async function signOutUser(){
-  const { error } = await supabase.auth.signOut();
-  if(error) throw error;
-  return true;
-}
-
-
-/* =========================================================
-   PRIVATE STORAGE PHOTO HELPERS
-========================================================= */
-
-function photoStoragePath(photo){
-  let path = null;
-  if(photo && typeof photo === 'object'){
-    path = photo.storagePath || photo.storage_path || photo.path || null;
-  }else if(typeof photo === 'string' && photo.startsWith('storage://')){
-    path = photo.slice('storage://'.length);
-  }
-  if(typeof path !== 'string') return null;
-  path = path.trim();
-  if(path.startsWith('storage://')) path = path.slice('storage://'.length);
-  if(path.startsWith(`${PHOTO_BUCKET}/`)) path = path.slice(PHOTO_BUCKET.length + 1);
-  return path || null;
-}
-
-export async function getPhotoDisplayUrl(photo, expiresIn = 3600){
-  if(!photo) return '';
-
-  if(typeof photo === 'string'){
-    if(photo.startsWith('data:image/')) return photo;
-    if(/^https?:\/\//i.test(photo)) return photo;
-  }
-
-  if(photo && typeof photo === 'object'){
-    const legacyPhotoId = photo.legacyPhotoId || photo.legacy_photo_id || photo.photoId || photo.photo_id || null;
-    if(legacyPhotoId){
-      const { data, error } = await supabase.rpc('get_legacy_report_photo', {
-        p_photo_id: String(legacyPhotoId)
-      });
-      if(error) throw error;
-      if(typeof data !== 'string' || !data.startsWith('data:image/')){
-        throw new Error('Supabase returned no valid image data for the legacy photo reference.');
-      }
-      return data;
-    }
-  }
-
-  const path = photoStoragePath(photo);
-  if(typeof photo === 'string' && !path) return '';
-
-  if(!path){
-    const directSource = typeof photo === 'object'
-      ? (photo.url || photo.src || photo.data || photo.image || '')
-      : '';
-    if(typeof directSource === 'string' && (directSource.startsWith('data:image/') || /^https?:\/\//i.test(directSource))) return directSource;
-    return '';
-  }
-
-  const { data, error } = await supabase.storage
-    .from(PHOTO_BUCKET)
-    .createSignedUrl(path, expiresIn);
-  if(error) throw new Error(`Could not create a photo link for '${path}': ${error.message || error}`);
-  if(!data?.signedUrl) throw new Error(`Supabase did not return a photo link for '${path}'.`);
-  return data.signedUrl;
-}
-
-function blobToDataUrl(blob){
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result || ''));
-    reader.onerror = () => reject(new Error('Could not read stored photo.'));
-    reader.readAsDataURL(blob);
-  });
-}
-
-export async function getPhotoDataUrl(photo){
-  if(typeof photo === 'string' && photo.startsWith('data:image/')) return photo;
-  const url = await getPhotoDisplayUrl(photo);
-  if(!url) throw new Error('Photo reference is missing.');
-  const response = await fetch(url);
-  if(!response.ok) throw new Error(`Could not download photo (${response.status}).`);
-  return blobToDataUrl(await response.blob());
-}
-
-export async function uploadPhotoDataUrl(reportId, pointKey, dataUrl, originalName = ''){
-  if(!reportId) throw new Error('Save the report before attaching photos.');
-  if(typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image/')){
-    throw new Error('The selected photo could not be read as an image.');
-  }
-
-  const response = await fetch(dataUrl);
-  const blob = await response.blob();
-  const category = String(pointKey || 'general')
-    .replace(/__\d+$/, '')
-    .replace(/[^a-zA-Z0-9_-]/g, '_') || 'general';
-  const safeKey = String(pointKey || 'photo').replace(/[^a-zA-Z0-9_-]/g, '_');
-  const random = (globalThis.crypto?.randomUUID?.() || `${Date.now()}_${Math.random().toString(36).slice(2)}`);
-  const fileName = `${safeKey}_${random}.jpg`;
-  const storagePath = `${reportId}/${category}/${fileName}`;
-
-  const { error } = await supabase.storage
-    .from(PHOTO_BUCKET)
-    .upload(storagePath, blob, {
-      contentType: blob.type || 'image/jpeg',
-      cacheControl: '3600',
-      upsert: false
-    });
-  if(error) throw error;
-
-  return {
-    storagePath,
-    filename: String(originalName || fileName).slice(0, 200),
-    contentType: blob.type || 'image/jpeg',
-    uploadedAt: new Date().toISOString()
-  };
-}
-
-export async function deleteStoragePhoto(storagePath){
-  if(!storagePath) return { success:true };
-  const { error } = await supabase.storage.from(PHOTO_BUCKET).remove([storagePath]);
-  if(error) throw error;
-  return { success:true };
-}
-
-export async function deleteLegacyPhotoData(legacyPhotoId){
-  if(!legacyPhotoId) return { success:true, deleted:false };
-  const { data, error } = await supabase.rpc('delete_legacy_report_photo', {
-    p_photo_id: legacyPhotoId
-  });
-  if(error) throw error;
-  return data || { success:true };
-}
-
-/* One-time Admin optimization. The SQL RPC moves embedded image strings into a
-   private table and replaces them with small references in one database transaction.
-   It avoids downloading and resending the complete multi-megabyte report JSON. */
-export async function migrateEmbeddedPhotosToStorage(reportId, onProgress = null){
-  try{
-    const auth = await getAuthContext();
-    if(!auth || auth.role !== 'admin') throw new Error('Administrator access is required.');
-    if(!reportId) throw new Error('Report ID is required.');
-    if(typeof onProgress === 'function') onProgress({ done:0, total:1, section:'Optimizing report photos' });
-
-    const { data, error } = await supabase.rpc('prepare_report_photos_for_lazy_loading', {
-      p_report_id: reportId
-    });
-    if(error) throw error;
-    const migrated = Number(data?.migrated || 0);
-    if(typeof onProgress === 'function') onProgress({ done:1, total:1, section:'Complete' });
-    return {
-      success: data?.success !== false,
-      migrated,
-      data,
-      message: data?.message || 'Photo optimization complete.'
-    };
-  }catch(error){
-    console.error('prepare report photos for lazy loading:', error);
-    return { success:false, migrated:0, error };
-  }
-}
-
-
-/* =========================================================
-   EMAIL SHIP REPORT
-
-   Calls the Supabase Edge Function that:
-   - identifies the correct ship email
-   - creates the secure response token
-   - sends the report response email
-========================================================= */
-
-export async function sendShipReportEmail({
-  reportId
-}){
-
-  try{
-
-    if(
-      !reportId
-    ){
-
-      throw new Error(
-        'Report ID is required.'
-      );
-
-    }
-
-
-    const { data: sessionData } = await supabase.auth.getSession();
-    const accessToken = sessionData?.session?.access_token;
-
-    const response = await fetch(
-      `${SUPABASE_URL}/functions/v1/send-ship-report`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          apikey: SUPABASE_KEY,
-          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {})
-        },
-        body: JSON.stringify({ reportId })
-      }
-    );
-
-
-    let data = null;
-
-    try{
-      data = await response.json();
-    }catch(
-      _error
-    ){
-      data = null;
-    }
-
-
-    if(
-      !response.ok ||
-      !data?.success
-    ){
-
-      throw new Error(
-        data?.error ||
-        `Email function returned HTTP ${response.status}.`
-      );
-
-    }
-
-
-    return {
-
-      success:true,
-
-      data,
-
-      error:null
-
-    };
-
-  }catch(error){
-
-    console.error(
-      'sendShipReportEmail:',
-      error
-    );
-
-    return {
-
-      success:false,
-
-      data:null,
-
-      error
-
-    };
-
-  }
-
-}
-
-
-/* =========================================================
-   REPORT OWNER (small query; does not download report photos)
-========================================================= */
-
-export async function getReportOwnership(reportId){
-  try{
-    const { data, error } = await supabase
-      .from('ship_visit_reports')
-      .select('id,created_by,ship,status,reviewer')
-      .eq('id', reportId)
-      .single();
-    if(error) throw error;
-    return { success:true, data, error:null };
-  }catch(error){
-    return { success:false, data:null, error };
-  }
-}
-
-
-/* =========================================================
-   DELETE REPORT
-========================================================= */
-
-export async function deleteReport(reportId){
-  try{
-    const { data, error } = await supabase
-      .from('ship_visit_reports')
-      .delete()
-      .eq('id', reportId)
-      .select('id')
-      .maybeSingle();
-    if(error) throw error;
-    if(!data?.id){
-      throw new Error('Report was not deleted. You may only delete reports you created.');
-    }
-    return { success:true, data, error:null };
-  }catch(error){
-    return { success:false, error };
-  }
-}
-
-
-/* =========================================================
-   REPORT STATUS COLOR
-========================================================= */
-
-export function getReportColor(
-  report
-){
-
-  if(
-    report?.status === 'open'
-  ){
-
-    return 'red';
-
-  }
-
-
-  if(
-    report?.status === 'ship_review'
-  ){
-
-    return 'blue';
-
-  }
-
-
-  if(
-    report?.status === 'submitted'
-  ){
-
-    return 'green';
-
-  }
-
-
-  return 'blue';
-
-}
-
-
-/* =========================================================
-   STATUS TEXT
-========================================================= */
-
-export function getReportStatusText(
-  report
-){
-
-  if(
-    report?.status === 'open'
-  ){
-
-    return 'OPEN / ONGOING';
-
-  }
-
-
-  if(
-    report?.status === 'ship_review'
-  ){
-
-    return 'WAITING FOR SHIP RESPONSE';
-
-  }
-
-
-  if(
-    report?.status === 'submitted'
-  ){
-
-    return 'SUBMITTED';
-
-  }
-
-
-  return 'UNKNOWN';
-
-}
-
-
-/* =========================================================
-   FOLLOW-UP COUNT
-========================================================= */
-
-export function countFollowUps(
-  state
-){
-
-  return Object.values(
-    state ||
-    {}
-  )
-  .filter(
-    item =>
-      item &&
-      item.followUpNeeded
-  )
-  .length;
-
-}
-
-
-/* =========================================================
-   COMPLETED FOLLOW-UP COUNT
-========================================================= */
-
-export function countCompletedFollowUps(
-  state
-){
-
-  return Object.values(
-    state ||
-    {}
-  )
-  .filter(
-    item =>
-      item &&
-      item.followUpNeeded &&
-      Array.isArray(
-        item.shipComments
-      ) &&
-      item.shipComments.length > 0
-  )
-  .length;
-
-}
-
-
-/* =========================================================
-   FOLLOW-UP STATUS
-========================================================= */
-
-export function reportNeedsFollowUp(
-  report
-){
-
-  const state =
-    report
-      ?.report_data
-      ?.state ||
-    {};
-
-
-  return Object.values(
-    state
-  )
-  .some(
-    item =>
-      item &&
-      item.followUpNeeded &&
-      !(
-        Array.isArray(
-          item.shipComments
-        ) &&
-        item.shipComments.length > 0
-      )
-  );
-
-}
-
-
-/* =========================================================
-   DEFAULT EXPORT
-========================================================= */
-
-export default {
-
-  supabase,
-
-  createOpenReport,
-
-  updateOpenReport,
-
-  saveOpenReport,
-
-  sendToShipReview,
-
-  getOpenReports,
-
-  getShipReviewReports,
-
-  getSubmittedReports,
-
-  getReport,
-
-  submitShipResponse,
-
-  sendShipReportEmail,
-
-  deleteReport,
-  getReportOwnership,
-
-  getReportColor,
-
-  getReportStatusText,
-
-  countFollowUps,
-
-  countCompletedFollowUps,
-
-  reportNeedsFollowUp,
-  getAuthContext,
-  signInWithPassword,
-  signOutUser,
-  getPhotoDisplayUrl,
-  getPhotoDataUrl,
-  uploadPhotoDataUrl,
-  deleteStoragePhoto,
-  migrateEmbeddedPhotosToStorage
-
-};
-
-/* =========================================================
-   SHORESIDE SHIP FOCUS REQUEST MANAGEMENT
-   Changes only report_data.shipFocusRequests via a restricted RPC.
-========================================================= */
-
-export async function manageShipFocusRequest({ reportId, sectionId, text }) {
-  try {
-    if (!reportId || !sectionId) throw new Error('Report and department are required.');
-    const { data, error } = await supabase.rpc('manage_ship_focus_request', {
-      p_report_id: reportId,
-      p_section_id: sectionId,
-      p_request_text: text || ''
-    });
-    if (error) throw error;
-    return { success: true, data, error: null };
-  } catch (error) {
-    console.error('manageShipFocusRequest:', error);
-    return { success: false, data: null, error };
-  }
-}
+COMMIT;
