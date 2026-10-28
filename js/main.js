@@ -2566,6 +2566,9 @@ function renderCurrentReportSummary(
   }
 
 
+  // Keep the current report's saved ship focus requests available to the PDF/print module.
+  window.__shipVisitShipFocusRequests = report?.report_data?.shipFocusRequests || {};
+
   const points =
     getReportPoints(
       report,
@@ -2577,9 +2580,13 @@ function renderCurrentReportSummary(
     section => getDepartmentGeneralCommentsFromReport(report, section.id).length > 0
   );
 
+  const hasShipFocusRequests = Object.values(report?.report_data?.shipFocusRequests || {})
+    .some(value => String(typeof value === 'string' ? value : (value?.text || '')).trim());
+
   if(
     points.length === 0 &&
-    departmentsWithComments.length === 0
+    departmentsWithComments.length === 0 &&
+    !hasShipFocusRequests
   ){
 
     container.innerHTML = `
@@ -2696,6 +2703,25 @@ function renderCurrentReportSummary(
 
     </div>
 
+
+    ${(() => {
+      const requests = report?.report_data?.shipFocusRequests || {};
+      const entries = Object.entries(requests).map(([sectionId, value]) => ({
+        sectionId,
+        section: SECTIONS.find(item => item.id === sectionId)?.title || sectionId,
+        text: typeof value === 'string' ? value : (value?.text || ''),
+        name: typeof value === 'object' && value ? (value.name || value.email || 'Ship') : 'Ship'
+      })).filter(item => String(item.text || '').trim());
+      if(!entries.length) return '';
+      return `<div style="margin:0 0 18px;padding:12px;border:1px solid var(--vv-line);border-radius:9px;background:#F0FAF5;">
+        <div style="margin-bottom:8px;color:#087443;font-size:12px;font-weight:800;">SHIP FOCUS REQUESTS</div>
+        ${entries.map(item => `<div style="margin-top:8px;padding:8px 10px;border-left:3px solid #079455;border-radius:5px;background:#fff;">
+          <div style="font-size:10px;font-weight:800;color:var(--vv-squid);">${escapeHtml(item.section)}</div>
+          <div style="margin-top:4px;font-size:11px;line-height:1.5;color:var(--vv-body);white-space:pre-wrap;">${escapeHtml(item.text)}</div>
+          <div style="margin-top:4px;font-size:9px;color:var(--vv-gray);">From ship${item.name && item.name !== 'Ship' ? ` — ${escapeHtml(item.name)}` : ''}</div>
+        </div>`).join('')}
+      </div>`;
+    })()}
 
     ${
       SECTIONS.map(section => {
@@ -2846,6 +2872,8 @@ function renderShipboardShipCommentField(point){
       <textarea data-ship-comment-key="${escapeHtml(point.key)}" rows="3" maxlength="3000"
         placeholder="Add the ship-side response for this follow-up..."
         style="width:100%;box-sizing:border-box;padding:9px;border:1px solid var(--vv-line);border-radius:6px;font:inherit;font-size:12px;resize:vertical;">${escapeHtml(existing)}</textarea>
+      <button type="button" data-delete-ship-comment-key="${escapeHtml(point.key)}"
+        style="margin-top:7px;padding:6px 10px;border:1px solid #B4232D;border-radius:6px;background:#fff;color:#B4232D;font:inherit;font-size:10px;font-weight:800;cursor:pointer;">DELETE MY SAVED SHIP COMMENT</button>
     </div>`;
 }
 
@@ -2888,8 +2916,6 @@ function renderShipboardOpenReportDepartment(report, departmentId){
           placeholder="Add a request or focus area for this department..."
           style="width:100%;box-sizing:border-box;padding:9px;border:1px solid var(--vv-line);border-radius:6px;font:inherit;font-size:12px;resize:vertical;">${escapeHtml((() => { const v = report?.report_data?.shipFocusRequests?.[section.id]; return typeof v === 'string' ? v : (v?.text || ''); })())}</textarea>
         <div style="margin-top:6px;color:var(--vv-gray);font-size:10px;">Only shipboard comments and focus requests are saved; reviewer findings remain unchanged.</div>
-        <button type="button" data-save-shipboard-updates style="margin-top:9px;min-height:38px;padding:9px 14px;border:0;border-radius:7px;background:var(--vv-squid);color:#fff;font:inherit;font-size:11px;font-weight:800;cursor:pointer;">SAVE SHIP COMMENTS</button>
-        <span data-shipboard-save-status role="status" style="margin-left:8px;font-size:11px;color:var(--vv-gray);"></span>
       </div>
     </div>
 
@@ -2905,6 +2931,11 @@ function renderShipboardOpenReportDepartment(report, departmentId){
 
     <div style="margin:16px 0 8px;padding:9px 0 6px;border-bottom:1px dashed var(--vv-line);color:var(--vv-gray);font-size:12px;font-weight:800;">NOT YET CHECKED (${uncheckedPoints.length})</div>
     ${uncheckedPoints.length ? uncheckedPoints.map(point => renderSummaryPoint(point) + renderShipboardShipCommentField(point)).join('') : '<div class="empty">All points in this department have been checked.</div>'}
+
+    <div style="position:sticky;bottom:8px;z-index:5;margin:18px 0 6px;padding:12px;border:1px solid var(--vv-line);border-radius:10px;background:#FFFFFF;box-shadow:0 4px 18px rgba(30,15,40,.12);">
+      <button type="button" data-save-shipboard-updates style="width:100%;min-height:44px;padding:11px 16px;border:0;border-radius:8px;background:var(--vv-squid);color:#fff;font:inherit;font-size:12px;font-weight:800;cursor:pointer;">SAVE SHIP COMMENTS AND FOCUS REQUEST</button>
+      <div data-shipboard-save-status role="status" aria-live="polite" style="margin-top:7px;text-align:center;font-size:11px;color:var(--vv-gray);"></div>
+    </div>
   `;
 
   const backButton = container.querySelector('[data-shipboard-back-departments]');
@@ -2912,11 +2943,11 @@ function renderShipboardOpenReportDepartment(report, departmentId){
     backButton.addEventListener('click', () => renderShipboardOpenReportDepartments(report));
   }
 
-  const saveButton = container.querySelector('[data-save-shipboard-updates]');
-  if(saveButton){
-    saveButton.addEventListener('click', async () => {
+  const saveButtons = [...container.querySelectorAll('[data-save-shipboard-updates]')];
+  if(saveButtons.length){
+    const handleShipboardSave = async () => {
       const status = container.querySelector('[data-shipboard-save-status]');
-      saveButton.disabled = true;
+      saveButtons.forEach(button => { button.disabled = true; button.textContent = 'SAVING...'; });
       if(status) status.textContent = 'Saving...';
       const comments = {};
       container.querySelectorAll('[data-ship-comment-key]').forEach(input => {
@@ -2940,8 +2971,22 @@ function renderShipboardOpenReportDepartment(report, departmentId){
         console.error('Saving shipboard open updates failed:', error);
         if(status) status.textContent = `Save failed: ${error?.message || 'Please try again.'}`;
       }finally{
-        saveButton.disabled = false;
+        saveButtons.forEach(button => { button.disabled = false; button.textContent = 'SAVE SHIP COMMENTS AND FOCUS REQUEST'; });
       }
+    };
+    saveButtons.forEach(button => button.addEventListener('click', handleShipboardSave));
+    container.querySelectorAll('[data-delete-ship-comment-key]').forEach(button => {
+      button.addEventListener('click', async () => {
+        const key = button.dataset.deleteShipCommentKey;
+        const input = [...container.querySelectorAll('[data-ship-comment-key]')]
+          .find(item => item.dataset.shipCommentKey === key);
+        if(!input) return;
+        if(!window.confirm('Delete your saved ship comment for this checklist point? This cannot be undone.')) return;
+        input.value = '';
+        // A blank value tells the secure RPC to remove this authenticated shipboard user's
+        // saved comment for this point; other users' responses are preserved server-side.
+        await handleShipboardSave();
+      });
     });
   }
 
