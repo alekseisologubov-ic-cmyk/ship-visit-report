@@ -1128,6 +1128,12 @@ function renderDepartment(
           class="department-general-comments-list"
         ></div>
 
+        <div
+          id="ship-focus-request-display-${escapeHtml(section.id)}"
+          class="ship-focus-request-display"
+          style="display:none;margin:12px 0;padding:12px 14px;border:1px solid #b9e6cf;border-left:4px solid #009b68;border-radius:8px;background:#eefaf4;"
+        ></div>
+
         <div class="department-general-comment-row">
 
           <textarea
@@ -1183,11 +1189,41 @@ function renderDepartment(
 
   bindDepartmentGeneralComment(section);
   renderDepartmentGeneralComments(section);
+  renderShipFocusRequestForDepartment(section);
 
   renderDepartmentPoints(
     section
   );
 
+}
+
+
+
+
+/* ============================================================
+   SHIP FOCUS REQUEST (READ-ONLY FOR SHORESIDE)
+============================================================ */
+
+function renderShipFocusRequestForDepartment(section){
+  const container = getElement(`ship-focus-request-display-${section.id}`);
+  if(!container) return;
+
+  const requests = window.__shipVisitShipFocusRequests || {};
+  const raw = requests[section.id];
+  const text = typeof raw === 'string' ? raw : String(raw?.text || raw?.request || '').trim();
+
+  if(!text){
+    container.style.display = 'none';
+    container.innerHTML = '';
+    return;
+  }
+
+  container.style.display = 'block';
+  container.innerHTML = `
+    <div style="margin-bottom:6px;color:#087443;font-size:11px;font-weight:800;letter-spacing:.04em;">SHIP FOCUS REQUEST</div>
+    <div style="color:#173d2d;font-size:13px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere;">${escapeHtml(text)}</div>
+    <div style="margin-top:6px;color:#47715e;font-size:10px;">Submitted by the ship team · read-only</div>
+  `;
 }
 
 
