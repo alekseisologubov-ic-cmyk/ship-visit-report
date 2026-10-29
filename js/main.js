@@ -3063,13 +3063,22 @@ function renderShipboardOpenReportDepartment(report, departmentId){
             reader.onerror = () => reject(new Error('Could not read the selected photo.'));
             reader.readAsDataURL(file);
           });
-          const uploaded = await uploadPhotoDataUrl(report.id, key, dataUrl, file.name);
-          const result = await saveShipboardOpenUpdates({
-            reportId: report.id,
-            comments: {},
-            focusRequests: {},
-            photos: { [key]: [{ storagePath: uploaded.storagePath, filename: uploaded.filename }] }
-          });
+          // Never leave the shipboard UI stuck on "Uploading..." indefinitely.
+          const uploaded = await withTimeout(
+            uploadPhotoDataUrl(report.id, key, dataUrl, file.name),
+            45000,
+            'Photo upload timed out after 45 seconds. Check Supabase Storage policies, bucket name, and network connection.'
+          );
+          const result = await withTimeout(
+            saveShipboardOpenUpdates({
+              reportId: report.id,
+              comments: {},
+              focusRequests: {},
+              photos: { [key]: [{ storagePath: uploaded.storagePath, filename: uploaded.filename }] }
+            }),
+            30000,
+            'The photo uploaded, but saving its reference timed out. Check the save_shipboard_open_updates RPC and p_photos migration.'
+          );
           if(!result?.success) throw (result?.error || new Error('Photo reference could not be saved.'));
           if(result.data?.state) report.report_data = { ...(report.report_data || {}), state: result.data.state };
           if(local) local.textContent = 'Photo uploaded and saved. Refresh the report to see the saved attachment.';
