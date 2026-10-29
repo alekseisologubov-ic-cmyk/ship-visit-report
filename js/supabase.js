@@ -730,14 +730,13 @@ export async function getReport(
    SAVE SHIPBOARD COMMENTS ON OPEN REPORTS
 ========================================================= */
 
-export async function saveShipboardOpenUpdates({ reportId, comments = {}, focusRequests = {}, photos = {} }){
+export async function saveShipboardOpenUpdates({ reportId, comments = {}, focusRequests = {} }){
   try{
     if(!reportId) throw new Error('Report ID is required.');
     const { data, error } = await supabase.rpc('save_shipboard_open_updates', {
       p_report_id: reportId,
       p_comments: comments || {},
-      p_focus_requests: focusRequests || {},
-      p_photos: photos || {}
+      p_focus_requests: focusRequests || {}
     });
     if(error) throw error;
     return { success:true, data, error:null };
@@ -944,26 +943,18 @@ export async function uploadPhotoDataUrl(reportId, pointKey, dataUrl, originalNa
 
   const response = await fetch(dataUrl);
   const blob = await response.blob();
-  const contentType = blob.type || 'image/jpeg';
-  if(!/^image\/(jpeg|png|webp|gif)$/i.test(contentType)) {
-    throw new Error('Choose a JPG, PNG, WEBP, or GIF image.');
-  }
-  if(blob.size > 12 * 1024 * 1024) {
-    throw new Error('Each photo must be 12 MB or smaller.');
-  }
   const category = String(pointKey || 'general')
     .replace(/__\d+$/, '')
     .replace(/[^a-zA-Z0-9_-]/g, '_') || 'general';
   const safeKey = String(pointKey || 'photo').replace(/[^a-zA-Z0-9_-]/g, '_');
-  const extension = ({'image/jpeg':'jpg','image/png':'png','image/webp':'webp','image/gif':'gif'})[contentType.toLowerCase()] || 'jpg';
   const random = (globalThis.crypto?.randomUUID?.() || `${Date.now()}_${Math.random().toString(36).slice(2)}`);
-  const fileName = `${safeKey}_${random}.${extension}`;
+  const fileName = `${safeKey}_${random}.jpg`;
   const storagePath = `${reportId}/${category}/${fileName}`;
 
   const { error } = await supabase.storage
     .from(PHOTO_BUCKET)
     .upload(storagePath, blob, {
-      contentType,
+      contentType: blob.type || 'image/jpeg',
       cacheControl: '3600',
       upsert: false
     });
@@ -972,7 +963,7 @@ export async function uploadPhotoDataUrl(reportId, pointKey, dataUrl, originalNa
   return {
     storagePath,
     filename: String(originalName || fileName).slice(0, 200),
-    contentType,
+    contentType: blob.type || 'image/jpeg',
     uploadedAt: new Date().toISOString()
   };
 }
@@ -1376,44 +1367,22 @@ export default {
 };
 
 /* =========================================================
-   SHORESIDE / ADMIN SHIP FOCUS REQUEST MANAGEMENT
+   SHORESIDE SHIP FOCUS REQUEST MANAGEMENT
+   Changes only report_data.shipFocusRequests via a restricted RPC.
 ========================================================= */
 
-export async function manageShipFocusRequest({
-  reportId,
-  sectionId,
-  text = ''
-} = {}) {
+export async function manageShipFocusRequest({ reportId, sectionId, text }) {
   try {
-    if (!reportId || !sectionId) {
-      throw new Error('Report ID and department are required.');
-    }
-
-    const { data, error } = await supabase.rpc(
-      'manage_ship_focus_request',
-      {
-        p_report_id: reportId,
-        p_section_id: sectionId,
-        p_request_text: text || ''
-      }
-    );
-
-    if (error) {
-      throw error;
-    }
-
-    return {
-      success: true,
-      data,
-      error: null
-    };
+    if (!reportId || !sectionId) throw new Error('Report and department are required.');
+    const { data, error } = await supabase.rpc('manage_ship_focus_request', {
+      p_report_id: reportId,
+      p_section_id: sectionId,
+      p_request_text: text || ''
+    });
+    if (error) throw error;
+    return { success: true, data, error: null };
   } catch (error) {
     console.error('manageShipFocusRequest:', error);
-
-    return {
-      success: false,
-      data: null,
-      error
-    };
+    return { success: false, data: null, error };
   }
 }
