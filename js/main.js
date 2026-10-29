@@ -77,6 +77,7 @@ import {
   getReportByReference,
   submitShipResponse,
   saveShipboardOpenUpdates,
+  uploadPhotoDataUrl,
   getAuthContext,
   signInWithPassword,
   signOutUser,
@@ -2881,8 +2882,9 @@ function renderShipboardShipCommentField(point){
         <div style="display:flex;gap:7px;">
           <button type="button" data-ship-comment-focus="${key}"
             style="padding:8px 11px;border:1px solid #D9D3E0;border-radius:7px;background:#fff;color:var(--vv-squid);font:inherit;font-size:11px;font-weight:800;cursor:pointer;">Comment</button>
-          <button type="button" data-ship-photo-notice="${key}"
+          <button type="button" data-ship-photo-button="${key}"
             style="padding:8px 11px;border:1px solid #D9D3E0;border-radius:7px;background:#fff;color:var(--vv-squid);font:inherit;font-size:11px;font-weight:800;cursor:pointer;">Photo</button>
+          <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" data-ship-photo-input="${key}" style="display:none;" />
         </div>
       </div>
       ${text ? `
@@ -3026,11 +3028,67 @@ function renderShipboardOpenReportDepartment(report, departmentId){
         input?.focus();
       });
     });
-    container.querySelectorAll('[data-ship-photo-notice]').forEach(button => {
+    container.querySelectorAll('[data-ship-photo-button]').forEach(button => {
       button.addEventListener('click', () => {
-        const key = button.dataset.shipPhotoNotice;
+        const key = button.dataset.shipPhotoButton;
+        const picker = [...container.querySelectorAll('[data-ship-photo-input]')]
+          .find(input => input.dataset.shipPhotoInput === key);
+        picker?.click();
+      });
+    });
+    container.querySelectorAll('[data-ship-photo-input]').forEach(input => {
+      input.addEventListener('change', async () => {
+        const file = input.files?.[0];
+        const key = input.dataset.shipPhotoInput;
         const local = container.querySelector(`[data-ship-comment-local-status="${CSS.escape(key)}"]`);
-        if(local) local.textContent = 'Photo attachments need the matching Supabase comment-photo migration before they can be saved.';
+        if(!file) return;
+        if(!/^image\/(jpeg|png|webp|gif)$/i.test(file.type)) {
+          if(local) local.textContent = 'Choose a JPG, PNG, WEBP, or GIF image.';
+          input.value = '';
+          return;
+        }
+        if(file.size > 12 * 1024 * 1024) {
+          if(local) local.textContent = 'Each photo must be 12 MB or smaller.';
+          input.value = '';
+          return;
+        }
+        const buttons = [...container.querySelectorAll('[data-ship-photo-button]')]
+          .filter(item => item.dataset.shipPhotoButton === key);
+        buttons.forEach(item => { item.disabled = true; item.textContent = 'Uploading...'; });
+        if(local) local.textContent = 'Uploading photo...';
+        try {
+          const dataUrl = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(String(reader.result || ''));
+            reader.onerror = () => reject(new Error('Could not read the selected photo.'));
+            reader.readAsDataURL(file);
+          });
+          // Never leave the shipboard UI stuck on "Uploading..." indefinitely.
+          const uploaded = await withTimeout(
+            uploadPhotoDataUrl(report.id, key, dataUrl, file.name),
+            45000,
+            'Photo upload timed out after 45 seconds. Check Supabase Storage policies, bucket name, and network connection.'
+          );
+          const result = await withTimeout(
+            saveShipboardOpenUpdates({
+              reportId: report.id,
+              comments: {},
+              focusRequests: {},
+              photos: { [key]: [{ storagePath: uploaded.storagePath, filename: uploaded.filename }] }
+            }),
+            30000,
+            'The photo uploaded, but saving its reference timed out. Check the save_shipboard_open_updates RPC and p_photos migration.'
+          );
+          if(!result?.success) throw (result?.error || new Error('Photo reference could not be saved.'));
+          if(result.data?.state) report.report_data = { ...(report.report_data || {}), state: result.data.state };
+          if(local) local.textContent = 'Photo uploaded and saved. Refresh the report to see the saved attachment.';
+        } catch(error) {
+          console.error('Shipboard photo upload failed:', error);
+          if(local) local.textContent = `Photo upload failed: ${error?.message || 'Please try again.'}`;
+        } finally {
+          buttons.forEach(item => { item.disabled = false; item.textContent = 'Photo'; });
+          input.value = '';
+        }
       });
     });
     container.querySelectorAll('[data-delete-ship-comment-key]').forEach(button => {
