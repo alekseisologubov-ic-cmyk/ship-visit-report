@@ -858,11 +858,13 @@ export async function getAuthContext(){
   // Access is driven by the app_user_roles table in SQL (one row per approved login).
   const { data: roleRow, error: roleError } = await supabase
     .from('app_user_roles')
-    .select('role, active')
+    .select('*')
     .eq('user_id', session.user.id)
     .maybeSingle();
   if(roleError) throw roleError;
 
+  // Some deployed schemas do not have an `active` column. A matching role row is
+  // treated as enabled unless an existing active column explicitly says false.
   const active = roleRow ? roleRow.active !== false : false;
   // reviewer_aliases is not present in this database schema.
   // Keep aliases empty; use the authenticated profile name/email as fallback.
