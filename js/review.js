@@ -24,8 +24,8 @@ import {
 import {
   saveOpenReport,
   sendToShipReview,
-  getReport,
-  supabase
+  supabase,
+  getPhotoDisplayUrl
 } from './supabase.js';
 
 
@@ -38,6 +38,63 @@ let callbacks = {
   sentToShip:null
 
 };
+
+const reviewPhotoRefs = new Map();
+let reviewPhotoCounter = 0;
+function reviewPhotoName(photo, index = 0){
+  let raw = photo && typeof photo === 'object'
+    ? (photo.filename || photo.fileName || photo.originalName || photo.name || photo.storagePath || photo.storage_path || photo.path || '')
+    : (typeof photo === 'string' ? photo.replace(/^storage:\/\//, '') : '');
+  raw = String(raw || '').split(/[?#]/, 1)[0].replace(/\\/g, '/').split('/').pop();
+  try { raw = decodeURIComponent(raw); } catch (_) {}
+  return raw || `Photo ${index + 1}`;
+}
+function reviewPhotoButton(photo, index = 0){
+  const id = `review-photo-${++reviewPhotoCounter}`;
+  reviewPhotoRefs.set(id, photo);
+  return `<button type="button" class="response-photo-open" data-review-photo-id="${id}"><span aria-hidden="true">▧</span><span>${escapeHtml(reviewPhotoName(photo,index))}</span><span class="response-photo-hint">Click to preview</span></button>`;
+}
+function bindReviewPhotoPreview(root){
+  if(!document.getElementById('review-photo-preview-style')){
+    const style = document.createElement('style');
+    style.id = 'review-photo-preview-style';
+    style.textContent = '#review-photo-preview[hidden]{display:none!important}#review-photo-preview{position:fixed;inset:0;z-index:10020;background:rgba(12,5,18,.94);display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box}#review-photo-preview img{max-width:96vw;max-height:88vh;object-fit:contain;border-radius:8px}#review-photo-preview button{position:absolute;top:18px;right:20px;width:44px;height:44px;border-radius:50%;font-size:28px;background:#fff;color:#3C1053;border:1px solid #ddd;cursor:pointer}#review-photo-preview-status{color:white;text-align:center;padding:16px}';
+    document.head.appendChild(style);
+  }
+  let overlay = document.getElementById('review-photo-preview');
+  if(!overlay){
+    overlay = document.createElement('div');
+    overlay.id = 'review-photo-preview';
+    overlay.hidden = true;
+    overlay.innerHTML = '<button type="button" aria-label="Close photo preview">×</button><div id="review-photo-preview-status">Loading photo…</div><img alt="Report photo preview" hidden>';
+    document.body.appendChild(overlay);
+    const close = () => { overlay.hidden = true; overlay.querySelector('img').removeAttribute('src'); };
+    overlay.querySelector('button').addEventListener('click', close);
+    overlay.addEventListener('click', e => { if(e.target === overlay) close(); });
+    document.addEventListener('keydown', e => { if(e.key === 'Escape' && !overlay.hidden) close(); });
+  }
+  root.querySelectorAll('[data-review-photo-id]').forEach(button => {
+    if(button.dataset.bound === 'true') return;
+    button.dataset.bound = 'true';
+    button.addEventListener('click', async () => {
+      const photo = reviewPhotoRefs.get(button.dataset.reviewPhotoId);
+      if(!photo) return;
+      const status = overlay.querySelector('#review-photo-preview-status');
+      const img = overlay.querySelector('img');
+      overlay.hidden = false; img.hidden = true; img.removeAttribute('src'); status.hidden = false; status.textContent = 'Loading photo…';
+      try {
+        const url = await getPhotoDisplayUrl(photo);
+        if(!url) throw new Error('Photo reference is missing.');
+        img.onload = () => { img.hidden = false; status.hidden = true; };
+        img.onerror = () => { img.hidden = true; status.hidden = false; status.textContent = 'The image could not be displayed. Check its saved Storage reference.'; };
+        img.src = url;
+      } catch(error) {
+        status.hidden = false; status.textContent = `Could not load photo: ${error?.message || 'unknown error'}`;
+      }
+    });
+  });
+}
+
 
 
 export function setReviewCallbacks(
@@ -425,44 +482,7 @@ export function renderShipReview(){
 
   container.innerHTML =
     html;
-
-  // Photo lightbox: click any reviewer photo to open it in a popup.
-  // Use event delegation so it continues working after rerenders.
-  if (!container.dataset.photoPreviewBound) {
-    container.dataset.photoPreviewBound = 'true';
-    container.addEventListener('click', event => {
-      const trigger = event.target.closest('.ship-review-photo-preview-trigger');
-      if (!trigger) return;
-      const src = trigger.dataset.photoSrc;
-      if (!src) {
-        alert('The photo URL is not available for preview.');
-        return;
-      }
-      let modal = document.getElementById('ship-review-photo-lightbox');
-      if (!modal) {
-        modal = document.createElement('div');
-        modal.id = 'ship-review-photo-lightbox';
-        modal.innerHTML = `
-          <div class="ship-review-photo-lightbox-backdrop" style="position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:99999;display:flex;align-items:center;justify-content:center;padding:24px;" role="dialog" aria-modal="true" aria-label="Photo preview">
-            <div style="position:relative;max-width:95vw;max-height:94vh;display:flex;flex-direction:column;align-items:center;gap:10px;">
-              <button type="button" class="ship-review-photo-lightbox-close" aria-label="Close photo preview" style="align-self:flex-end;border:1px solid #fff;background:#fff;color:#321044;border-radius:8px;padding:8px 14px;font-weight:700;cursor:pointer;">Close ✕</button>
-              <div class="ship-review-photo-lightbox-name" style="color:#fff;font-size:14px;overflow-wrap:anywhere;"></div>
-              <img class="ship-review-photo-lightbox-image" alt="Photo preview" style="display:block;max-width:92vw;max-height:80vh;object-fit:contain;border-radius:8px;background:#fff;">
-            </div>
-          </div>`;
-        document.body.appendChild(modal);
-        modal.addEventListener('click', e => {
-          if (e.target === modal || e.target.classList.contains('ship-review-photo-lightbox-backdrop') || e.target.closest('.ship-review-photo-lightbox-close')) modal.style.display = 'none';
-        });
-        document.addEventListener('keydown', e => {
-          if (e.key === 'Escape') modal.style.display = 'none';
-        });
-      }
-      modal.querySelector('.ship-review-photo-lightbox-image').src = src;
-      modal.querySelector('.ship-review-photo-lightbox-name').textContent = trigger.dataset.photoName || 'Report photo';
-      modal.style.display = 'block';
-    });
-  }
+  bindReviewPhotoPreview(container);
 
 
   const bottom =
@@ -694,30 +714,7 @@ function renderReviewPoint(
 
                 ${
                   point.photos
-                    .map(
-                      photo => `
-
-                        <div class="response-photo">
-
-                          <button
-                            type="button"
-                            class="ship-review-photo-preview-trigger"
-                            data-photo-src="${escapeHtml(typeof photo === 'string' ? photo : (photo?.url || photo?.signedUrl || photo?.signed_url || photo?.publicUrl || photo?.public_url || photo?.path || photo?.storagePath || photo?.storage_path || ''))}"
-                            data-photo-name="${escapeHtml(typeof photo === 'string' ? (photo.split('/').pop().split('?')[0] || 'Report photo') : (photo?.filename || photo?.name || 'Report photo'))}"
-                            aria-label="Click to preview photo"
-                            style="border:0;background:transparent;padding:0;cursor:zoom-in;max-width:100%;"
-                          >
-                            <img
-                              src="${escapeHtml(typeof photo === 'string' ? photo : (photo?.url || photo?.signedUrl || photo?.signed_url || photo?.publicUrl || photo?.public_url || photo?.path || photo?.storagePath || photo?.storage_path || ''))}"
-                              alt="${escapeHtml(typeof photo === 'string' ? (photo.split('/').pop().split('?')[0] || 'Report photo') : (photo?.filename || photo?.name || 'Report photo'))}"
-                              style="cursor:zoom-in;max-width:100%;height:auto;"
-                            >
-                          </button>
-
-                        </div>
-
-                      `
-                    )
+                    .map((photo, photoIndex) => `<div class="response-photo">${reviewPhotoButton(photo, photoIndex)}</div>`)
                     .join('')
                 }
 
@@ -863,40 +860,20 @@ export async function sendCurrentReportToShip(){
 
 
   /*
-    Shipboard photos are saved by a separate secure RPC. The checklist
-    state in this browser can be older than the database state, so fetch
-    the latest report and merge its shipPhotos into the outgoing state
-    before saving or changing the status. This prevents the final save
-    from overwriting photo references added by shipboard users.
+    Save one final time.
   */
-  let outgoingState = JSON.parse(JSON.stringify(getState() || {}));
-  const latestResult = await getReport(reportId);
-  if (!latestResult?.success || !latestResult.data) {
-    alert('Could not verify the latest saved report before sending. Please retry.');
-    return false;
-  }
-  const latestState = latestResult.data?.report_data?.state || {};
-  for (const [key, latestItem] of Object.entries(latestState)) {
-    if (!latestItem || !Array.isArray(latestItem.shipPhotos) || latestItem.shipPhotos.length === 0) continue;
-    const localItem = outgoingState[key] && typeof outgoingState[key] === 'object' ? outgoingState[key] : {};
-    const localPhotos = Array.isArray(localItem.shipPhotos) ? localItem.shipPhotos : [];
-    const seen = new Set(localPhotos.map(photo => {
-      if (typeof photo === 'string') return photo;
-      return String(photo?.path || photo?.storagePath || photo?.storage_path || photo?.filename || '');
-    }));
-    const mergedPhotos = [...localPhotos];
-    for (const photo of latestItem.shipPhotos) {
-      const identity = typeof photo === 'string' ? photo : String(photo?.path || photo?.storagePath || photo?.storage_path || photo?.filename || '');
-      if (!seen.has(identity)) { mergedPhotos.push(photo); seen.add(identity); }
-    }
-    outgoingState[key] = { ...localItem, shipPhotos: mergedPhotos };
-  }
 
   const saved =
     await saveOpenReport({
+
       reportId,
-      meta: getMeta(),
-      state: outgoingState
+
+      meta:
+        getMeta(),
+
+      state:
+        getState()
+
     });
 
 
@@ -931,13 +908,17 @@ export async function sendCurrentReportToShip(){
   }
 
 
-  // Use the same merged state for the status transition; do not fall back
-  // to getState(), which may not contain shipboard-uploaded photo references.
   const result =
     await sendToShipReview({
+
       reportId,
-      meta: getMeta(),
-      state: outgoingState
+
+      meta:
+        getMeta(),
+
+      state:
+        getState()
+
     });
 
 
