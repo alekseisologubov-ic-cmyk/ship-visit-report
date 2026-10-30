@@ -1773,6 +1773,15 @@ function hasDetails(
       item.shipComments.length > 0
     )
 
+    ||
+
+    (
+      Array.isArray(
+        item.shipPhotos
+      ) &&
+      item.shipPhotos.length > 0
+    )
+
   );
 
 }
@@ -2607,8 +2616,10 @@ function closePhotoLightbox(){
 }
 
 function photoStoragePathForChecklist(source){
-  if(source && typeof source === 'object' && typeof source.storagePath === 'string'){
-    return source.storagePath;
+  if(source && typeof source === 'object'){
+    // Reviewer uploads use storagePath; shipboard uploads (RPC) use path.
+    const stored = source.storagePath || source.storage_path || source.path;
+    if(typeof stored === 'string' && stored) return stored;
   }
   if(typeof source === 'string' && source.startsWith('storage://')){
     return source.slice('storage://'.length);
@@ -2673,6 +2684,7 @@ function photoFileDisplayNameForChecklist(source, index){
   if(source && typeof source === 'object'){
     candidate = source.fileName || source.filename || source.originalName || source.name || '';
     if(!candidate && typeof source.storagePath === 'string') candidate = source.storagePath;
+    if(!candidate && typeof source.path === 'string') candidate = source.path;
   }else if(typeof source === 'string' && source.startsWith('storage://')){
     candidate = source.slice('storage://'.length);
   }
@@ -2820,106 +2832,50 @@ function renderShipComments(
   key
 ){
 
-  const container =
-    getElement(
-      `ship-comments-${key}`
-    );
+  const container = getElement(`ship-comments-${key}`);
+  if(!container) return;
 
+  const item = getItem(key);
+  const comments = Array.isArray(item?.shipComments) ? item.shipComments : [];
+  const photos = Array.isArray(item?.shipPhotos) ? item.shipPhotos : [];
 
-  if(
-    !container
-  ){
+  container.innerHTML = '';
+  if(comments.length === 0 && photos.length === 0) return;
 
-    return;
+  const heading = document.createElement('div');
+  heading.textContent = 'SHIP COMMENTS / RESPONSES';
+  heading.style.cssText = 'margin-top:10px;margin-bottom:5px;color:var(--vv-squid);font-size:9px;font-weight:800;letter-spacing:.04em;';
+  container.appendChild(heading);
 
+  comments.forEach(comment => {
+    const box = document.createElement('div');
+    box.className = 'ship-response-display';
+    box.innerHTML = `<strong>${escapeHtml(comment.name || 'Ship')}:</strong>` +
+      `<div style="margin-top:3px;">${escapeHtml(comment.text || '')}</div>`;
+    container.appendChild(box);
+  });
+
+  if(photos.length > 0){
+    const label = document.createElement('div');
+    label.textContent = 'SHIP PHOTOS (read-only)';
+    label.style.cssText = 'margin-top:8px;margin-bottom:4px;color:var(--vv-squid);font-size:9px;font-weight:800;letter-spacing:.04em;';
+    container.appendChild(label);
+
+    photos.forEach((source, index) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'photo-file-open';
+      button.textContent = photoFileDisplayNameForChecklist(source, index);
+      button.title = 'Click to open ship photo';
+      button.style.cssText = 'display:block;max-width:300px;margin:0 0 5px;padding:6px 8px;border:1px solid rgba(60,16,83,.22);border-radius:6px;background:#fff;color:#3C1053;font:600 12px/1.2 Arial,sans-serif;text-align:left;text-decoration:underline;overflow-wrap:anywhere;cursor:pointer;';
+      button.addEventListener('click', () => {
+        openPhotoLightbox(source, async () =>
+          directPhotoUrlForChecklist(source) || await getPhotoDisplayUrl(source)
+        );
+      });
+      container.appendChild(button);
+    });
   }
-
-
-  const item =
-    getItem(
-      key
-    );
-
-
-  const comments =
-    Array.isArray(
-      item?.shipComments
-    )
-      ? item.shipComments
-      : [];
-
-
-  if(
-    comments.length === 0
-  ){
-
-    container.innerHTML =
-      '';
-
-
-    return;
-
-  }
-
-
-  container.innerHTML = `
-
-    <div
-      style="
-        margin-top:10px;
-        margin-bottom:5px;
-        color:var(--vv-squid);
-        font-size:9px;
-        font-weight:800;
-        letter-spacing:.04em;
-      "
-    >
-
-      SHIP COMMENTS / RESPONSES
-
-    </div>
-
-
-    ${
-      comments
-        .map(
-          comment => `
-
-            <div
-              class="ship-response-display"
-            >
-
-              <strong>
-
-                ${escapeHtml(
-                  comment.name ||
-                  'Ship'
-                )}:
-
-              </strong>
-
-
-              <div
-                style="
-                  margin-top:3px;
-                "
-              >
-
-                ${escapeHtml(
-                  comment.text ||
-                  ''
-                )}
-
-              </div>
-
-            </div>
-
-          `
-        )
-        .join('')
-    }
-
-  `;
 
 }
 
@@ -3465,7 +3421,9 @@ export function getChecklistFollowUps(){
                   item.shipComments
                 )
                   ? item.shipComments
-                  : []
+                  : [],
+
+ shipPhotos: Array.isArray(item.shipPhotos) ? item.shipPhotos : []
 
             });
 
@@ -3558,7 +3516,9 @@ export function getAllChecklistPoints(){
                 item.shipComments
               )
                 ? item.shipComments
-                : []
+                : [],
+
+ shipPhotos: Array.isArray(item.shipPhotos) ? item.shipPhotos : []
 
           });
 
