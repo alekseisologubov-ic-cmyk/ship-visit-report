@@ -78,6 +78,7 @@ import {
   submitShipResponse,
   saveShipboardOpenUpdates,
   appendShipboardOpenComment,
+  deleteShipboardOpenComment,
   getAuthContext,
   signInWithPassword,
   signOutUser,
@@ -2548,6 +2549,10 @@ function normalizeShipComment(
 
   return {
 
+    id: value.id || value.commentId || value.comment_id || null,
+
+    email: String(value.email || value.userEmail || value.user_email || '').toLowerCase(),
+
     name:
       value.name ||
       value.ship ||
@@ -2901,10 +2906,9 @@ function renderShipboardShipCommentField(point){
   const key = escapeHtml(point.key);
   const shipPhotos = Array.isArray(point.shipPhotos) ? point.shipPhotos : [];
   const photoNames = shipPhotos.map((photo, index) => {
-    const name = typeof photo === 'string'
-      ? photo.split('/').pop()
-      : (photo?.filename || photo?.fileName || photo?.name || photo?.storagePath?.split('/').pop() || photo?.storage_path?.split('/').pop() || `Attached photo ${index + 1}`);
-    return escapeHtml(String(name));
+    const name = responsePhotoFilename(photo, index);
+    const attrs = photoImageAttributes(photo, index);
+    return `<li style="margin:4px 0;"><button type="button" class="response-photo-open" ${attrs}><span>▧</span><span>${escapeHtml(name)}</span><span class="response-photo-hint">Click to preview</span></button></li>`;
   });
   return `
     <section data-ship-comment-panel="${key}"
@@ -2918,10 +2922,21 @@ function renderShipboardShipCommentField(point){
             style="padding:8px 11px;border:1px solid #D9D3E0;border-radius:7px;background:#fff;color:var(--vv-squid);font:inherit;font-size:11px;font-weight:800;cursor:pointer;">Photo</button>
         </div>
       </div>
+      ${comments.length ? `<div style="display:grid;gap:7px;margin-bottom:10px;">${comments.map((comment, index) => {
+        // The database RPC verifies that the authenticated user authored this comment.
+        const canDelete = Boolean(comment?.id);
+        return `<div style="padding:9px 10px;border:1px solid #D7EBDD;border-left:3px solid #22A06B;border-radius:7px;background:#F0FAF3;">
+          <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;">
+            <strong style="font-size:11px;color:#176B3A;">${escapeHtml(comment.name || comment.email || 'Shipboard')}</strong>
+            ${canDelete ? `<button type="button" data-delete-ship-comment-key="${key}" data-delete-ship-comment-id="${escapeHtml(comment.id)}" style="border:1px solid #E7B8B8;border-radius:6px;background:#fff;color:#A21D1D;padding:4px 7px;font:inherit;font-size:10px;font-weight:700;cursor:pointer;">Delete</button>` : ''}
+          </div>
+          <div style="margin-top:4px;font-size:12px;white-space:pre-wrap;overflow-wrap:anywhere;">${escapeHtml(comment.text || '')}</div>
+        </div>`;
+      }).join('')}</div>` : ''}
       <textarea data-ship-comment-key="${key}" rows="3" maxlength="3000"
         placeholder="Add a new ship-side response for this follow-up..."
         style="display:block;width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--vv-line);border-radius:7px;font:inherit;font-size:12px;resize:vertical;"></textarea>
-      ${photoNames.length ? `<div style="margin-top:7px;padding:8px 10px;border:1px solid #D7EBDD;border-radius:7px;background:#F0FAF3;font-size:11px;color:#176B3A;"><strong>Attached photos (${photoNames.length}):</strong><ul style="margin:5px 0 0;padding-left:18px;">${photoNames.map(name => `<li>${name}</li>`).join('')}</ul></div>` : ''}
+      ${photoNames.length ? `<div style="margin-top:7px;padding:8px 10px;border:1px solid #D7EBDD;border-radius:7px;background:#F0FAF3;font-size:11px;color:#176B3A;"><strong>Attached photos (${photoNames.length}) — click a filename to preview:</strong><ul style="list-style:none;margin:5px 0 0;padding:0;">${photoNames.join('')}</ul></div>` : ''}
       <button type="button" data-add-ship-comment-key="${key}"
         style="display:block;width:100%;min-height:40px;margin-top:8px;padding:9px;border:0;border-radius:7px;background:var(--vv-squid);color:#fff;font:inherit;font-size:12px;font-weight:800;cursor:pointer;">Add</button>
       <div data-ship-comment-local-status="${key}" role="status" aria-live="polite"
@@ -3092,6 +3107,32 @@ function renderShipboardOpenReportDepartment(report, departmentId){
         const input = [...container.querySelectorAll('[data-ship-comment-key]')]
           .find(item => item.dataset.shipCommentKey === button.dataset.shipCommentFocus);
         input?.focus();
+      });
+    });
+    container.querySelectorAll('[data-delete-ship-comment-key]').forEach(button => {
+      button.addEventListener('click', async () => {
+        const key = button.dataset.deleteShipCommentKey;
+        const commentId = button.dataset.deleteShipCommentId;
+        if (!commentId || !window.confirm('Delete this comment? This cannot be undone.')) return;
+        const local = container.querySelector(`[data-ship-comment-local-status="${CSS.escape(key)}"]`);
+        button.disabled = true;
+        button.textContent = 'Deleting…';
+        if (local) local.textContent = 'Deleting comment…';
+        try {
+          const result = await deleteShipboardOpenComment({ reportId: report.id, pointKey: key, commentId });
+          if (!result?.success) throw (result?.error || new Error('Could not delete comment.'));
+          const refreshed = await getReport(report.id);
+          if (!refreshed?.success || !refreshed.data) throw new Error('Comment deleted, but the report could not refresh. Reopen the report.');
+          Object.assign(report, refreshed.data);
+          renderShipboardOpenReportDepartment(report, section.id);
+          const statusAfter = container.querySelector(`[data-ship-comment-local-status="${CSS.escape(key)}"]`);
+          if (statusAfter) statusAfter.textContent = 'Comment deleted.';
+        } catch (error) {
+          console.error('Deleting shipboard comment failed:', error);
+          if (local) local.textContent = `Delete failed: ${error?.message || 'Please try again.'}`;
+          button.disabled = false;
+          button.textContent = 'Delete';
+        }
       });
     });
     container.querySelectorAll('[data-ship-photo-notice]').forEach(button => {
