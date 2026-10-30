@@ -831,23 +831,27 @@ export async function getAuthContext(){
   const session = sessionResult?.session || null;
   if(!session) return null;
 
-  // Access is driven by the app_user_roles table in SQL (one row per approved login).
+  // This project's app_user_roles schema contains only user_id, role, and created_at.
+  // Do not select columns that do not exist: that breaks login after password auth succeeds.
+  // A row in app_user_roles is the approval record; the role remains server/database-backed.
   const { data: roleRow, error: roleError } = await supabase
     .from('app_user_roles')
-    .select('role, display_name, reviewer_aliases, active')
+    .select('role')
     .eq('user_id', session.user.id)
     .maybeSingle();
   if(roleError) throw roleError;
 
-  const active = roleRow ? roleRow.active !== false : false;
-  const aliases = Array.isArray(roleRow?.reviewer_aliases) ? roleRow.reviewer_aliases : [];
+  const email = String(session.user.email || '').trim();
+  const metadataName = session.user.user_metadata?.full_name ||
+    session.user.user_metadata?.name || '';
+  const displayName = String(metadataName || (email.includes('@') ? email.split('@')[0] : email));
 
   return {
     session,
     user: session.user,
-    role: active ? (roleRow?.role || null) : null,
-    displayName: roleRow?.display_name || '',
-    reviewerAliases: [roleRow?.display_name, ...aliases].filter(Boolean)
+    role: roleRow?.role || null,
+    displayName,
+    reviewerAliases: displayName ? [displayName] : []
   };
 }
 
