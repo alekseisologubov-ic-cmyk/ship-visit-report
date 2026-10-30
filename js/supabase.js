@@ -799,9 +799,6 @@ export async function saveShipboardOpenUpdates({ reportId, comments = {}, focusR
 
 
 /* =========================================================
-   
-
-/* =========================================================
    APPEND ONE SHIPBOARD COMMENT (NEVER REPLACE HISTORY)
 ========================================================= */
 export async function appendShipboardOpenComment({ reportId, pointKey, text }) {
@@ -825,7 +822,8 @@ export async function appendShipboardOpenComment({ reportId, pointKey, text }) {
   }
 }
 
-SHIP SUBMITS FINAL RESPONSE
+/* =========================================================
+   SHIP SUBMITS FINAL RESPONSE
 ========================================================= */
 
 export async function submitShipResponse({
