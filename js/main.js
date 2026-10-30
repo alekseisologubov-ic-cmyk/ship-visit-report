@@ -2059,7 +2059,12 @@ function getReportPoints(
             shipComments:
               getShipComments(
                 item
-              )
+              ),
+
+            // Shipboard-uploaded photos are stored separately from reviewer photos.
+            // Keep them in the normalized point so they render after a report reload.
+            shipPhotos:
+              Array.isArray(item.shipPhotos) ? item.shipPhotos : []
 
           });
 
@@ -2335,54 +2340,53 @@ function getPhotos(
   item
 ){
 
-  if(!item || typeof item !== 'object'){
+  if(
+    !item
+  ){
+
     return [];
+
   }
 
-  // Reviewer-added photos are stored in `photos`; shipboard uploads are
-  // stored by save_shipboard_open_updates in `shipPhotos`. Show both to
-  // every role that can open this report.
-  const sourcePhotos = [
-    ...(Array.isArray(item.photos) ? item.photos : []),
-    ...(Array.isArray(item.shipPhotos) ? item.shipPhotos : []),
-    ...(Array.isArray(item.ship_photos) ? item.ship_photos : [])
-  ];
 
-  const seen = new Set();
-  const normalized = [];
+  if(
+    !Array.isArray(
+      item.photos
+    )
+  ){
 
-  for(const photo of sourcePhotos){
-    let value = null;
+    return [];
 
-    if(typeof photo === 'string'){
-      value = photo;
-    }else if(photo && typeof photo === 'object'){
-      const legacyPhotoId = photo.legacyPhotoId || photo.legacy_photo_id || photo.photoId || photo.photo_id || null;
-      const storagePath = photo.storagePath || photo.storage_path || photo.path || photo.filePath || photo.file_path || null;
-      const directSource = photo.url || photo.src || photo.data || photo.image || '';
+  }
 
-      if(legacyPhotoId || storagePath){
-        value = {
-          ...photo,
-          ...(legacyPhotoId ? { legacyPhotoId: String(legacyPhotoId) } : {}),
-          ...(storagePath ? { storagePath: String(storagePath) } : {})
-        };
-      }else if(directSource){
-        value = directSource;
+
+  return item.photos
+    .map(photo => {
+      if(typeof photo === 'string') return photo;
+
+      if(photo && typeof photo === 'object'){
+        // Accept references saved by either the current or older naming format.
+        const legacyPhotoId = photo.legacyPhotoId || photo.legacy_photo_id || photo.photoId || photo.photo_id || null;
+        const storagePath = photo.storagePath || photo.storage_path || photo.path || null;
+
+        if(legacyPhotoId || storagePath){
+          return {
+            ...photo,
+            ...(legacyPhotoId ? { legacyPhotoId: String(legacyPhotoId) } : {}),
+            ...(storagePath ? { storagePath: String(storagePath) } : {})
+          };
+        }
+
+        const directSource = photo.url || photo.src || photo.data || photo.image || '';
+        if(directSource) return directSource;
       }
-    }
 
-    if(!value) continue;
-    const identity = typeof value === 'string'
-      ? value
-      : (value.storagePath || value.path || value.legacyPhotoId || value.filename || JSON.stringify(value));
-    if(seen.has(identity)) continue;
-    seen.add(identity);
-    normalized.push(value);
-  }
+      return '';
+    })
+    .filter(Boolean);
 
-  return normalized;
 }
+
 
 /* ============================================================
    SHIP COMMENTS
@@ -2895,6 +2899,13 @@ function renderShipboardShipCommentField(point){
           <button type="button" data-delete-ship-comment-key="${key}" aria-label="Delete my saved ship comment" title="Delete comment"
             style="position:absolute;top:8px;right:8px;width:29px;height:29px;border:1px solid #D9D3E0;border-radius:50%;background:#fff;color:#B4232D;font-size:20px;font-weight:800;cursor:pointer;">×</button>
         </article>` : ''}
+      ${(Array.isArray(point.shipPhotos) && point.shipPhotos.length) ? `
+        <div style="margin:0 0 10px;padding:9px;border:1px solid #E4DDEA;border-radius:7px;background:#FBFAFC;">
+          <strong style="display:block;margin-bottom:7px;font-size:10px;color:var(--vv-squid);">SHIP TEAM ATTACHED PHOTOS (${point.shipPhotos.length})</strong>
+          <div style="display:flex;flex-wrap:wrap;gap:7px;">
+            ${point.shipPhotos.map((photo, index) => `<button type="button" ${photoImageAttributes(photo, index)} style="max-width:100%;padding:7px 9px;border:1px solid #D9D3E0;border-radius:6px;background:#fff;color:var(--vv-squid);font:inherit;font-size:11px;cursor:pointer;">📷 ${escapeHtml(responsePhotoFilename(photo, index))} — Click to preview</button>`).join('')}
+          </div>
+        </div>` : ''}
       <textarea data-ship-comment-key="${key}" rows="3" maxlength="3000"
         placeholder="Add the ship-side response for this follow-up..."
         style="display:block;width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--vv-line);border-radius:7px;font:inherit;font-size:12px;resize:vertical;">${escapeHtml(text)}</textarea>
@@ -3082,7 +3093,7 @@ function renderShipboardOpenReportDepartment(report, departmentId){
           );
           if(!result?.success) throw (result?.error || new Error('Photo reference could not be saved.'));
           if(result.data?.state) report.report_data = { ...(report.report_data || {}), state: result.data.state };
-          if(local) local.textContent = 'Photo uploaded and saved. Refresh the report to see the saved attachment.';
+          if(local) local.textContent = 'Photo uploaded and saved. Reload this department to view the attachment.';
         } catch(error) {
           console.error('Shipboard photo upload failed:', error);
           if(local) local.textContent = `Photo upload failed: ${error?.message || 'Please try again.'}`;
@@ -3383,6 +3394,28 @@ function renderSummaryPoint(
           : ''
       }
 
+
+
+      ${
+        Array.isArray(point.shipPhotos) && point.shipPhotos.length
+          ? `
+            <div style="margin-top:10px;">
+              <div class="response-label">SHIP TEAM ATTACHED PHOTOS</div>
+              <div class="response-photos">
+                ${point.shipPhotos.map((photo, photoIndex) => `
+                  <div class="response-photo">
+                    <button type="button" class="response-photo-open" ${photoImageAttributes(photo, photoIndex)}>
+                      <span aria-hidden="true">▧</span>
+                      <span>${escapeHtml(responsePhotoFilename(photo, photoIndex))}</span>
+                      <span class="response-photo-hint">Click to preview</span>
+                    </button>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          `
+          : ''
+      }
 
       ${
         point.shipComments.length
@@ -4764,6 +4797,28 @@ function renderShipResponsePoint(
           : ''
       }
 
+
+
+      ${
+        Array.isArray(point.shipPhotos) && point.shipPhotos.length
+          ? `
+            <div style="margin-top:10px;">
+              <div class="response-label">SHIP TEAM ATTACHED PHOTOS</div>
+              <div class="response-photos">
+                ${point.shipPhotos.map((photo, photoIndex) => `
+                  <div class="response-photo">
+                    <button type="button" class="response-photo-open" ${photoImageAttributes(photo, photoIndex)}>
+                      <span aria-hidden="true">▧</span>
+                      <span>${escapeHtml(responsePhotoFilename(photo, photoIndex))}</span>
+                      <span class="response-photo-hint">Click to preview</span>
+                    </button>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          `
+          : ''
+      }
 
       <!-- EXISTING SHIP RESPONSES -->
 
