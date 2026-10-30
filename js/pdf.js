@@ -854,11 +854,17 @@ async function stateWithResolvedPhotos(inputState){
   const state = JSON.parse(JSON.stringify(inputState || {}));
 
   for(const [itemKey, item] of Object.entries(state)){
-    if(!item || !Array.isArray(item.photos)) continue;
+    if(!item || typeof item !== 'object') continue;
 
-    const resolved = [];
-    for(let index = 0; index < item.photos.length; index++){
-      const photo = item.photos[index];
+    // Submitted reports can contain two independent photo collections:
+    // photos = shore/reviewer attachments; shipPhotos = shipboard attachments.
+    // Resolve both for PDF output without changing the saved report data.
+    const photoCollections = ['photos', 'shipPhotos', 'ship_photos'];
+    for(const collectionName of photoCollections){
+      if(!Array.isArray(item[collectionName]) || item[collectionName].length === 0) continue;
+      const resolved = [];
+      for(let index = 0; index < item[collectionName].length; index++){
+        const photo = item[collectionName][index];
       const label = (photo && typeof photo === 'object'
         ? (photo.filename || photo.fileName || photo.originalName || photo.name || photo.storagePath || photo.storage_path || photo.path)
         : '') || `Photo ${String(index + 1).padStart(2, '0')}`;
@@ -897,14 +903,20 @@ async function stateWithResolvedPhotos(inputState){
         }
 
         resolved.push(await convertPhotoToPdfDataUrl(dataUrl, String(label)));
-      }catch(error){
-        const reason = error?.message || 'Photo could not be loaded';
-        console.error(`PDF photo unavailable (${itemKey}): ${label}`, error);
-        resolved.push(photoUnavailableDataUrl(String(label), reason));
+        }catch(error){
+          const reason = error?.message || 'Photo could not be loaded';
+          console.error(`PDF photo unavailable (${itemKey}/${collectionName}): ${label}`, error);
+          // Do not abort the entire PDF if a historical storage object is missing.
+          resolved.push(photoUnavailableDataUrl(String(label), reason));
+        }
       }
+      item[collectionName] = resolved;
     }
 
-    item.photos = resolved;
+    // Keep both keys available to older report templates that used snake_case.
+    if(Array.isArray(item.shipPhotos) && !Array.isArray(item.ship_photos)){
+      item.ship_photos = item.shipPhotos;
+    }
   }
 
   return state;
