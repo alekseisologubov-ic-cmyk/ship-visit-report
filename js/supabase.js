@@ -858,7 +858,7 @@ export async function getAuthContext(){
   // Access is driven by the app_user_roles table in SQL (one row per approved login).
   const { data: roleRow, error: roleError } = await supabase
     .from('app_user_roles')
-    .select('role, display_name, reviewer_aliases, active')
+    .select('role, reviewer_aliases, active')
     .eq('user_id', session.user.id)
     .maybeSingle();
   if(roleError) throw roleError;
@@ -866,12 +866,21 @@ export async function getAuthContext(){
   const active = roleRow ? roleRow.active !== false : false;
   const aliases = Array.isArray(roleRow?.reviewer_aliases) ? roleRow.reviewer_aliases : [];
 
+  // app_user_roles does not contain display_name in this database.
+  // Use auth metadata or the email prefix as a safe display-name fallback.
+  const displayName = String(
+    session.user?.user_metadata?.display_name ||
+    session.user?.user_metadata?.full_name ||
+    session.user?.email?.split('@')[0] ||
+    ''
+  ).trim();
+
   return {
     session,
     user: session.user,
     role: active ? (roleRow?.role || null) : null,
-    displayName: roleRow?.display_name || '',
-    reviewerAliases: [roleRow?.display_name, ...aliases].filter(Boolean)
+    displayName,
+    reviewerAliases: [displayName, ...aliases].filter(Boolean)
   };
 }
 
