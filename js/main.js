@@ -77,6 +77,7 @@ import {
   getReportByReference,
   submitShipResponse,
   saveShipboardOpenUpdates,
+  appendShipboardOpenComment,
   getAuthContext,
   signInWithPassword,
   signOutUser,
