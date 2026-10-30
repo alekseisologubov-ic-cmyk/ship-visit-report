@@ -799,7 +799,33 @@ export async function saveShipboardOpenUpdates({ reportId, comments = {}, focusR
 
 
 /* =========================================================
-   SHIP SUBMITS FINAL RESPONSE
+   
+
+/* =========================================================
+   APPEND ONE SHIPBOARD COMMENT (NEVER REPLACE HISTORY)
+========================================================= */
+export async function appendShipboardOpenComment({ reportId, pointKey, text }) {
+  try {
+    if (!reportId) throw new Error('Report ID is required.');
+    if (!pointKey) throw new Error('Checklist point is required.');
+    const cleanText = String(text || '').trim();
+    if (!cleanText) throw new Error('Enter a comment before saving.');
+    if (cleanText.length > 3000) throw new Error('Comment must be 3000 characters or fewer.');
+
+    const { data, error } = await supabase.rpc('append_shipboard_open_comment', {
+      p_report_id: reportId,
+      p_point_key: pointKey,
+      p_text: cleanText
+    });
+    if (error) throw error;
+    return { success: true, data, error: null };
+  } catch (error) {
+    console.error('appendShipboardOpenComment:', error);
+    return { success: false, data: null, error };
+  }
+}
+
+SHIP SUBMITS FINAL RESPONSE
 ========================================================= */
 
 export async function submitShipResponse({
@@ -831,27 +857,23 @@ export async function getAuthContext(){
   const session = sessionResult?.session || null;
   if(!session) return null;
 
-  // This project's app_user_roles schema contains only user_id, role, and created_at.
-  // Do not select columns that do not exist: that breaks login after password auth succeeds.
-  // A row in app_user_roles is the approval record; the role remains server/database-backed.
+  // Access is driven by the app_user_roles table in SQL (one row per approved login).
   const { data: roleRow, error: roleError } = await supabase
     .from('app_user_roles')
-    .select('role')
+    .select('role, display_name, reviewer_aliases, active')
     .eq('user_id', session.user.id)
     .maybeSingle();
   if(roleError) throw roleError;
 
-  const email = String(session.user.email || '').trim();
-  const metadataName = session.user.user_metadata?.full_name ||
-    session.user.user_metadata?.name || '';
-  const displayName = String(metadataName || (email.includes('@') ? email.split('@')[0] : email));
+  const active = roleRow ? roleRow.active !== false : false;
+  const aliases = Array.isArray(roleRow?.reviewer_aliases) ? roleRow.reviewer_aliases : [];
 
   return {
     session,
     user: session.user,
-    role: roleRow?.role || null,
-    displayName,
-    reviewerAliases: displayName ? [displayName] : []
+    role: active ? (roleRow?.role || null) : null,
+    displayName: roleRow?.display_name || '',
+    reviewerAliases: [roleRow?.display_name, ...aliases].filter(Boolean)
   };
 }
 
