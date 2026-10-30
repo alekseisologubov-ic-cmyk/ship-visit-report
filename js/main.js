@@ -3025,7 +3025,17 @@ function renderShipboardOpenReportDepartment(report, departmentId){
           shipFocusRequests: result.data?.shipFocusRequests || { ...(report.report_data?.shipFocusRequests || {}), ...focusRequests }
         };
         Object.keys(photos).forEach(key => pendingShipboardPhotos.delete(key));
-        if(status) status.textContent = 'Saved successfully';
+
+        // Refresh the report data and repaint the currently open department in-place.
+        // This makes saved/deleted comments and newly attached photos visible without
+        // logging out, reloading the browser, or navigating away from the report.
+        const refreshed = await getReport(report.id);
+        if(refreshed?.success && refreshed.data){
+          Object.assign(report, refreshed.data);
+        }
+        renderShipboardOpenReportDepartment(report, section.id);
+        const refreshedStatus = document.querySelector('#report-overall-content [data-shipboard-save-status]');
+        if(refreshedStatus) refreshedStatus.textContent = 'Saved successfully';
       }catch(error){
         console.error('Saving shipboard open updates failed:', error);
         if(status) status.textContent = `Save failed: ${error?.message || 'Please try again.'}`;
