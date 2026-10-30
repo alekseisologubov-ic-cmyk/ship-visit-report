@@ -2903,7 +2903,7 @@ function renderShipboardShipCommentField(point){
     <section data-ship-comment-panel="${key}"
       style="margin:-4px 0 12px 30px;padding:12px;border:1px solid #D9D3E0;border-radius:9px;background:#fff;">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;">
-        <strong style="font-size:11px;color:var(--vv-squid);">SHIP TEAM COMMENT</strong>
+        <strong style="font-size:11px;color:var(--vv-squid);">ADD SHIP TEAM COMMENT</strong>
         <div style="display:flex;gap:7px;">
           <button type="button" data-ship-comment-focus="${key}"
             style="padding:8px 11px;border:1px solid #D9D3E0;border-radius:7px;background:#fff;color:var(--vv-squid);font:inherit;font-size:11px;font-weight:800;cursor:pointer;">Comment</button>
@@ -2911,15 +2911,6 @@ function renderShipboardShipCommentField(point){
             style="padding:8px 11px;border:1px solid #D9D3E0;border-radius:7px;background:#fff;color:var(--vv-squid);font:inherit;font-size:11px;font-weight:800;cursor:pointer;">Photo</button>
         </div>
       </div>
-      ${comments.map(comment => `
-        <article style="margin-bottom:10px;padding:11px 12px;border-left:3px solid #26965A;border-radius:7px;background:#EAF7EF;">
-          <div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline;">
-            <strong style="display:block;margin-bottom:5px;font-size:11px;color:#176B3A;">${escapeHtml(comment?.name || 'Ship team')}</strong>
-            <span style="font-size:10px;color:#47765A;">${escapeHtml(comment?.timestamp ? new Date(comment.timestamp).toLocaleString() : '')}</span>
-          </div>
-          <div style="font-size:12px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere;">${escapeHtml(comment?.text || '')}</div>
-        </article>
-      `).join('')}
       <textarea data-ship-comment-key="${key}" rows="3" maxlength="3000"
         placeholder="Add a new ship-side response for this follow-up..."
         style="display:block;width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--vv-line);border-radius:7px;font:inherit;font-size:12px;resize:vertical;"></textarea>
