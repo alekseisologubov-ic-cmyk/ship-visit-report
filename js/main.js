@@ -3126,7 +3126,29 @@ function renderShipboardOpenReportDepartment(report, departmentId){
               });
             }
             pendingShipboardPhotos.set(key, saved);
-            if (local) local.textContent = `${saved.length} photo(s) uploaded. Press SAVE SHIP COMMENTS AND FOCUS REQUEST to attach them to this report.`;
+            if (local) local.textContent = 'Photo uploaded. Saving attachment to the report…';
+
+            // Attach uploaded photo metadata immediately, rather than leaving it
+            // pending behind the department-level Save button. Keep comments untouched.
+            const photoSave = await saveShipboardOpenUpdates({
+              reportId: report.id,
+              comments: {},
+              focusRequests: {},
+              photos: { [key]: saved }
+            });
+            if (!photoSave?.success) {
+              throw (photoSave?.error || new Error('Photo uploaded, but could not attach it to the report.'));
+            }
+            pendingShipboardPhotos.delete(key);
+            report.report_data = {
+              ...(report.report_data || {}),
+              state: photoSave.data?.state || report.report_data?.state || {}
+            };
+            const refreshed = await getReport(report.id);
+            if (refreshed?.success && refreshed.data) Object.assign(report, refreshed.data);
+            renderShipboardOpenReportDepartment(report, section.id);
+            const refreshedLocal = document.querySelector(`#report-overall-content [data-ship-comment-local-status="${CSS.escape(key)}"]`);
+            if (refreshedLocal) refreshedLocal.textContent = 'Photo attached to the report successfully.';
           } catch (error) {
             console.error('Shipboard photo upload failed:', error);
             if (local) local.textContent = `Photo upload failed: ${error?.message || 'Please try again.'}`;
