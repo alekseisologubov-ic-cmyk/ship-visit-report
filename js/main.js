@@ -2922,17 +2922,7 @@ function renderShipboardShipCommentField(point){
             style="padding:8px 11px;border:1px solid #D9D3E0;border-radius:7px;background:#fff;color:var(--vv-squid);font:inherit;font-size:11px;font-weight:800;cursor:pointer;">Photo</button>
         </div>
       </div>
-      ${comments.length ? `<div style="display:grid;gap:7px;margin-bottom:10px;">${comments.map((comment, index) => {
-        // The database RPC verifies that the authenticated user authored this comment.
-        const canDelete = Boolean(comment?.id);
-        return `<div style="padding:9px 10px;border:1px solid #D7EBDD;border-left:3px solid #22A06B;border-radius:7px;background:#F0FAF3;">
-          <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;">
-            <strong style="font-size:11px;color:#176B3A;">${escapeHtml(comment.name || comment.email || 'Shipboard')}</strong>
-            ${canDelete ? `<button type="button" data-delete-ship-comment-key="${key}" data-delete-ship-comment-id="${escapeHtml(comment.id)}" style="border:1px solid #E7B8B8;border-radius:6px;background:#fff;color:#A21D1D;padding:4px 7px;font:inherit;font-size:10px;font-weight:700;cursor:pointer;">Delete</button>` : ''}
-          </div>
-          <div style="margin-top:4px;font-size:12px;white-space:pre-wrap;overflow-wrap:anywhere;">${escapeHtml(comment.text || '')}</div>
-        </div>`;
-      }).join('')}</div>` : ''}
+      <!-- Saved comments are displayed only in SHIP COMMENTS / RESPONSES above. -->
       <textarea data-ship-comment-key="${key}" rows="3" maxlength="3000"
         placeholder="Add a new ship-side response for this follow-up..."
         style="display:block;width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--vv-line);border-radius:7px;font:inherit;font-size:12px;resize:vertical;"></textarea>
@@ -3515,25 +3505,18 @@ function renderSummaryPoint(
                 point.shipComments
                   .map(
                     comment => `
-
                       <div
                         class="ship-response-display"
-                        style="position:relative;padding-right:${isShipboard() && String(activeReportRecord?.status || 'open') === 'open' ? '38px' : '10px'};"
+                        style="position:relative;padding-right:10px;"
                       >
-
-                        <strong>
-
-                          ${escapeHtml(
-                            comment.name
-                          )}:
-
-                        </strong>
-
-                        <div style="margin-top:3px;">
-                          ${escapeHtml(comment.text)}
+                        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
+                          <strong>${escapeHtml(comment.name || comment.email || 'Shipboard')}:</strong>
+                          ${isShipboard() && String(activeReportRecord?.status || 'open') === 'open' && comment.id
+                            ? `<button type="button" data-delete-ship-comment-key="${escapeHtml(point.key)}" data-delete-ship-comment-id="${escapeHtml(comment.id)}" style="border:1px solid #E7B8B8;border-radius:6px;background:#fff;color:#A21D1D;padding:4px 7px;font:inherit;font-size:10px;font-weight:700;cursor:pointer;">Delete</button>`
+                            : ''}
                         </div>
+                        <div style="margin-top:3px;">${escapeHtml(comment.text || '')}</div>
                       </div>
-
                     `
                   )
                   .join('')
