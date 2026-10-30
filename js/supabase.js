@@ -858,7 +858,7 @@ export async function getAuthContext(){
   // Access is driven by the app_user_roles table in SQL (one row per approved login).
   const { data: roleRow, error: roleError } = await supabase
     .from('app_user_roles')
-    .select('role, display_name, reviewer_aliases, active')
+    .select('*')
     .eq('user_id', session.user.id)
     .maybeSingle();
   if(roleError) throw roleError;
