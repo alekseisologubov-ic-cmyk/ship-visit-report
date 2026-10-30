@@ -2897,10 +2897,6 @@ function renderShipboardOpenReportDepartments(report){
 function renderShipboardShipCommentField(point){
   if(!point.followUpNeeded) return '';
   const comments = Array.isArray(point.shipComments) ? point.shipComments : [];
-  const current = comments.find(c =>
-    String(c?.email || '').toLowerCase() === String(currentAuthUserEmail || '').toLowerCase()
-  ) || comments[comments.length - 1] || null;
-  const text = current?.text || '';
   const key = escapeHtml(point.key);
   return `
     <section data-ship-comment-panel="${key}"
@@ -2914,13 +2910,15 @@ function renderShipboardShipCommentField(point){
             style="padding:8px 11px;border:1px solid #D9D3E0;border-radius:7px;background:#fff;color:var(--vv-squid);font:inherit;font-size:11px;font-weight:800;cursor:pointer;">Photo</button>
         </div>
       </div>
-      ${text ? `
-        <article style="position:relative;margin-bottom:10px;padding:11px 44px 11px 12px;border-left:3px solid var(--vv-squid);border-radius:7px;background:#F8F5FA;">
-          <strong style="display:block;margin-bottom:5px;font-size:11px;color:var(--vv-squid);">${escapeHtml(current?.name || 'Ship team')}</strong>
-          <div style="font-size:12px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere;">${escapeHtml(text)}</div>
-          <button type="button" data-delete-ship-comment-key="${key}" aria-label="Delete my saved ship comment" title="Delete comment"
-            style="position:absolute;top:8px;right:8px;width:29px;height:29px;border:1px solid #D9D3E0;border-radius:50%;background:#fff;color:#B4232D;font-size:20px;font-weight:800;cursor:pointer;">×</button>
-        </article>` : ''}
+      ${comments.map(comment => `
+        <article style="margin-bottom:10px;padding:11px 12px;border-left:3px solid #26965A;border-radius:7px;background:#EAF7EF;">
+          <div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline;">
+            <strong style="display:block;margin-bottom:5px;font-size:11px;color:#176B3A;">${escapeHtml(comment?.name || 'Ship team')}</strong>
+            <span style="font-size:10px;color:#47765A;">${escapeHtml(comment?.timestamp ? new Date(comment.timestamp).toLocaleString() : '')}</span>
+          </div>
+          <div style="font-size:12px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere;">${escapeHtml(comment?.text || '')}</div>
+        </article>
+      `).join('')}
       <textarea data-ship-comment-key="${key}" rows="3" maxlength="3000"
         placeholder="Add a new ship-side response for this follow-up..."
         style="display:block;width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--vv-line);border-radius:7px;font:inherit;font-size:12px;resize:vertical;"></textarea>
@@ -3003,17 +3001,7 @@ function renderShipboardOpenReportDepartment(report, departmentId){
       const status = container.querySelector('[data-shipboard-save-status]');
       saveButtons.forEach(button => { button.disabled = true; button.textContent = 'SAVING...'; });
       if(status) status.textContent = 'Saving...';
-      // Send only comments that the user is actually adding. Empty untouched
-      // inputs must not erase previously saved comments. Deletion is explicit.
-      const comments = {};
-      const onlyCommentKey = options.onlyCommentKey || null;
-      container.querySelectorAll('[data-ship-comment-key]').forEach(input => {
-        const key = input.dataset.shipCommentKey;
-        if (onlyCommentKey && key !== onlyCommentKey) return;
-        const value = input.value.trim();
-        if (value) comments[key] = value;
-      });
-      if (options.deleteCommentKey) comments[options.deleteCommentKey] = '';
+      // Comments are appended through the dedicated append-only RPC below.
       const focusRequests = {};
       container.querySelectorAll('[data-ship-focus-section]').forEach(input => {
         focusRequests[input.dataset.shipFocusSection] = input.value.trim();
@@ -3023,7 +3011,7 @@ function renderShipboardOpenReportDepartment(report, departmentId){
         if (Array.isArray(items) && items.length) photos[key] = items;
       });
       try{
-        const result = await saveShipboardOpenUpdates({ reportId: report.id, comments, focusRequests, photos });
+        const result = await saveShipboardOpenUpdates({ reportId: report.id, comments: {}, focusRequests, photos });
         if(!result?.success) throw (result?.error || new Error('Could not save shipboard updates.'));
         report.report_data = {
           ...(report.report_data || {}),
@@ -3062,12 +3050,41 @@ function renderShipboardOpenReportDepartment(report, departmentId){
           input.focus();
           return;
         }
-        await handleShipboardSave({ onlyCommentKey: key });
-        // The successful save re-renders the panel: the saved text appears above
-        // in the saved-comment card and this input is reset for the next comment.
+        const text = input.value.trim();
         const local = container.querySelector(`[data-ship-comment-local-status="${CSS.escape(key)}"]`);
-        const status = container.querySelector('[data-shipboard-save-status]');
-        if(local && status) local.textContent = status.textContent;
+        const addButton = button;
+        addButton.disabled = true;
+        addButton.textContent = 'SAVING...';
+        if(local) local.textContent = 'Saving comment...';
+        let commentWasSaved = false;
+        try {
+          const saved = await appendShipboardOpenComment({
+            reportId: report.id,
+            pointKey: key,
+            text
+          });
+          if(!saved?.success) throw (saved?.error || new Error('Could not save comment.'));
+          commentWasSaved = true;
+          // Clear only after the server confirms the append succeeded.
+          input.value = '';
+          const refreshed = await getReport(report.id);
+          if(!refreshed?.success || !refreshed.data) {
+            if(local) local.textContent = 'Comment saved. Reopen the report to refresh the saved comments.';
+            return;
+          }
+          Object.assign(report, refreshed.data);
+          renderShipboardOpenReportDepartment(report, section.id);
+          const refreshedLocal = container.querySelector(`[data-ship-comment-local-status="${CSS.escape(key)}"]`);
+          if(refreshedLocal) refreshedLocal.textContent = 'Comment saved. You can add another comment.';
+        } catch(error) {
+          console.error('Appending shipboard comment failed:', error);
+          if(local) local.textContent = commentWasSaved
+            ? 'Comment saved. Reopen the report if the comment list has not refreshed.'
+            : `Save failed: ${error?.message || 'Please try again.'}`;
+        } finally {
+          addButton.disabled = false;
+          addButton.textContent = 'Add';
+        }
       });
     });
     container.querySelectorAll('[data-ship-comment-focus]').forEach(button => {
@@ -3126,16 +3143,6 @@ function renderShipboardOpenReportDepartment(report, departmentId){
           }
         }, { once: true });
         picker.click();
-      });
-    });
-    container.querySelectorAll('[data-delete-ship-comment-key]').forEach(button => {
-      button.addEventListener('click', async () => {
-        const key = button.dataset.deleteShipCommentKey;
-        const input = [...container.querySelectorAll('[data-ship-comment-key]')]
-          .find(item => item.dataset.shipCommentKey === key);
-        if(!input) return;
-        if(!window.confirm('Delete your saved ship comment for this checklist point?')) return;
-        await handleShipboardSave({ deleteCommentKey: key });
       });
     });
   }
@@ -3462,11 +3469,6 @@ function renderSummaryPoint(
                         <div style="margin-top:3px;">
                           ${escapeHtml(comment.text)}
                         </div>
-                        ${isShipboard() && String(activeReportRecord?.status || 'open') === 'open' ? `
-                          <button type="button" data-delete-green-ship-comment-key="${escapeHtml(point.key)}"
-                            aria-label="Delete your ship comment" title="Delete your saved ship comment"
-                            style="position:absolute;top:7px;right:7px;width:24px;height:24px;border:1px solid #E4D8E8;border-radius:50%;background:#fff;color:#C41425;font-size:18px;line-height:1;font-weight:800;cursor:pointer;">×</button>
-                        ` : ''}
                       </div>
 
                     `
