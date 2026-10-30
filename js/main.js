@@ -77,11 +77,11 @@ import {
   getReportByReference,
   submitShipResponse,
   saveShipboardOpenUpdates,
-  uploadPhotoDataUrl,
   getAuthContext,
   signInWithPassword,
   signOutUser,
   getPhotoDisplayUrl,
+  uploadPhotoDataUrl,
   migrateEmbeddedPhotosToStorage
 } from './supabase.js';
 
@@ -94,6 +94,8 @@ let responsePhotoLightbox = null;
 let responsePhotoLightboxImage = null;
 let responsePhotoLightboxStatus = null;
 let responsePhotoPreviousOverflow = '';
+// Uploaded shipboard photos waiting to be attached to the report by the secure RPC.
+const pendingShipboardPhotos = new Map();
 
 function responsePhotoFilename(photo, index = 0){
   let name = '';
@@ -2051,6 +2053,9 @@ function getReportPoints(
                 item
               ),
 
+            shipPhotos:
+              getShipPhotos(item),
+
             followUpNeeded:
               Boolean(
                 item.followUpNeeded
@@ -2059,12 +2064,7 @@ function getReportPoints(
             shipComments:
               getShipComments(
                 item
-              ),
-
-            // Shipboard-uploaded photos are stored separately from reviewer photos.
-            // Keep them in the normalized point so they render after a report reload.
-            shipPhotos:
-              Array.isArray(item.shipPhotos) ? item.shipPhotos : []
+              )
 
           });
 
@@ -2385,6 +2385,29 @@ function getPhotos(
     })
     .filter(Boolean);
 
+}
+
+
+/* ============================================================
+   SHIPBOARD PHOTOS
+============================================================ */
+
+function getShipPhotos(item){
+  if(!item || !Array.isArray(item.shipPhotos)) return [];
+  return item.shipPhotos.map(photo => {
+    if(typeof photo === 'string') return photo;
+    if(!photo || typeof photo !== 'object') return '';
+    const legacyPhotoId = photo.legacyPhotoId || photo.legacy_photo_id || photo.photoId || photo.photo_id || null;
+    const storagePath = photo.storagePath || photo.storage_path || photo.path || null;
+    if(legacyPhotoId || storagePath){
+      return {
+        ...photo,
+        ...(legacyPhotoId ? { legacyPhotoId: String(legacyPhotoId) } : {}),
+        ...(storagePath ? { storagePath: String(storagePath) } : {})
+      };
+    }
+    return photo.url || photo.src || photo.data || photo.image || '';
+  }).filter(Boolean);
 }
 
 
@@ -2887,9 +2910,8 @@ function renderShipboardShipCommentField(point){
         <div style="display:flex;gap:7px;">
           <button type="button" data-ship-comment-focus="${key}"
             style="padding:8px 11px;border:1px solid #D9D3E0;border-radius:7px;background:#fff;color:var(--vv-squid);font:inherit;font-size:11px;font-weight:800;cursor:pointer;">Comment</button>
-          <button type="button" data-ship-photo-button="${key}"
+          <button type="button" data-ship-photo-notice="${key}"
             style="padding:8px 11px;border:1px solid #D9D3E0;border-radius:7px;background:#fff;color:var(--vv-squid);font:inherit;font-size:11px;font-weight:800;cursor:pointer;">Photo</button>
-          <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" data-ship-photo-input="${key}" style="display:none;" />
         </div>
       </div>
       ${text ? `
@@ -2899,13 +2921,6 @@ function renderShipboardShipCommentField(point){
           <button type="button" data-delete-ship-comment-key="${key}" aria-label="Delete my saved ship comment" title="Delete comment"
             style="position:absolute;top:8px;right:8px;width:29px;height:29px;border:1px solid #D9D3E0;border-radius:50%;background:#fff;color:#B4232D;font-size:20px;font-weight:800;cursor:pointer;">×</button>
         </article>` : ''}
-      ${(Array.isArray(point.shipPhotos) && point.shipPhotos.length) ? `
-        <div style="margin:0 0 10px;padding:9px;border:1px solid #E4DDEA;border-radius:7px;background:#FBFAFC;">
-          <strong style="display:block;margin-bottom:7px;font-size:10px;color:var(--vv-squid);">SHIP TEAM ATTACHED PHOTOS (${point.shipPhotos.length})</strong>
-          <div style="display:flex;flex-wrap:wrap;gap:7px;">
-            ${point.shipPhotos.map((photo, index) => `<button type="button" ${photoImageAttributes(photo, index)} style="max-width:100%;padding:7px 9px;border:1px solid #D9D3E0;border-radius:6px;background:#fff;color:var(--vv-squid);font:inherit;font-size:11px;cursor:pointer;">📷 ${escapeHtml(responsePhotoFilename(photo, index))} — Click to preview</button>`).join('')}
-          </div>
-        </div>` : ''}
       <textarea data-ship-comment-key="${key}" rows="3" maxlength="3000"
         placeholder="Add the ship-side response for this follow-up..."
         style="display:block;width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--vv-line);border-radius:7px;font:inherit;font-size:12px;resize:vertical;">${escapeHtml(text)}</textarea>
@@ -2997,14 +3012,19 @@ function renderShipboardOpenReportDepartment(report, departmentId){
       container.querySelectorAll('[data-ship-focus-section]').forEach(input => {
         focusRequests[input.dataset.shipFocusSection] = input.value.trim();
       });
+      const photos = {};
+      pendingShipboardPhotos.forEach((items, key) => {
+        if (Array.isArray(items) && items.length) photos[key] = items;
+      });
       try{
-        const result = await saveShipboardOpenUpdates({ reportId: report.id, comments, focusRequests });
+        const result = await saveShipboardOpenUpdates({ reportId: report.id, comments, focusRequests, photos });
         if(!result?.success) throw (result?.error || new Error('Could not save shipboard updates.'));
         report.report_data = {
           ...(report.report_data || {}),
           state: result.data?.state || report.report_data?.state || {},
           shipFocusRequests: result.data?.shipFocusRequests || { ...(report.report_data?.shipFocusRequests || {}), ...focusRequests }
         };
+        Object.keys(photos).forEach(key => pendingShipboardPhotos.delete(key));
         if(status) status.textContent = 'Saved successfully';
       }catch(error){
         console.error('Saving shipboard open updates failed:', error);
@@ -3040,67 +3060,55 @@ function renderShipboardOpenReportDepartment(report, departmentId){
         input?.focus();
       });
     });
-    container.querySelectorAll('[data-ship-photo-button]').forEach(button => {
+    container.querySelectorAll('[data-ship-photo-notice]').forEach(button => {
       button.addEventListener('click', () => {
-        const key = button.dataset.shipPhotoButton;
-        const picker = [...container.querySelectorAll('[data-ship-photo-input]')]
-          .find(input => input.dataset.shipPhotoInput === key);
-        picker?.click();
-      });
-    });
-    container.querySelectorAll('[data-ship-photo-input]').forEach(input => {
-      input.addEventListener('change', async () => {
-        const file = input.files?.[0];
-        const key = input.dataset.shipPhotoInput;
+        const key = button.dataset.shipPhotoNotice;
         const local = container.querySelector(`[data-ship-comment-local-status="${CSS.escape(key)}"]`);
-        if(!file) return;
-        if(!/^image\/(jpeg|png|webp|gif)$/i.test(file.type)) {
-          if(local) local.textContent = 'Choose a JPG, PNG, WEBP, or GIF image.';
-          input.value = '';
-          return;
-        }
-        if(file.size > 12 * 1024 * 1024) {
-          if(local) local.textContent = 'Each photo must be 12 MB or smaller.';
-          input.value = '';
-          return;
-        }
-        const buttons = [...container.querySelectorAll('[data-ship-photo-button]')]
-          .filter(item => item.dataset.shipPhotoButton === key);
-        buttons.forEach(item => { item.disabled = true; item.textContent = 'Uploading...'; });
-        if(local) local.textContent = 'Uploading photo...';
-        try {
-          const dataUrl = await new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(String(reader.result || ''));
-            reader.onerror = () => reject(new Error('Could not read the selected photo.'));
-            reader.readAsDataURL(file);
-          });
-          // Never leave the shipboard UI stuck on "Uploading..." indefinitely.
-          const uploaded = await withTimeout(
-            uploadPhotoDataUrl(report.id, key, dataUrl, file.name),
-            45000,
-            'Photo upload timed out after 45 seconds. Check Supabase Storage policies, bucket name, and network connection.'
-          );
-          const result = await withTimeout(
-            saveShipboardOpenUpdates({
-              reportId: report.id,
-              comments: {},
-              focusRequests: {},
-              photos: { [key]: [{ path: uploaded.storagePath, filename: uploaded.filename, contentType: uploaded.contentType, uploadedAt: uploaded.uploadedAt }] }
-            }),
-            30000,
-            'The photo uploaded, but saving its reference timed out. Check the save_shipboard_open_updates RPC and p_photos migration.'
-          );
-          if(!result?.success) throw (result?.error || new Error('Photo reference could not be saved.'));
-          if(result.data?.state) report.report_data = { ...(report.report_data || {}), state: result.data.state };
-          if(local) local.textContent = 'Photo uploaded and saved. Reload this department to view the attachment.';
-        } catch(error) {
-          console.error('Shipboard photo upload failed:', error);
-          if(local) local.textContent = `Photo upload failed: ${error?.message || 'Please try again.'}`;
-        } finally {
-          buttons.forEach(item => { item.disabled = false; item.textContent = 'Photo'; });
-          input.value = '';
-        }
+        const picker = document.createElement('input');
+        picker.type = 'file';
+        picker.accept = 'image/jpeg,image/png,image/webp,image/gif';
+        picker.multiple = true;
+        picker.style.display = 'none';
+        document.body.appendChild(picker);
+        picker.addEventListener('change', async () => {
+          const files = Array.from(picker.files || []);
+          picker.remove();
+          if (!files.length) return;
+          const saved = pendingShipboardPhotos.get(key) || [];
+          try {
+            button.disabled = true;
+            if (local) local.textContent = `Uploading ${files.length} photo(s)…`;
+            for (const file of files) {
+              if (!/^image\/(jpeg|png|webp|gif)$/i.test(file.type)) {
+                throw new Error(`${file.name}: choose a JPG, PNG, WEBP, or GIF image.`);
+              }
+              if (file.size > 12 * 1024 * 1024) {
+                throw new Error(`${file.name}: each photo must be 12 MB or smaller.`);
+              }
+              const dataUrl = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(String(reader.result || ''));
+                reader.onerror = () => reject(new Error(`Could not read ${file.name}.`));
+                reader.readAsDataURL(file);
+              });
+              const uploaded = await uploadPhotoDataUrl(report.id, key, dataUrl, file.name);
+              saved.push({
+                path: uploaded.storagePath,
+                filename: uploaded.filename || file.name,
+                contentType: uploaded.contentType || file.type,
+                uploadedAt: uploaded.uploadedAt || new Date().toISOString()
+              });
+            }
+            pendingShipboardPhotos.set(key, saved);
+            if (local) local.textContent = `${saved.length} photo(s) uploaded. Press SAVE SHIP COMMENTS AND FOCUS REQUEST to attach them to this report.`;
+          } catch (error) {
+            console.error('Shipboard photo upload failed:', error);
+            if (local) local.textContent = `Photo upload failed: ${error?.message || 'Please try again.'}`;
+          } finally {
+            button.disabled = false;
+          }
+        }, { once: true });
+        picker.click();
       });
     });
     container.querySelectorAll('[data-delete-ship-comment-key]').forEach(button => {
@@ -3394,28 +3402,6 @@ function renderSummaryPoint(
           : ''
       }
 
-
-
-      ${
-        Array.isArray(point.shipPhotos) && point.shipPhotos.length
-          ? `
-            <div style="margin-top:10px;">
-              <div class="response-label">SHIP TEAM ATTACHED PHOTOS</div>
-              <div class="response-photos">
-                ${point.shipPhotos.map((photo, photoIndex) => `
-                  <div class="response-photo">
-                    <button type="button" class="response-photo-open" ${photoImageAttributes(photo, photoIndex)}>
-                      <span aria-hidden="true">▧</span>
-                      <span>${escapeHtml(responsePhotoFilename(photo, photoIndex))}</span>
-                      <span class="response-photo-hint">Click to preview</span>
-                    </button>
-                  </div>
-                `).join('')}
-              </div>
-            </div>
-          `
-          : ''
-      }
 
       ${
         point.shipComments.length
@@ -4746,6 +4732,28 @@ function renderShipResponsePoint(
       }
 
 
+      ${
+        point.shipPhotos && point.shipPhotos.length
+          ? `
+            <div style="margin-top:10px;">
+              <div class="response-label">SHIPBOARD PHOTOS</div>
+              <div class="response-photos">
+                ${point.shipPhotos.map((photo, photoIndex) => `
+                  <div class="response-photo">
+                    <button type="button" class="response-photo-open" ${photoImageAttributes(photo, photoIndex)}>
+                      <span aria-hidden="true">▧</span>
+                      <span>${escapeHtml(responsePhotoFilename(photo, photoIndex))}</span>
+                      <span class="response-photo-hint">Click to preview</span>
+                    </button>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          `
+          : ''
+      }
+
+
       <!-- ORIGINAL REVIEWER PHOTO -->
 
       ${
@@ -4798,12 +4806,11 @@ function renderShipResponsePoint(
       }
 
 
-
       ${
-        Array.isArray(point.shipPhotos) && point.shipPhotos.length
+        point.shipPhotos && point.shipPhotos.length
           ? `
             <div style="margin-top:10px;">
-              <div class="response-label">SHIP TEAM ATTACHED PHOTOS</div>
+              <div class="response-label">SHIPBOARD PHOTOS</div>
               <div class="response-photos">
                 ${point.shipPhotos.map((photo, photoIndex) => `
                   <div class="response-photo">
@@ -4819,6 +4826,7 @@ function renderShipResponsePoint(
           `
           : ''
       }
+
 
       <!-- EXISTING SHIP RESPONSES -->
 
