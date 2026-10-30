@@ -2899,6 +2899,13 @@ function renderShipboardShipCommentField(point){
   if(!point.followUpNeeded) return '';
   const comments = Array.isArray(point.shipComments) ? point.shipComments : [];
   const key = escapeHtml(point.key);
+  const shipPhotos = Array.isArray(point.shipPhotos) ? point.shipPhotos : [];
+  const photoNames = shipPhotos.map((photo, index) => {
+    const name = typeof photo === 'string'
+      ? photo.split('/').pop()
+      : (photo?.filename || photo?.fileName || photo?.name || photo?.storagePath?.split('/').pop() || photo?.storage_path?.split('/').pop() || `Attached photo ${index + 1}`);
+    return escapeHtml(String(name));
+  });
   return `
     <section data-ship-comment-panel="${key}"
       style="margin:-4px 0 12px 30px;padding:12px;border:1px solid #D9D3E0;border-radius:9px;background:#fff;">
@@ -2914,6 +2921,7 @@ function renderShipboardShipCommentField(point){
       <textarea data-ship-comment-key="${key}" rows="3" maxlength="3000"
         placeholder="Add a new ship-side response for this follow-up..."
         style="display:block;width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--vv-line);border-radius:7px;font:inherit;font-size:12px;resize:vertical;"></textarea>
+      ${photoNames.length ? `<div style="margin-top:7px;padding:8px 10px;border:1px solid #D7EBDD;border-radius:7px;background:#F0FAF3;font-size:11px;color:#176B3A;"><strong>Attached photos (${photoNames.length}):</strong><ul style="margin:5px 0 0;padding-left:18px;">${photoNames.map(name => `<li>${name}</li>`).join('')}</ul></div>` : ''}
       <button type="button" data-add-ship-comment-key="${key}"
         style="display:block;width:100%;min-height:40px;margin-top:8px;padding:9px;border:0;border-radius:7px;background:var(--vv-squid);color:#fff;font:inherit;font-size:12px;font-weight:800;cursor:pointer;">Add</button>
       <div data-ship-comment-local-status="${key}" role="status" aria-live="polite"
