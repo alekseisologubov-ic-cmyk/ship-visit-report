@@ -818,6 +818,38 @@ function addImageToPDF(doc, source, x, y, maxWidth, maxHeight){
 /* Resolve private Storage and legacy-photo references to temporary data URLs
    for PDF/print generation. Only a clone is changed; saved report references
    remain intact. */
+function photoUnavailableDataUrl(filename, reason = ''){
+  // Keep PDF generation available even when one historical Storage object is missing.
+  // This placeholder does not alter or remove the saved photo reference in the database.
+  const canvas = document.createElement('canvas');
+  canvas.width = 1200;
+  canvas.height = 675;
+  const context = canvas.getContext('2d');
+  if(!context) throw new Error('Could not prepare a placeholder for a missing photo.');
+  context.fillStyle = '#f5f2f7';
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.strokeStyle = '#4b145b';
+  context.lineWidth = 8;
+  context.strokeRect(8, 8, canvas.width - 16, canvas.height - 16);
+  context.fillStyle = '#321044';
+  context.textAlign = 'center';
+  context.font = 'bold 42px Arial, sans-serif';
+  context.fillText('PHOTO COULD NOT BE LOADED', canvas.width / 2, 285, 1050);
+  context.font = '30px Arial, sans-serif';
+  const safeName = String(filename || 'Photo').slice(0, 100);
+  context.fillText(safeName, canvas.width / 2, 350, 1050);
+  if(reason){
+    context.font = '20px Arial, sans-serif';
+    context.fillStyle = '#55515a';
+    context.fillText(String(reason).slice(0, 140), canvas.width / 2, 410, 1050);
+  }
+  return canvas.toDataURL('image/jpeg', 0.88);
+}
+
+/* Resolve private Storage and legacy-photo references to temporary data URLs
+   for PDF/print generation. Only a clone is changed; saved report references
+   remain intact. A missing Storage object is represented by a labelled
+   placeholder so one broken historical photo cannot prevent the entire PDF. */
 async function stateWithResolvedPhotos(inputState){
   const state = JSON.parse(JSON.stringify(inputState || {}));
 
@@ -827,38 +859,49 @@ async function stateWithResolvedPhotos(inputState){
     const resolved = [];
     for(let index = 0; index < item.photos.length; index++){
       const photo = item.photos[index];
-      const label = photo?.filename || photo?.name || `Photo ${String(index + 1).padStart(2, '0')}`;
+      const label = (photo && typeof photo === 'object'
+        ? (photo.filename || photo.fileName || photo.originalName || photo.name || photo.storagePath || photo.storage_path || photo.path)
+        : '') || `Photo ${String(index + 1).padStart(2, '0')}`;
       let dataUrl = '';
 
-      if(typeof photo === 'string'){
-        if(photo.startsWith('data:image/')){
-          dataUrl = photo;
-        }else if(photo.startsWith('storage://') || /^https?:\/\//i.test(photo)){
-          dataUrl = await getPhotoDataUrl(photo);
-        }else{
-          throw new Error(`${label}: the saved photo entry has no image data or photo reference. Please do not delete it; the report needs a corrected photo reference.`);
-        }
-      }else if(photo && typeof photo === 'object'){
-        const normalizedRef = {
-          ...photo,
-          ...(photo.legacyPhotoId || photo.legacy_photo_id
-            ? { legacyPhotoId: photo.legacyPhotoId || photo.legacy_photo_id }
-            : {}),
-          ...(photo.storagePath || photo.storage_path
-            ? { storagePath: photo.storagePath || photo.storage_path }
-            : {})
-        };
+      try{
+        if(typeof photo === 'string'){
+          if(photo.startsWith('data:image/')){
+            dataUrl = photo;
+          }else if(photo.startsWith('storage://') || /^https?:\/\//i.test(photo)){
+            dataUrl = await getPhotoDataUrl(photo);
+          }else{
+            throw new Error('Saved photo entry has no recognized image reference.');
+          }
+        }else if(photo && typeof photo === 'object'){
+          const normalizedRef = {
+            ...photo,
+            ...(photo.legacyPhotoId || photo.legacy_photo_id || photo.photoId || photo.photo_id
+              ? { legacyPhotoId: photo.legacyPhotoId || photo.legacy_photo_id || photo.photoId || photo.photo_id }
+              : {}),
+            ...(photo.storagePath || photo.storage_path || photo.path
+              ? { storagePath: photo.storagePath || photo.storage_path || photo.path }
+              : {}),
+            ...(photo.url || photo.src || photo.data || photo.image
+              ? { url: photo.url || photo.src || photo.data || photo.image }
+              : {})
+          };
 
-        if(normalizedRef.legacyPhotoId || normalizedRef.storagePath || normalizedRef.url || normalizedRef.src || normalizedRef.data || normalizedRef.image){
-          dataUrl = await getPhotoDataUrl(normalizedRef);
+          if(normalizedRef.legacyPhotoId || normalizedRef.storagePath || normalizedRef.url || normalizedRef.src || normalizedRef.data || normalizedRef.image){
+            dataUrl = await getPhotoDataUrl(normalizedRef);
+          }else{
+            throw new Error('Saved photo reference is missing its ID or storage path.');
+          }
         }else{
-          throw new Error(`${label}: the saved photo reference is missing its ID or storage path.`);
+          throw new Error('Saved photo entry is invalid.');
         }
-      }else{
-        throw new Error(`${label}: the saved photo entry is invalid.`);
+
+        resolved.push(await convertPhotoToPdfDataUrl(dataUrl, String(label)));
+      }catch(error){
+        const reason = error?.message || 'Photo could not be loaded';
+        console.error(`PDF photo unavailable (${itemKey}): ${label}`, error);
+        resolved.push(photoUnavailableDataUrl(String(label), reason));
       }
-
-      resolved.push(await convertPhotoToPdfDataUrl(dataUrl, label));
     }
 
     item.photos = resolved;
@@ -866,7 +909,6 @@ async function stateWithResolvedPhotos(inputState){
 
   return state;
 }
-
 
 /* ============================================================
    GENERATE PDF
@@ -1765,23 +1807,9 @@ export async function generatePDF(){
     reviewer
   );
 
-  const shipFocusRequestsForPDF = window.__shipVisitShipFocusRequests || {};
-  const shipFocusEntriesForPDF = Object.entries(shipFocusRequestsForPDF)
-    .map(([sectionId, value]) => ({
-      section: SECTIONS.find(item => item.id === sectionId)?.title || sectionId,
-      text: typeof value === 'string' ? value : (value?.text || '')
-    }))
-    .filter(entry => String(entry.text || '').trim());
 
-  if(shipFocusEntriesForPDF.length){
-    y += 5;
-    addText('SHIP FOCUS REQUESTS', { size:9, color:squid, bold:true });
-    shipFocusEntriesForPDF.forEach(entry => {
-      addText(`${entry.section}: ${entry.text}`, { size:8.5, color:dark });
-    });
-  }
-
-  y += 5;
+  y +=
+    5;
 
 
   /* REPORT SUMMARY */
@@ -4083,24 +4111,8 @@ export async function generateFollowUpPDF(
   );
 
 
-  const focusRequests = report?.report_data?.shipFocusRequests || {};
-  const focusEntries = Object.entries(focusRequests)
-    .map(([sectionId, value]) => ({
-      sectionId,
-      text: typeof value === 'string' ? value : (value?.text || ''),
-      name: typeof value === 'object' && value ? (value.name || value.email || 'Ship') : 'Ship'
-    }))
-    .filter(entry => String(entry.text || '').trim());
-
-  if(focusEntries.length){
-    y += 6;
-    addText('SHIP FOCUS REQUESTS', 10, squid, margin, width, true);
-    focusEntries.forEach(entry => {
-      addText(`${SECTIONS.find(item => item.id === entry.sectionId)?.title || entry.sectionId}: ${entry.text}`, 9, dark, margin + 5, width - 5, true);
-    });
-  }
-
-  y += 8;
+  y +=
+    8;
 
 
   addText(
