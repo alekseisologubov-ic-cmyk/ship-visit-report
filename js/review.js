@@ -24,6 +24,7 @@ import {
 import {
   saveOpenReport,
   sendToShipReview,
+  getReport,
   supabase
 } from './supabase.js';
 
@@ -425,6 +426,44 @@ export function renderShipReview(){
   container.innerHTML =
     html;
 
+  // Photo lightbox: click any reviewer photo to open it in a popup.
+  // Use event delegation so it continues working after rerenders.
+  if (!container.dataset.photoPreviewBound) {
+    container.dataset.photoPreviewBound = 'true';
+    container.addEventListener('click', event => {
+      const trigger = event.target.closest('.ship-review-photo-preview-trigger');
+      if (!trigger) return;
+      const src = trigger.dataset.photoSrc;
+      if (!src) {
+        alert('The photo URL is not available for preview.');
+        return;
+      }
+      let modal = document.getElementById('ship-review-photo-lightbox');
+      if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'ship-review-photo-lightbox';
+        modal.innerHTML = `
+          <div class="ship-review-photo-lightbox-backdrop" style="position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:99999;display:flex;align-items:center;justify-content:center;padding:24px;" role="dialog" aria-modal="true" aria-label="Photo preview">
+            <div style="position:relative;max-width:95vw;max-height:94vh;display:flex;flex-direction:column;align-items:center;gap:10px;">
+              <button type="button" class="ship-review-photo-lightbox-close" aria-label="Close photo preview" style="align-self:flex-end;border:1px solid #fff;background:#fff;color:#321044;border-radius:8px;padding:8px 14px;font-weight:700;cursor:pointer;">Close ✕</button>
+              <div class="ship-review-photo-lightbox-name" style="color:#fff;font-size:14px;overflow-wrap:anywhere;"></div>
+              <img class="ship-review-photo-lightbox-image" alt="Photo preview" style="display:block;max-width:92vw;max-height:80vh;object-fit:contain;border-radius:8px;background:#fff;">
+            </div>
+          </div>`;
+        document.body.appendChild(modal);
+        modal.addEventListener('click', e => {
+          if (e.target === modal || e.target.classList.contains('ship-review-photo-lightbox-backdrop') || e.target.closest('.ship-review-photo-lightbox-close')) modal.style.display = 'none';
+        });
+        document.addEventListener('keydown', e => {
+          if (e.key === 'Escape') modal.style.display = 'none';
+        });
+      }
+      modal.querySelector('.ship-review-photo-lightbox-image').src = src;
+      modal.querySelector('.ship-review-photo-lightbox-name').textContent = trigger.dataset.photoName || 'Report photo';
+      modal.style.display = 'block';
+    });
+  }
+
 
   const bottom =
     document.getElementById(
@@ -660,10 +699,20 @@ function renderReviewPoint(
 
                         <div class="response-photo">
 
-                          <img
-                            src="${photo}"
-                            alt="Reviewer photo"
+                          <button
+                            type="button"
+                            class="ship-review-photo-preview-trigger"
+                            data-photo-src="${escapeHtml(typeof photo === 'string' ? photo : (photo?.url || photo?.signedUrl || photo?.signed_url || photo?.publicUrl || photo?.public_url || photo?.path || photo?.storagePath || photo?.storage_path || ''))}"
+                            data-photo-name="${escapeHtml(typeof photo === 'string' ? (photo.split('/').pop().split('?')[0] || 'Report photo') : (photo?.filename || photo?.name || 'Report photo'))}"
+                            aria-label="Click to preview photo"
+                            style="border:0;background:transparent;padding:0;cursor:zoom-in;max-width:100%;"
                           >
+                            <img
+                              src="${escapeHtml(typeof photo === 'string' ? photo : (photo?.url || photo?.signedUrl || photo?.signed_url || photo?.publicUrl || photo?.public_url || photo?.path || photo?.storagePath || photo?.storage_path || ''))}"
+                              alt="${escapeHtml(typeof photo === 'string' ? (photo.split('/').pop().split('?')[0] || 'Report photo') : (photo?.filename || photo?.name || 'Report photo'))}"
+                              style="cursor:zoom-in;max-width:100%;height:auto;"
+                            >
+                          </button>
 
                         </div>
 
@@ -814,20 +863,40 @@ export async function sendCurrentReportToShip(){
 
 
   /*
-    Save one final time.
+    Shipboard photos are saved by a separate secure RPC. The checklist
+    state in this browser can be older than the database state, so fetch
+    the latest report and merge its shipPhotos into the outgoing state
+    before saving or changing the status. This prevents the final save
+    from overwriting photo references added by shipboard users.
   */
+  let outgoingState = JSON.parse(JSON.stringify(getState() || {}));
+  const latestResult = await getReport(reportId);
+  if (!latestResult?.success || !latestResult.data) {
+    alert('Could not verify the latest saved report before sending. Please retry.');
+    return false;
+  }
+  const latestState = latestResult.data?.report_data?.state || {};
+  for (const [key, latestItem] of Object.entries(latestState)) {
+    if (!latestItem || !Array.isArray(latestItem.shipPhotos) || latestItem.shipPhotos.length === 0) continue;
+    const localItem = outgoingState[key] && typeof outgoingState[key] === 'object' ? outgoingState[key] : {};
+    const localPhotos = Array.isArray(localItem.shipPhotos) ? localItem.shipPhotos : [];
+    const seen = new Set(localPhotos.map(photo => {
+      if (typeof photo === 'string') return photo;
+      return String(photo?.path || photo?.storagePath || photo?.storage_path || photo?.filename || '');
+    }));
+    const mergedPhotos = [...localPhotos];
+    for (const photo of latestItem.shipPhotos) {
+      const identity = typeof photo === 'string' ? photo : String(photo?.path || photo?.storagePath || photo?.storage_path || photo?.filename || '');
+      if (!seen.has(identity)) { mergedPhotos.push(photo); seen.add(identity); }
+    }
+    outgoingState[key] = { ...localItem, shipPhotos: mergedPhotos };
+  }
 
   const saved =
     await saveOpenReport({
-
       reportId,
-
-      meta:
-        getMeta(),
-
-      state:
-        getState()
-
+      meta: getMeta(),
+      state: outgoingState
     });
 
 
@@ -862,17 +931,13 @@ export async function sendCurrentReportToShip(){
   }
 
 
+  // Use the same merged state for the status transition; do not fall back
+  // to getState(), which may not contain shipboard-uploaded photo references.
   const result =
     await sendToShipReview({
-
       reportId,
-
-      meta:
-        getMeta(),
-
-      state:
-        getState()
-
+      meta: getMeta(),
+      state: outgoingState
     });
 
 
