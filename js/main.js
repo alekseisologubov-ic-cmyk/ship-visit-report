@@ -3444,6 +3444,29 @@ function renderSummaryPoint(
       }
 
 
+      <!-- SHIPBOARD PHOTOS: display in submitted reports separately from reviewer photos -->
+      ${
+        point.shipPhotos.length
+          ? `
+            <div style="margin-top:10px;">
+              <div class="response-label" style="color:var(--status-green);">SHIP RESPONSE PHOTOS</div>
+              <div class="response-photos">
+                ${point.shipPhotos.map((photo, photoIndex) => `
+                  <div class="response-photo">
+                    <button type="button" class="response-photo-open" ${photoImageAttributes(photo, photoIndex)}>
+                      <span aria-hidden="true">▧</span>
+                      <span>${escapeHtml(responsePhotoFilename(photo, photoIndex))}</span>
+                      <span class="response-photo-hint">Click to preview</span>
+                    </button>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          `
+          : ''
+      }
+
+
     </div>
 
   `;
