@@ -822,6 +822,28 @@ export async function appendShipboardOpenComment({ reportId, pointKey, text }) {
   }
 }
 
+
+/* =========================================================
+   DELETE ONE SHIPBOARD COMMENT (SERVER CHECKS AUTHORSHIP)
+========================================================= */
+export async function deleteShipboardOpenComment({ reportId, pointKey, commentId }) {
+  try {
+    if (!reportId) throw new Error('Report ID is required.');
+    if (!pointKey) throw new Error('Checklist point is required.');
+    if (!commentId) throw new Error('Comment ID is required.');
+    const { data, error } = await supabase.rpc('delete_shipboard_open_comment', {
+      p_report_id: reportId,
+      p_point_key: pointKey,
+      p_comment_id: String(commentId)
+    });
+    if (error) throw error;
+    return { success: true, data, error: null };
+  } catch (error) {
+    console.error('deleteShipboardOpenComment:', error);
+    return { success: false, data: null, error };
+  }
+}
+
 /* =========================================================
    SHIP SUBMITS FINAL RESPONSE
 ========================================================= */
