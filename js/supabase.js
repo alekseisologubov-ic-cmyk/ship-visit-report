@@ -51,10 +51,38 @@ export const supabase =
    PAYLOAD
 ========================================================= */
 
+// Fields written only by shipboard users. Shoreside/admin saves must never overwrite them
+// with a stale in-memory copy, so they are always taken from the stored report.
+const SHIP_OWNED_ITEM_FIELDS = ['shipComments', 'shipPhotos'];
+
+function hasShipData(item){
+  return SHIP_OWNED_ITEM_FIELDS.some(field => {
+    const value = item?.[field];
+    return Array.isArray(value) ? value.length > 0 : Boolean(value);
+  });
+}
+
+function mergeShipOwnedFields(outgoingState, storedState){
+  const merged = JSON.parse(JSON.stringify(outgoingState || {}));
+  Object.entries(storedState || {}).forEach(([key, storedItem]) => {
+    if(!storedItem || typeof storedItem !== 'object') return;
+    const target = merged[key];
+    if(target && typeof target === 'object'){
+      SHIP_OWNED_ITEM_FIELDS.forEach(field => {
+        if(storedItem[field] !== undefined) target[field] = storedItem[field];
+      });
+    }else if(hasShipData(storedItem)){
+      merged[key] = JSON.parse(JSON.stringify(storedItem));
+    }
+  });
+  return merged;
+}
+
 function buildPayload({
   meta,
   state,
-  status
+  status,
+  preserved
 }){
 
   return {
@@ -80,6 +108,10 @@ function buildPayload({
       'open',
 
     report_data:{
+
+      ...(preserved?.shipFocusRequests !== undefined ? { shipFocusRequests: preserved.shipFocusRequests } : {}),
+
+      ...(preserved?.reportRef !== undefined ? { reportRef: preserved.reportRef } : {}),
 
       checklistVersion: getActiveChecklistVersion(),
 
@@ -218,6 +250,18 @@ export async function updateOpenReport({
 
   try{
 
+    // Re-read the stored report so shipboard comments/photos/focus requests added
+    // since this editor was opened are kept instead of overwritten.
+    const { data: stored, error: storedError } =
+      await supabase
+        .from('ship_visit_reports')
+        .select('report_data')
+        .eq('id', reportId)
+        .eq('status', 'open')
+        .maybeSingle();
+    if(storedError) throw storedError;
+    const storedData = stored?.report_data || {};
+
     const result =
       await supabase
         .from(
@@ -228,10 +272,16 @@ export async function updateOpenReport({
 
             meta,
 
-            state,
+            state:
+              mergeShipOwnedFields(state, storedData.state),
 
             status:
-              'open'
+              'open',
+
+            preserved:{
+              shipFocusRequests: storedData.shipFocusRequests,
+              reportRef: storedData.reportRef
+            }
 
           })
         )
@@ -781,58 +831,25 @@ export async function getAuthContext(){
   const session = sessionResult?.session || null;
   if(!session) return null;
 
+  // Access is driven by the app_user_roles table in SQL (one row per approved login).
   const { data: roleRow, error: roleError } = await supabase
     .from('app_user_roles')
-    .select('role')
+    .select('role, display_name, reviewer_aliases, active')
     .eq('user_id', session.user.id)
     .maybeSingle();
   if(roleError) throw roleError;
 
+  const active = roleRow ? roleRow.active !== false : false;
+  const aliases = Array.isArray(roleRow?.reviewer_aliases) ? roleRow.reviewer_aliases : [];
+
   return {
     session,
     user: session.user,
-    role: roleRow?.role || null
+    role: active ? (roleRow?.role || null) : null,
+    displayName: roleRow?.display_name || '',
+    reviewerAliases: [roleRow?.display_name, ...aliases].filter(Boolean)
   };
 }
-
-const APPROVED_SHIP_VISIT_EMAILS = new Set([
-  // Admin
-  'aleksei.sologubov-ic@virginvoyages.com',
-
-  // Report users / named reviewers
-  'levi.mezick@virginvoyages.com',
-  'seidy.soderholm@virginvoyages.com',
-  'don.habets@virginvoyages.com',
-  'eszter.tary@virginvoyages.com',
-  'marin.lukin@virginvoyages.com',
-  'edina.smajic-ic@virginvoyages.com',
-  'andras.rafajlovics@virginvoyages.com',
-  'andrew.diclementi@virginvoyages.com',
-  'jamesadam.noffsinger@virginvoyages.com',
-  'mycca.argawanon-ic@virginvoyages.com',
-
-  // Shipboard users
-  'val.htl.fbdirector@virginvoyages.com',
-  'brl.htl.fbdirector@virginvoyages.com',
-  'scl.htl.fbdirector@virginvoyages.com',
-  'res.htl.fbdirector@virginvoyages.com',
-  'scl.cul.srexecchef@virginvoyages.com',
-  'val.cul.srexecchef@virginvoyages.com',
-  'res.cul.srexecchef@virginvoyages.com',
-  'brl.cul.srexecchef@virginvoyages.com',
-  'scl.restaurantoperationsmanager@virginvoyages.com',
-  'val.rst.operationsmgr@virginvoyages.com',
-  'brl.rst.operationsmgr@virginvoyages.com',
-  'scl.beverageoperationsmanager@virginvoyages.com',
-  'brl.bev.operationsmgr@virginvoyages.com',
-  'res.rst.operationsmgr@virginvoyages.com',
-  'val.bev.operationsmgr@virginvoyages.com',
-  'res.bev.operationsmgr@virginvoyages.com',
-  'scl.htl.sanitationofficer@virginvoyages.com',
-  'res.htl.sanitationofficer@virginvoyages.com',
-  'val.htl.sanitationoff@virginvoyages.com',
-  'brl.htl.sanitationofficer@virginvoyages.com'
-]);
 
 export async function signInWithPassword(email, password){
   const cleanEmail = String(email || '').trim().toLowerCase();
@@ -840,16 +857,28 @@ export async function signInWithPassword(email, password){
   if(!cleanEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)){
     throw new Error('Enter a valid work email address.');
   }
-  if(!APPROVED_SHIP_VISIT_EMAILS.has(cleanEmail)){
-    throw new Error('This email address is not approved for Ship Visit Report access. Contact the administrator if you need access.');
-  }
   if(!cleanPassword){
     throw new Error('Enter your password.');
   }
-  return supabase.auth.signInWithPassword({
+  const result = await supabase.auth.signInWithPassword({
     email: cleanEmail,
     password: cleanPassword
   });
+  if(result?.error) return result;
+
+  // Approval check is done in SQL: the signed-in user must have an active role row.
+  let context = null;
+  try{
+    context = await getAuthContext();
+  }catch(error){
+    await supabase.auth.signOut();
+    throw error;
+  }
+  if(!context?.role){
+    await supabase.auth.signOut();
+    throw new Error('This email address is not approved for Ship Visit Report access. Contact the administrator if you need access.');
+  }
+  return result;
 }
 
 export async function signOutUser(){
