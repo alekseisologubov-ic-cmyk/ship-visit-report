@@ -135,9 +135,34 @@ function bindReviewPhotoPreview(root = document){
       }
 
       try{
-        const url = await getPhotoDisplayUrl(photo);
+        // Review data can contain older photo-object shapes than the main report.
+        // Normalize common storage-path fields before asking Supabase for a signed URL.
+        let photoForDisplay = photo;
+        if (photo && typeof photo === 'object' && !Array.isArray(photo)) {
+          const nested = photo.photo || photo.file || photo.metadata || photo.meta || {};
+          const storagePath =
+            photo.storagePath || photo.storage_path || photo.storageKey ||
+            photo.storage_key || photo.path || photo.filePath || photo.file_path ||
+            photo.objectPath || photo.object_path || photo.fullPath || photo.full_path ||
+            nested.storagePath || nested.storage_path || nested.path || nested.file_path || '';
+          const legacyPhotoId = photo.legacyPhotoId || photo.legacy_photo_id ||
+            photo.photoId || photo.photo_id || nested.legacyPhotoId || nested.photo_id || null;
+          const directUrl = photo.url || photo.src || photo.dataUrl || photo.data || photo.imageUrl ||
+            photo.image_url || nested.url || nested.src || '';
+          if (storagePath) {
+            photoForDisplay = { ...photo, storagePath: String(storagePath).replace(/^storage:\/\//, '') };
+          } else if (legacyPhotoId) {
+            photoForDisplay = { ...photo, legacyPhotoId };
+          } else if (directUrl) {
+            photoForDisplay = directUrl;
+          }
+        } else if (typeof photo === 'string' && photo.startsWith('storage://')) {
+          photoForDisplay = photo;
+        }
+
+        const url = await getPhotoDisplayUrl(photoForDisplay);
         if(!url || typeof url !== 'string'){
-          throw new Error('No usable photo URL was returned.');
+          throw new Error('No usable photo URL was returned. Photo reference: ' + reviewPhotoName(photo));
         }
 
         // Attach listeners before setting src so cached images are handled too.
