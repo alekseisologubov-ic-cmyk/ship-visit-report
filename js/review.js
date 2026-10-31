@@ -68,6 +68,9 @@ function bindReviewPhotoPreview(root = document){
       #review-photo-preview img[hidden]{display:none!important}
       #review-photo-preview .review-photo-close{position:absolute;top:0;right:0;z-index:2;width:44px;height:44px;border-radius:50%;font-size:28px;background:#fff;color:#3C1053;border:1px solid #ddd;cursor:pointer}
       #review-photo-preview-status{color:white;text-align:center;padding:16px;max-width:80vw}
+      .response-photo-open{display:flex;width:100%;justify-content:space-between;align-items:center;gap:12px;padding:12px;margin:6px 0;border:1px solid #d8cde0;border-radius:10px;background:#fff;color:#3c1053;cursor:pointer;text-align:left;font:inherit}
+      .response-photo-open:hover{background:#f7f1fa;border-color:#3c1053}
+      .response-photo-hint{font-size:12px;opacity:.75;white-space:nowrap}
     `;
     document.head.appendChild(style);
   }
@@ -135,34 +138,9 @@ function bindReviewPhotoPreview(root = document){
       }
 
       try{
-        // Review data can contain older photo-object shapes than the main report.
-        // Normalize common storage-path fields before asking Supabase for a signed URL.
-        let photoForDisplay = photo;
-        if (photo && typeof photo === 'object' && !Array.isArray(photo)) {
-          const nested = photo.photo || photo.file || photo.metadata || photo.meta || {};
-          const storagePath =
-            photo.storagePath || photo.storage_path || photo.storageKey ||
-            photo.storage_key || photo.path || photo.filePath || photo.file_path ||
-            photo.objectPath || photo.object_path || photo.fullPath || photo.full_path ||
-            nested.storagePath || nested.storage_path || nested.path || nested.file_path || '';
-          const legacyPhotoId = photo.legacyPhotoId || photo.legacy_photo_id ||
-            photo.photoId || photo.photo_id || nested.legacyPhotoId || nested.photo_id || null;
-          const directUrl = photo.url || photo.src || photo.dataUrl || photo.data || photo.imageUrl ||
-            photo.image_url || nested.url || nested.src || '';
-          if (storagePath) {
-            photoForDisplay = { ...photo, storagePath: String(storagePath).replace(/^storage:\/\//, '') };
-          } else if (legacyPhotoId) {
-            photoForDisplay = { ...photo, legacyPhotoId };
-          } else if (directUrl) {
-            photoForDisplay = directUrl;
-          }
-        } else if (typeof photo === 'string' && photo.startsWith('storage://')) {
-          photoForDisplay = photo;
-        }
-
-        const url = await getPhotoDisplayUrl(photoForDisplay);
+        const url = await getPhotoDisplayUrl(photo);
         if(!url || typeof url !== 'string'){
-          throw new Error('No usable photo URL was returned. Photo reference: ' + reviewPhotoName(photo));
+          throw new Error('No usable photo URL was returned.');
         }
 
         // Attach listeners before setting src so cached images are handled too.
@@ -249,10 +227,12 @@ function escapeHtml(
    GET CHECKED POINTS
 ========================================================= */
 
-export function getCheckedReviewPoints(){
+export function getCheckedReviewPoints(stateOverride = null){
 
   const state =
-    getState();
+    stateOverride && typeof stateOverride === 'object'
+      ? stateOverride
+      : getState();
 
 
   const points = [];
@@ -338,7 +318,7 @@ export function getCheckedReviewPoints(){
    RENDER SHIP REVIEW
 ========================================================= */
 
-export function renderShipReview(){
+export function renderShipReview(stateOverride = null){
 
   const container =
     document.getElementById(
@@ -360,7 +340,7 @@ export function renderShipReview(){
 
 
   const points =
-    getCheckedReviewPoints();
+    getCheckedReviewPoints(stateOverride);
 
 
   const followUps =
@@ -916,7 +896,14 @@ export async function prepareShipReview(){
   }
 
 
-  renderShipReview();
+  // Use the exact state returned by Supabase after saving. The saved row's
+  // checklist state lives at report_data.state. Fall back only if absent.
+  const savedState = saved?.data?.report_data?.state;
+  renderShipReview(
+    savedState && typeof savedState === 'object'
+      ? savedState
+      : getState()
+  );
 
 
   return true;
