@@ -24,8 +24,8 @@ import {
 import {
   saveOpenReport,
   sendToShipReview,
-  getPhotoDisplayUrl,
-  supabase
+  supabase,
+  getPhotoDisplayUrl
 } from './supabase.js';
 
 
@@ -38,6 +38,145 @@ let callbacks = {
   sentToShip:null
 
 };
+
+const reviewPhotoRefs = new Map();
+let reviewPhotoCounter = 0;
+function reviewPhotoName(photo, index = 0){
+  let raw = photo && typeof photo === 'object'
+    ? (photo.filename || photo.fileName || photo.originalName || photo.name || photo.storagePath || photo.storage_path || photo.path || '')
+    : (typeof photo === 'string' ? photo.replace(/^storage:\/\//, '') : '');
+  raw = String(raw || '').split(/[?#]/, 1)[0].replace(/\\/g, '/').split('/').pop();
+  try { raw = decodeURIComponent(raw); } catch (_) {}
+  return raw || `Photo ${index + 1}`;
+}
+function reviewPhotoButton(photo, index = 0){
+  const id = `review-photo-${++reviewPhotoCounter}`;
+  reviewPhotoRefs.set(id, photo);
+  return `<button type="button" class="response-photo-open" data-review-photo-id="${id}"><span aria-hidden="true">▧</span><span>${escapeHtml(reviewPhotoName(photo,index))}</span><span class="response-photo-hint">Click to preview</span></button>`;
+}
+function bindReviewPhotoPreview(root = document){
+  if(!root || typeof root.querySelectorAll !== 'function') return;
+
+  if(!document.getElementById('review-photo-preview-style')){
+    const style = document.createElement('style');
+    style.id = 'review-photo-preview-style';
+    style.textContent = `
+      #review-photo-preview[hidden]{display:none!important}
+      #review-photo-preview{position:fixed;inset:0;z-index:2147483000;background:rgba(12,5,18,.94);display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box}
+      #review-photo-preview .review-photo-preview-panel{position:relative;display:flex;align-items:center;justify-content:center;width:100%;height:100%}
+      #review-photo-preview img{max-width:96vw;max-height:88vh;object-fit:contain;border-radius:8px}
+      #review-photo-preview img[hidden]{display:none!important}
+      #review-photo-preview .review-photo-close{position:absolute;top:0;right:0;z-index:2;width:44px;height:44px;border-radius:50%;font-size:28px;background:#fff;color:#3C1053;border:1px solid #ddd;cursor:pointer}
+      #review-photo-preview-status{color:white;text-align:center;padding:16px;max-width:80vw}
+    `;
+    document.head.appendChild(style);
+  }
+
+  let overlay = document.getElementById('review-photo-preview');
+  if(!overlay){
+    overlay = document.createElement('div');
+    overlay.id = 'review-photo-preview';
+    overlay.hidden = true;
+    overlay.innerHTML = `
+      <div class="review-photo-preview-panel" role="dialog" aria-modal="true" aria-label="Photo preview">
+        <button type="button" class="review-photo-close" aria-label="Close photo preview">×</button>
+        <div id="review-photo-preview-status">Loading photo…</div>
+        <img alt="Report photo preview" hidden>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+  }
+
+  const closePreview = () => {
+    overlay.hidden = true;
+    const img = overlay.querySelector('img');
+    if(img){
+      img.onload = null;
+      img.onerror = null;
+      img.removeAttribute('src');
+      img.hidden = true;
+    }
+  };
+
+  const closeButton = overlay.querySelector('.review-photo-close');
+  if(closeButton && closeButton.dataset.bound !== 'true'){
+    closeButton.dataset.bound = 'true';
+    closeButton.addEventListener('click', closePreview);
+  }
+  if(overlay.dataset.bound !== 'true'){
+    overlay.dataset.bound = 'true';
+    overlay.addEventListener('click', event => {
+      if(event.target === overlay) closePreview();
+    });
+    document.addEventListener('keydown', event => {
+      if(event.key === 'Escape' && !overlay.hidden) closePreview();
+    });
+  }
+
+  root.querySelectorAll('[data-review-photo-id]').forEach(button => {
+    if(button.dataset.bound === 'true') return;
+    button.dataset.bound = 'true';
+    button.addEventListener('click', async event => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      const photo = reviewPhotoRefs.get(button.dataset.reviewPhotoId);
+      const status = overlay.querySelector('#review-photo-preview-status');
+      const img = overlay.querySelector('img');
+      overlay.hidden = false;
+      img.hidden = true;
+      img.removeAttribute('src');
+      status.hidden = false;
+      status.textContent = 'Loading photo…';
+
+      if(!photo){
+        status.textContent = 'Photo reference not found. Please reload the report and try again.';
+        return;
+      }
+
+      try{
+        const url = await getPhotoDisplayUrl(photo);
+        if(!url || typeof url !== 'string'){
+          throw new Error('No usable photo URL was returned.');
+        }
+
+        // Attach listeners before setting src so cached images are handled too.
+        await new Promise((resolve, reject) => {
+          let settled = false;
+          const cleanup = () => {
+            img.removeEventListener('load', onLoad);
+            img.removeEventListener('error', onError);
+          };
+          const onLoad = () => {
+            if(settled) return;
+            settled = true;
+            cleanup();
+            resolve();
+          };
+          const onError = () => {
+            if(settled) return;
+            settled = true;
+            cleanup();
+            reject(new Error('The image URL was returned, but the browser could not load the image. Check the photo storage path and access permissions.'));
+          };
+          img.addEventListener('load', onLoad);
+          img.addEventListener('error', onError);
+          img.src = url;
+          if(img.complete && img.naturalWidth > 0) onLoad();
+        });
+
+        img.hidden = false;
+        status.hidden = true;
+      }catch(error){
+        console.error('Review photo preview failed:', error, photo);
+        img.hidden = true;
+        status.hidden = false;
+        status.textContent = `Could not load photo: ${error?.message || 'Unknown error'}`;
+      }
+    });
+  });
+}
+
 
 
 export function setReviewCallbacks(
@@ -138,12 +277,11 @@ export function getCheckedReviewPoints(){
                 : [],
 
             photos:
-              Array.isArray(item.photos) ? item.photos : [],
-
-            shipPhotos:
-              Array.isArray(item.shipPhotos)
-                ? item.shipPhotos
-                : (Array.isArray(item.ship_photos) ? item.ship_photos : []),
+              Array.isArray(
+                item.photos
+              )
+                ? item.photos
+                : [],
 
             followUpNeeded:
               Boolean(
@@ -176,8 +314,6 @@ export function getCheckedReviewPoints(){
 ========================================================= */
 
 export function renderShipReview(){
-  reviewPhotoRefs.clear();
-  reviewPhotoSequence = 0;
 
   const container =
     document.getElementById(
@@ -428,8 +564,8 @@ export function renderShipReview(){
 
   container.innerHTML =
     html;
+  bindReviewPhotoPreview(container);
 
-  bindReviewPhotoButtons(container);
 
   const bottom =
     document.getElementById(
@@ -485,99 +621,6 @@ export function renderShipReview(){
 
   }
 
-}
-
-
-/* =========================================================
-   REVIEW PHOTO PREVIEW + ORDERED PHOTO GROUPS
-========================================================= */
-
-const reviewPhotoRefs = new Map();
-let reviewPhotoSequence = 0;
-
-function reviewPhotoName(photo, index){
-  if(photo && typeof photo === 'object'){
-    const candidate = photo.filename || photo.fileName || photo.originalName || photo.name || photo.storagePath || photo.storage_path || photo.path;
-    if(candidate) return String(candidate).split('/').pop();
-  }
-  if(typeof photo === 'string') return photo.split('/').pop().replace(/^storage:\/\//, '').split('/').pop();
-  return `Photo ${index + 1}`;
-}
-
-function renderReviewPhotoGroup(photos, title, kind){
-  if(!Array.isArray(photos) || photos.length === 0) return '';
-  return `
-    <div style="margin-top:11px;">
-      <div class="response-label">${escapeHtml(title)}</div>
-      <div style="display:grid;grid-template-columns:1fr;gap:7px;margin-top:6px;">
-        ${photos.map((photo, index) => {
-          const id = `review-photo-${++reviewPhotoSequence}`;
-          reviewPhotoRefs.set(id, photo);
-          const name = reviewPhotoName(photo, index);
-          return `
-            <button type="button" class="review-photo-open" data-review-photo-id="${id}" style="display:flex;align-items:center;gap:10px;width:100%;min-height:44px;padding:10px 12px;border:1px solid var(--vv-line);border-radius:8px;background:#fff;color:var(--vv-squid);text-align:left;cursor:pointer;">
-              <span aria-hidden="true">▧</span>
-              <strong style="overflow-wrap:anywhere;">${escapeHtml(name)}</strong>
-              <span style="margin-left:auto;font-size:11px;font-weight:400;white-space:nowrap;">Click to preview</span>
-            </button>
-          `;
-        }).join('')}
-      </div>
-    </div>
-  `;
-}
-
-function ensureReviewPhotoModal(){
-  let overlay = document.getElementById('review-photo-modal');
-  if(overlay) return overlay;
-  overlay = document.createElement('div');
-  overlay.id = 'review-photo-modal';
-  overlay.style.cssText = 'position:fixed;inset:0;z-index:10050;background:rgba(15,8,20,.92);display:none;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;';
-  overlay.innerHTML = `
-    <div style="position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center;">
-      <button type="button" data-review-photo-close="true" aria-label="Close photo preview" style="position:absolute;right:0;top:0;width:44px;height:44px;border:1px solid #fff;border-radius:50%;background:#fff;color:#3C1053;font-size:28px;cursor:pointer;z-index:2;">×</button>
-      <div data-review-photo-status="true" style="color:#fff;font:600 15px Arial,sans-serif;text-align:center;">Loading photo…</div>
-      <img data-review-photo-image="true" alt="Report photo preview" style="display:none;max-width:96vw;max-height:90vh;width:auto;height:auto;object-fit:contain;border-radius:8px;box-shadow:0 8px 40px rgba(0,0,0,.5);" />
-    </div>`;
-  document.body.appendChild(overlay);
-  const close = () => { overlay.style.display = 'none'; const img=overlay.querySelector('[data-review-photo-image]'); img.removeAttribute('src'); document.body.style.overflow=''; };
-  overlay.querySelector('[data-review-photo-close]').addEventListener('click', close);
-  overlay.addEventListener('click', event => { if(event.target === overlay) close(); });
-  document.addEventListener('keydown', event => { if(event.key === 'Escape' && overlay.style.display !== 'none') close(); });
-  overlay._closeReviewPhoto = close;
-  return overlay;
-}
-
-function bindReviewPhotoButtons(root){
-  root.querySelectorAll('button[data-review-photo-id]').forEach(button => {
-    if(button.dataset.reviewPhotoBound === 'true') return;
-    button.dataset.reviewPhotoBound = 'true';
-    button.addEventListener('click', async () => {
-      const photo = reviewPhotoRefs.get(button.dataset.reviewPhotoId);
-      if(!photo) return;
-      const overlay = ensureReviewPhotoModal();
-      const img = overlay.querySelector('[data-review-photo-image]');
-      const status = overlay.querySelector('[data-review-photo-status]');
-      overlay.style.display = 'flex';
-      img.style.display = 'none';
-      img.removeAttribute('src');
-      status.style.display = 'block';
-      status.textContent = 'Loading photo…';
-      document.body.style.overflow = 'hidden';
-      try{
-        const url = await getPhotoDisplayUrl(photo);
-        if(!url) throw new Error('No valid photo URL was returned.');
-        img.onload = () => { img.style.display='block'; status.style.display='none'; };
-        img.onerror = () => { img.style.display='none'; status.style.display='block'; status.textContent='The photo link opened, but the image could not be displayed.'; };
-        img.src = url;
-        if(img.complete && img.naturalWidth > 0){ img.style.display='block'; status.style.display='none'; }
-      }catch(error){
-        console.error('Could not preview report photo:', error);
-        status.style.display='block';
-        status.textContent = `Could not load photo: ${error?.message || 'unknown error'}`;
-      }
-    });
-  });
 }
 
 
@@ -676,39 +719,95 @@ function renderReviewPoint(
       ${
         point.comments.length
           ? `
-            <div style="margin-top:11px;">
-              <div class="response-label">SHORESIDE COMMENTS</div>
-              ${point.comments.map(comment => `
-                <div class="comment">
-                  <strong>${escapeHtml(comment.name || 'Reviewer')}:</strong>
-                  ${escapeHtml(comment.text || '')}
-                </div>
-              `).join('')}
+
+            <div
+              style="
+                margin-top:11px;
+              "
+            >
+
+              <div
+                class="response-label"
+              >
+
+                REVIEWER COMMENTS
+
+              </div>
+
+
+              ${
+                point.comments
+                  .map(
+                    comment => `
+
+                      <div class="comment">
+
+                        <strong>
+
+                          ${escapeHtml(
+                            comment.name ||
+                            'Reviewer'
+                          )}:
+
+                        </strong>
+
+
+                        ${escapeHtml(
+                          comment.text ||
+                          ''
+                        )}
+
+                      </div>
+
+                    `
+                  )
+                  .join('')
+              }
+
             </div>
+
           `
           : ''
       }
 
-      ${renderReviewPhotoGroup(point.photos, 'SHORESIDE PHOTOS', 'shore')}
 
       ${
-        point.shipComments.length
+        point.photos.length
           ? `
-            <div style="margin-top:11px;">
-              <div class="response-label">SHIP RESPONSE</div>
-              ${point.shipComments.map(comment => `
-                <div class="ship-response-comment" style="margin-top:6px;padding:10px 12px;border-left:4px solid #16A36A;border-radius:8px;background:#EAF7EF;font-size:12px;line-height:1.5;">
-                  <strong style="color:#007B50;">${escapeHtml(comment.name || comment.email || 'Shipboard')}:</strong>
-                  <div>${escapeHtml(comment.text || comment.comment || '')}</div>
-                  ${comment.timestamp || comment.created_at ? `<div style="margin-top:4px;color:#6B7280;font-size:10px;">${escapeHtml(comment.timestamp || comment.created_at)}</div>` : ''}
-                </div>
-              `).join('')}
+
+            <div
+              style="
+                margin-top:11px;
+              "
+            >
+
+              <div
+                class="response-label"
+              >
+
+                ATTACHED PHOTOS
+
+              </div>
+
+
+              <div
+                class="response-photos"
+              >
+
+                ${
+                  point.photos
+                    .map((photo, photoIndex) => `<div class="response-photo">${reviewPhotoButton(photo, photoIndex)}</div>`)
+                    .join('')
+                }
+
+              </div>
+
             </div>
+
           `
           : ''
       }
 
-      ${renderReviewPhotoGroup(point.shipPhotos, 'SHIP RESPONSE PHOTOS', 'ship')}
 
     </div>
 
