@@ -179,53 +179,94 @@ function ensureResponsePhotoLightbox(){
   responsePhotoLightbox._close=closeLightbox;
 }
 
+let responsePhotoOpenSequence = 0;
+
 async function openResponsePhoto(photo){
   ensureResponsePhotoLightbox();
+  const openSequence = ++responsePhotoOpenSequence;
   responsePhotoPreviousOverflow=document.body.style.overflow;
   responsePhotoLightbox.hidden=false;
   document.body.style.overflow='hidden';
+  responsePhotoLightboxImage.onload=null;
+  responsePhotoLightboxImage.onerror=null;
   responsePhotoLightboxImage.hidden=true;
   responsePhotoLightboxImage.removeAttribute('src');
   responsePhotoLightboxStatus.hidden=false;
   responsePhotoLightboxStatus.textContent='Loading photo…';
   try{
     const url=await getPhotoDisplayUrl(photo);
-    if(!url) throw new Error('Photo reference is missing.');
-    if(responsePhotoLightbox.hidden) return;
-    responsePhotoLightboxImage.onload=()=>{
-      responsePhotoLightboxImage.hidden=false;
-      responsePhotoLightboxStatus.hidden=true;
-    };
-    responsePhotoLightboxImage.onerror=()=>{
-      responsePhotoLightboxImage.hidden=true;
-      responsePhotoLightboxStatus.hidden=false;
-      responsePhotoLightboxStatus.textContent='The photo link was created, but the browser could not display the image. Close this preview and retry.';
-    };
-    responsePhotoLightboxImage.src=url;
-    if(responsePhotoLightboxImage.complete&&responsePhotoLightboxImage.naturalWidth>0){
-      responsePhotoLightboxImage.hidden=false;
-      responsePhotoLightboxStatus.hidden=true;
-    }
+    if(!url || typeof url !== 'string') throw new Error('No usable photo URL or image data was returned.');
+    if(responsePhotoLightbox.hidden || openSequence !== responsePhotoOpenSequence) return;
+
+    await new Promise((resolve, reject) => {
+      let settled = false;
+      const finish = (error) => {
+        if(settled) return;
+        settled = true;
+        responsePhotoLightboxImage.onload = null;
+        responsePhotoLightboxImage.onerror = null;
+        error ? reject(error) : resolve();
+      };
+      responsePhotoLightboxImage.onload = () => finish();
+      responsePhotoLightboxImage.onerror = () => finish(new Error('The photo URL was returned, but the browser could not display the image. Check the storage path and photo access permissions.'));
+      responsePhotoLightboxImage.src=url;
+      if(responsePhotoLightboxImage.complete && responsePhotoLightboxImage.naturalWidth > 0) finish();
+    });
+
+    if(responsePhotoLightbox.hidden || openSequence !== responsePhotoOpenSequence) return;
+    responsePhotoLightboxImage.hidden=false;
+    responsePhotoLightboxStatus.hidden=true;
   }catch(error){
-    console.error('Could not open report photo:',error);
-    if(!responsePhotoLightbox.hidden){
+    console.error('Could not open report photo:',error,photo);
+    if(!responsePhotoLightbox.hidden && openSequence === responsePhotoOpenSequence){
+      responsePhotoLightboxImage.hidden=true;
       responsePhotoLightboxStatus.hidden=false;
       responsePhotoLightboxStatus.textContent='Could not load this photo: ' + String(error?.message || 'unknown photo-access error');
     }
   }
 }
 
+let responsePhotoDelegationBound = false;
+
 async function hydratePhotoElements(root){
   if(!root || typeof root.querySelectorAll !== 'function') return;
-  const buttons=[...root.querySelectorAll('button[data-photo-ref-id]')];
-  for(const button of buttons){
-    if(button.dataset.photoBound==='true') continue;
-    button.dataset.photoBound='true';
-    button.addEventListener('click',()=>{
-      const photo=responsePhotoSources.get(button.dataset.photoRefId);
-      if(photo) openResponsePhoto(photo);
-    });
-  }
+
+  // Mark preview buttons as ready for styling/debugging. Use one delegated
+  // handler on document so photo buttons continue working after report
+  // sections are re-rendered or replaced in the Review/Open/Submitted views.
+  root.querySelectorAll('button[data-photo-ref-id]').forEach(button => {
+    button.dataset.photoBound = 'true';
+    button.setAttribute('aria-haspopup', 'dialog');
+    button.setAttribute('title', 'Click to preview photo');
+  });
+
+  if(responsePhotoDelegationBound) return;
+  responsePhotoDelegationBound = true;
+
+  document.addEventListener('click', event => {
+    const button = event.target && event.target.closest
+      ? event.target.closest('button[data-photo-ref-id]')
+      : null;
+    if(!button) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const photoRefId = button.dataset.photoRefId;
+    const photo = responsePhotoSources.get(photoRefId);
+    if(!photo){
+      console.error('Photo preview reference was not found:', photoRefId);
+      ensureResponsePhotoLightbox();
+      responsePhotoLightbox.hidden = false;
+      responsePhotoLightboxStatus.hidden = false;
+      responsePhotoLightboxStatus.textContent = 'This photo reference is no longer available. Reload the report and try again.';
+      responsePhotoLightboxImage.hidden = true;
+      responsePhotoLightboxImage.removeAttribute('src');
+      return;
+    }
+
+    void openResponsePhoto(photo);
+  }, true);
 }
 
 
