@@ -1022,7 +1022,15 @@ export function showScreen(
 
   if(target === 'checklist'){
     const reviewBtn = document.getElementById('shipReviewBtn');
-    if(reviewBtn) reviewBtn.textContent = 'Review Report';
+    const summaryButton = document.getElementById('summaryBtn');
+    if(reviewBtn){
+      reviewBtn.textContent = 'Review Report';
+      // Report Summary is no longer needed: Review Report shows the full PDF.
+      if(summaryButton){
+        reviewBtn.className = summaryButton.className;
+        summaryButton.style.display = 'none';
+      }
+    }
   }
 
   window.scrollTo(
