@@ -107,6 +107,9 @@ import {
   signOutUser,
   getPhotoDisplayUrl,
   uploadPhotoDataUrl,
+  deleteReportPhotoReference,
+  deleteStoragePhoto,
+  deleteLegacyPhotoData,
   migrateEmbeddedPhotosToStorage
 } from './supabase.js';
 
@@ -166,6 +169,9 @@ function ensureResponsePhotoLightbox(){
       #response-photo-lightbox .response-photo-status[hidden]{display:none}
       .response-photo-open{display:flex;align-items:center;gap:10px;width:100%;min-height:46px;padding:10px 12px;border:1px solid rgba(60,16,83,.22);border-radius:8px;background:#fff;color:#3C1053;text-align:left;font:600 14px/1.4 Arial,sans-serif;cursor:pointer;overflow-wrap:anywhere}
       .response-photo-open:hover{background:#f7f2fa}
+      .response-photo{position:relative}
+      .response-photo-delete{position:absolute;top:4px;right:4px;z-index:2;width:26px;height:26px;border:1px solid #e7cbd0;border-radius:50%;background:#fff;color:#b42332;font-size:19px;font-weight:800;line-height:20px;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.12)}
+      .response-photo-delete:disabled{opacity:.45;cursor:wait}
       .response-photo-open .response-photo-hint{margin-left:auto;font-size:11px;font-weight:400;white-space:nowrap;color:#6c5a76}
       @media(max-width:600px){#response-photo-lightbox{padding:10px}#response-photo-lightbox .response-photo-image{max-width:98vw;max-height:86vh}.response-photo-open .response-photo-hint{display:none}}
     `;
@@ -3209,6 +3215,45 @@ function renderShipboardOpenReportDepartment(report, departmentId){
     });
   });
 
+  /* ---------- DELETE PHOTO: remove saved report reference, then delete stored bytes ---------- */
+  container.querySelectorAll('[data-delete-report-photo]').forEach(button => {
+    button.addEventListener('click', async () => {
+      const pointKey = button.dataset.photoPointKey;
+      const photoType = button.dataset.photoType;
+      const photoIndex = Number(button.dataset.photoIndex);
+      const item = report?.report_data?.state?.[pointKey] || {};
+      const photos = photoType === 'shipPhotos' ? getShipPhotos(item) : getPhotos(item);
+      const photo = photos[photoIndex];
+      if(!photo || !Number.isInteger(photoIndex) || photoIndex < 0) return;
+      if(!window.confirm('Permanently delete this photo from the report and storage? This cannot be undone.')) return;
+      button.disabled = true;
+      try {
+        const result = await deleteReportPhotoReference({
+          reportId: report.id,
+          pointKey,
+          photoType,
+          photoIndex
+        });
+        // The database reference is removed first. Then remove the underlying stored bytes.
+        const removed = result.removedPhoto || photo;
+        if(removed && typeof removed === 'object') {
+          const legacyId = removed.legacyPhotoId || removed.legacy_photo_id || removed.photoId || removed.photo_id;
+          const storagePath = removed.storagePath || removed.storage_path || removed.path;
+          if(legacyId) await deleteLegacyPhotoData(String(legacyId));
+          else if(storagePath) await deleteStoragePhoto(String(storagePath));
+        }
+        const refreshed = await getReport(report.id);
+        if(!refreshed?.success || !refreshed.data) throw (refreshed?.error || new Error('Photo was removed, but the report could not be refreshed. Reload the report to confirm.'));
+        report.report_data = refreshed.data.report_data;
+        renderShipboardOpenReportDepartment(report, departmentId);
+      } catch(error) {
+        console.error('Permanent photo deletion failed:', error);
+        button.disabled = false;
+        alert(`Could not fully delete the photo: ${error?.message || 'Please try again.'}`);
+      }
+    });
+  });
+
   /* ---------- BOTTOM SAVE BUTTON: sends any unsent comments + the focus request ---------- */
   const saveButtons = [...container.querySelectorAll('[data-save-shipboard-updates]')];
   const handleShipboardSave = async () => {
@@ -3613,6 +3658,7 @@ function renderSummaryPoint(
                             <span>${escapeHtml(responsePhotoFilename(photo, photoIndex))}</span>
                             <span class="response-photo-hint">Click to preview</span>
                           </button>
+                          ${(!isShipboard() && String(report?.status || 'open') === 'open') ? `<button type="button" class="response-photo-delete" data-delete-report-photo="true" data-photo-point-key="${escapeHtml(point.key)}" data-photo-type="photos" data-photo-index="${photoIndex}" title="Delete photo permanently" aria-label="Delete photo">×</button>` : ''}
                         </div>
 
                       `
@@ -3705,6 +3751,7 @@ function renderSummaryPoint(
                       <span>${escapeHtml(responsePhotoFilename(photo, photoIndex))}</span>
                       <span class="response-photo-hint">Click to preview</span>
                     </button>
+                    ${(isShipboard() && String(report?.status || 'open') === 'open') ? `<button type="button" class="response-photo-delete" data-delete-report-photo="true" data-photo-point-key="${escapeHtml(point.key)}" data-photo-type="shipPhotos" data-photo-index="${photoIndex}" title="Delete photo permanently" aria-label="Delete photo">×</button>` : ''}
                   </div>
                 `).join('')}
               </div>
