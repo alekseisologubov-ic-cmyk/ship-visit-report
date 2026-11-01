@@ -2987,8 +2987,8 @@ function isMyShipPhoto(photo){
   const me = String(currentAuthUserEmail).trim().toLowerCase();
   const by = String(photo.uploadedBy || photo.uploaded_by || '').trim().toLowerCase();
   if(by) return by === me;
-  const path = String(photo.storagePath || photo.storage_path || photo.path || '');
-  return Boolean(path) && readMyShipPhotoPaths().includes(path);
+  // Older photos have no recorded owner: let shipboard users remove them so they are not stuck.
+  return true;
 }
 
 // Removes one photo record through the delete_report_photo_reference function, then the file itself.
