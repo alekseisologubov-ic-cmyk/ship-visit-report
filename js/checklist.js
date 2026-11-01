@@ -2,77 +2,41 @@
   ============================================================
   VIRGIN VOYAGES
   SHIP VISIT REPORT
-  main.js
+  checklist.js
   ============================================================
 
-  STABLE MASTER CONTROLLER
+  CHECKLIST FLOW
 
-  IMPORTANT:
-  This version intentionally does NOT depend on reports.js
-  for loading Open Reports, Ship Response Reports, or
-  Submitted Reports.
+    CHECKLIST HOME
+        |
+        +-- CULINARY
+        +-- BAR
+        +-- RESTAURANT
+        +-- PROCUREMENT
+        +-- SANITATION
 
-  That removes one of the current freeze points.
+    Click department
+        |
+        v
+    Department checklist
+        |
+        v
+    Back to Departments
 
-  FLOW:
-
-    HOME
-      |
-      +-- CREATE REPORT
-      |      |
-      |      +-- DEPARTMENT HOME
-      |             |
-      |             +-- CHECKLIST
-      |             |
-      |             +-- REPORT SUMMARY
-      |             |
-      |             +-- SEND TO SHIP REVIEW
-      |
-      +-- OPEN REPORTS
-      |      |
-      |      +-- OPEN REPORT
-      |
-      +-- SHIP RESPONSE REPORT
-      |      |
-      |      +-- SHIP RESPONSE
-      |             |
-      |             +-- SUBMITTED
-      |
-      +-- SUBMITTED REPORTS
-             |
-             +-- REVIEW REPORT
-                    |
-                    +-- SAVE PDF
+  Features:
+    - Department navigation
+    - Checklist circle
+    - Reviewer comments
+    - Photos
+    - Follow-up flag
+    - Ship comments display
+    - Supabase saving
+    - Progress tracking
 */
-
-/* Remove credentials accidentally placed in the query string.
-   Preserve non-sensitive report-link parameters such as ref, report and token. */
-(function removeCredentialsFromAddressBar(){
-  try {
-    const url = new URL(window.location.href);
-    const sensitiveNames = new Set([
-      'email', 'password', 'pass', 'login', 'username', 'user',
-      'supabase_email', 'supabase_password'
-    ]);
-    let changed = false;
-    for (const key of [...url.searchParams.keys()]) {
-      if (sensitiveNames.has(key.toLowerCase())) {
-        url.searchParams.delete(key);
-        changed = true;
-      }
-    }
-    if (changed) {
-      const cleanUrl = url.pathname + (url.search ? url.search : '') + url.hash;
-      window.history.replaceState(window.history.state, document.title, cleanUrl);
-    }
-  } catch (error) {
-    console.warn('Could not clean sensitive URL parameters:', error);
-  }
-})();
 
 
 /* ============================================================
-   CORE IMPORTS
+   IMPORTS
 ============================================================ */
 
 import {
@@ -81,1135 +45,91 @@ import {
 
 
 import {
-  startNewReport,
-  resetReport,
-  loadReport,
-  getMeta,
   getState,
+  getItem,
+  toggleChecked,
+  addReviewerComment,
+  removeReviewerComment,
+  addDepartmentGeneralComment,
+  removeDepartmentGeneralComment,
+  getDepartmentGeneralComments,
+  addReportGeneralComment,
+  removeReportGeneralComment,
+  getReportGeneralComments,
+  LEADER_ROLES,
+  getLeaders,
+  setLeader,
+  addPhoto,
+  removePhoto,
+  setFollowUp,
+  setShoreFollowUp,
+  getMeta,
   getReviewer,
-  setReviewer,
-  getReportId,
-  setReportId
+  getReportId
 } from './state.js';
 
 
 import {
   saveOpenReport,
-  getOpenReports,
-  getShipReviewReports,
-  getSubmittedReports,
-  getReport,
-  getReportByReference,
-  submitShipResponse,
-  saveShipboardOpenUpdates,
-  getAuthContext,
-  signInWithPassword,
-  signOutUser,
-  getPhotoDisplayUrl,
   uploadPhotoDataUrl,
+  getPhotoDisplayUrl,
   deleteStoragePhoto,
-  supabase,
-  migrateEmbeddedPhotosToStorage
+  deleteLegacyPhotoData,
+  manageShipFocusRequest
 } from './supabase.js';
 
 
-// Photo sources stay in memory as references only; image bytes are requested
-// from Supabase only after the user clicks a filename button.
-const responsePhotoSources = new Map();
-let responsePhotoSequence = 0;
-let responsePhotoLightbox = null;
-let responsePhotoLightboxImage = null;
-let responsePhotoLightboxStatus = null;
-let responsePhotoPreviousOverflow = '';
-// Uploaded shipboard photos waiting to be attached to the report by the secure RPC.
-const pendingShipboardPhotos = new Map();
-// Each new shipboard comment is joined to the earlier ones with this invisible separator,
-// and split back into separate comment entries whenever the report is displayed.
-const SHIP_COMMENT_SEPARATOR = '\n\u2063\n';
-// Shipboard photo file names are stored as  <login email> + mark + <file name>  so the
-// uploader survives the database save. The e-mail part is hidden when names are shown.
-const SHIP_PHOTO_OWNER_MARK = '⁤';
+/* ============================================================
+   CURRENT DEPARTMENT
+============================================================ */
 
-// Ship Focus Requests: several entries per department are kept in one text, separated by the
-// invisible comment separator, each starting with the login email of whoever wrote it.
-const SHIP_FOCUS_AUTHOR_MARK = '⁤';
-function focusEntriesFrom(value){
-  const text = typeof value === 'string' ? value : (value?.text || '');
-  const fallback = (value && typeof value === 'object') ? (value.email || value.name || 'Ship') : 'Ship';
-  return splitShipCommentText(text).map(part => {
-    const at = part.indexOf(SHIP_FOCUS_AUTHOR_MARK);
-    if(at > 0) return { name: part.slice(0, at).trim() || fallback, text: part.slice(at + 1).trim() };
-    return { name: fallback, text: part.trim() };
-  }).filter(entry => entry.text);
-}
-function focusDisplayText(value){
-  const raw = typeof value === 'string' ? value : (value?.text || '');
-  const entries = focusEntriesFrom(value);
-  if(entries.length === 1 && !raw.includes(SHIP_FOCUS_AUTHOR_MARK)) return entries[0].text;
-  return entries.map(entry => `${entry.name}: ${entry.text}`).join('\n');
-}
-function splitShipCommentText(text){
-  return String(text ?? '')
-    .split(SHIP_COMMENT_SEPARATOR)
-    .map(part => part.trim())
-    .filter(Boolean);
-}
-
-function responsePhotoFilename(photo, index = 0){
-  let name = '';
-  if(photo && typeof photo === 'object'){
-    name = photo.filename || photo.fileName || photo.originalName || photo.name || photo.storagePath || '';
-  }else if(typeof photo === 'string' && photo.startsWith('storage://')){
-    name = photo.slice('storage://'.length);
-  }
-  name = String(name || '');
-  if(name.includes(SHIP_PHOTO_OWNER_MARK)) name = name.slice(name.indexOf(SHIP_PHOTO_OWNER_MARK) + 1);
-  name = name.split(/[?#]/, 1)[0].replace(/\\/g, '/');
-  if(name.includes('/')) name = name.slice(name.lastIndexOf('/') + 1);
-  try{ name = decodeURIComponent(name); }catch(_error){}
-  return name.trim() || `Photo ${String(index + 1).padStart(2, '0')}.jpg`;
-}
-
-function photoImageAttributes(photo, index = 0){
-  const refId = `response-photo-${++responsePhotoSequence}`;
-  responsePhotoSources.set(refId, photo);
-  const filename = responsePhotoFilename(photo, index);
-  return `data-photo-ref-id="${refId}" data-photo-filename="${escapeHtml(filename)}" aria-label="Open ${escapeHtml(filename)}"`;
-}
-
-function ensureResponsePhotoLightbox(){
-  if(responsePhotoLightbox && responsePhotoLightbox.isConnected) return;
-  if(!document.getElementById('response-photo-lightbox-style')){
-    const style = document.createElement('style');
-    style.id = 'response-photo-lightbox-style';
-    style.textContent = `
-      #response-photo-lightbox[hidden]{display:none!important}
-      #response-photo-lightbox{position:fixed;inset:0;z-index:10001;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;background:rgba(12,5,18,.94)}
-      #response-photo-lightbox .response-photo-panel{position:relative;display:flex;align-items:center;justify-content:center;width:100%;height:100%;min-width:0;min-height:0}
-      #response-photo-lightbox .response-photo-image{max-width:96vw;max-height:90vh;width:auto;height:auto;object-fit:contain;border-radius:8px;box-shadow:0 8px 40px rgba(0,0,0,.45)}
-      #response-photo-lightbox .response-photo-close{position:absolute;top:0;right:0;z-index:2;width:44px;height:44px;border:1px solid #fff;border-radius:50%;background:#fff;color:#3C1053;font-size:30px;line-height:1;cursor:pointer}
-      #response-photo-lightbox .response-photo-status{color:#fff;font:600 16px/1.5 Arial,sans-serif;text-align:center;padding:16px;max-width:80vw}
-      #response-photo-lightbox .response-photo-status[hidden]{display:none}
-      .response-photo-open{display:flex;align-items:center;gap:10px;width:100%;min-height:46px;padding:10px 12px;border:1px solid rgba(60,16,83,.22);border-radius:8px;background:#fff;color:#3C1053;text-align:left;font:600 14px/1.4 Arial,sans-serif;cursor:pointer;overflow-wrap:anywhere}
-      .response-photo-open:hover{background:#f7f2fa}
-      .response-photo-open .response-photo-hint{margin-left:auto;font-size:11px;font-weight:400;white-space:nowrap;color:#6c5a76}
-      @media(max-width:600px){#response-photo-lightbox{padding:10px}#response-photo-lightbox .response-photo-image{max-width:98vw;max-height:86vh}.response-photo-open .response-photo-hint{display:none}}
-    `;
-    document.head.appendChild(style);
-  }
-  const overlay=document.createElement('div');
-  overlay.id='response-photo-lightbox';
-  overlay.hidden=true;
-  overlay.setAttribute('role','dialog');
-  overlay.setAttribute('aria-modal','true');
-  overlay.setAttribute('aria-label','Photo preview');
-  const panel=document.createElement('div');
-  panel.className='response-photo-panel';
-  const close=document.createElement('button');
-  close.type='button';
-  close.className='response-photo-close';
-  close.textContent='×';
-  close.setAttribute('aria-label','Close photo preview');
-  const status=document.createElement('div');
-  status.className='response-photo-status';
-  status.textContent='Loading photo…';
-  const img=document.createElement('img');
-  img.className='response-photo-image';
-  img.alt='Enlarged report photo';
-  img.hidden=true;
-  img.decoding='async';
-  panel.append(close,status,img);
-  overlay.appendChild(panel);
-  document.body.appendChild(overlay);
-  const closeLightbox=()=>{
-    overlay.hidden=true;
-    img.removeAttribute('src');
-    img.hidden=true;
-    img.onload=null;
-    img.onerror=null;
-    status.hidden=false;
-    status.textContent='Loading photo…';
-    document.body.style.overflow=responsePhotoPreviousOverflow;
-  };
-  close.addEventListener('click',closeLightbox);
-  overlay.addEventListener('click',event=>{if(event.target===overlay) closeLightbox();});
-  panel.addEventListener('click',event=>{if(event.target===panel) closeLightbox();});
-  document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!overlay.hidden)closeLightbox();});
-  responsePhotoLightbox=overlay;
-  responsePhotoLightboxImage=img;
-  responsePhotoLightboxStatus=status;
-  responsePhotoLightbox._close=closeLightbox;
-}
-
-async function openResponsePhoto(photo){
-  ensureResponsePhotoLightbox();
-  responsePhotoPreviousOverflow=document.body.style.overflow;
-  responsePhotoLightbox.hidden=false;
-  document.body.style.overflow='hidden';
-  responsePhotoLightboxImage.hidden=true;
-  responsePhotoLightboxImage.removeAttribute('src');
-  responsePhotoLightboxStatus.hidden=false;
-  responsePhotoLightboxStatus.textContent='Loading photo…';
-  try{
-    const url=await getPhotoDisplayUrl(photo);
-    if(!url) throw new Error('Photo reference is missing.');
-    if(responsePhotoLightbox.hidden) return;
-    responsePhotoLightboxImage.onload=()=>{
-      responsePhotoLightboxImage.hidden=false;
-      responsePhotoLightboxStatus.hidden=true;
-    };
-    responsePhotoLightboxImage.onerror=()=>{
-      responsePhotoLightboxImage.hidden=true;
-      responsePhotoLightboxStatus.hidden=false;
-      responsePhotoLightboxStatus.textContent='The photo link was created, but the browser could not display the image. Close this preview and retry.';
-    };
-    responsePhotoLightboxImage.src=url;
-    if(responsePhotoLightboxImage.complete&&responsePhotoLightboxImage.naturalWidth>0){
-      responsePhotoLightboxImage.hidden=false;
-      responsePhotoLightboxStatus.hidden=true;
-    }
-  }catch(error){
-    console.error('Could not open report photo:',error);
-    if(!responsePhotoLightbox.hidden){
-      responsePhotoLightboxStatus.hidden=false;
-      responsePhotoLightboxStatus.textContent='Could not load this photo: ' + String(error?.message || 'unknown photo-access error');
-    }
-  }
-}
-
-async function hydratePhotoElements(root){
-  if(!root || typeof root.querySelectorAll !== 'function') return;
-  const buttons=[...root.querySelectorAll('button[data-photo-ref-id]')];
-  for(const button of buttons){
-    if(button.dataset.photoBound==='true') continue;
-    button.dataset.photoBound='true';
-    button.addEventListener('click',()=>{
-      const photo=responsePhotoSources.get(button.dataset.photoRefId);
-      if(photo) openResponsePhoto(photo);
-    });
-  }
-}
+let currentDepartment = null;
 
 
 /* ============================================================
-   MODULE CACHE
+   OPTIONAL CALLBACK
 ============================================================ */
 
-let checklistModule = null;
+let checklistChangedCallback = null;
 
-let reviewModule = null;
 
-let pdfModule = null;
-
-
-/* ============================================================
-   NAVIGATION STATE
-============================================================ */
-
-let checklistReturnScreen =
-  'home';
-
-
-let summaryReturnScreen =
-  'checklist';
-
-
-let currentSubmittedReport =
-  null;
-
-
-let currentShipResponseReport =
-  null;
-
-
-/*
-  TRUE when the app was opened from a Ship Visit Report email link.
-  In this mode the browser is locked to the Ship Response screen.
-*/
-let shipResponseLinkMode = false;
-
-
-/* ============================================================
-   ADMIN
-============================================================ */
-
-let currentAppRole = null;
-let currentAuthUserId = null;
-let currentAuthUserEmail = '';
-let activeReportRecord = null;
-let adminMode = false;
-let appBindingsInitialized = false;
-let loginFormBound = false;
-const storagePhotoUrlCache = new Map();
-
-function isAdmin(){
-  return currentAppRole === 'admin';
-}
-
-function isReviewer(){
-  return currentAppRole === 'reviewer';
-}
-
-function isShipboard(){
-  return currentAppRole === 'shipboard';
-}
-
-function isReportUser(){
-  return currentAppRole === 'user';
-}
-
-function canDeleteReport(report){
-  if(isAdmin()) return true;
-  if(!isReportUser()) return false;
-  const isOwner = Boolean(
-    currentAuthUserId &&
-    report?.created_by &&
-    String(report.created_by) === String(currentAuthUserId)
-  );
-  // Shoreside users may also delete a report assigned to them by name,
-  // using the explicit authenticated-email-to-reviewer-name mapping below.
-  return isOwner || isNamedReviewerForReport(report);
-}
-
-
-// A standard User may edit/submit an OPEN report if they created it or their
-// approved login email corresponds to a name in the report's Reviewer field.
-// The name-to-email mapping is explicit so a similar/partial name cannot grant access.
-const REVIEWER_NAME_ALIASES_BY_EMAIL = Object.freeze({
-  'levi.mezick@virginvoyages.com': ['Levi Mezick'],
-  'seidy.soderholm@virginvoyages.com': ['Seidy Soderholm'],
-  'don.habets@virginvoyages.com': ['Don Habets'],
-  'eszter.tary@virginvoyages.com': ['Eszter Tary'],
-  'marin.lukin@virginvoyages.com': ['Marin Lukin'],
-  'edina.smajic-ic@virginvoyages.com': ['Edina Smajic-IC', 'Edina Smajic IC'],
-  'andras.rafajlovics@virginvoyages.com': ['Andras Rafajlovics'],
-  'andrew.diclementi@virginvoyages.com': ['Andrew Di Clementi', 'Andrew Diclementi'],
-  'jamesadam.noffsinger@virginvoyages.com': ['Adam Noffsinger', 'James Adam Noffsinger'],
-  'mycca.argawanon-ic@virginvoyages.com': ['Mycca Argawanon-IC', 'Mycca Argawanon IC']
-});
-
-function normalizeReviewerIdentity(value){
-  return String(value || '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]/g, '');
-}
-
-function isNamedReviewerForReport(report){
-  if(!isReportUser()) return false;
-  const aliases = REVIEWER_NAME_ALIASES_BY_EMAIL[currentAuthUserEmail] || [];
-  if(aliases.length === 0) return false;
-  const rawReviewerText = [
-    report?.reviewer,
-    report?.report_data?.meta?.reviewer
-  ].filter(Boolean).join(', ');
-  const normalizedNames = normalizeReviewerIdentity(rawReviewerText);
-  return aliases.some(alias => normalizedNames.includes(normalizeReviewerIdentity(alias)));
-}
-
-function canEditReport(report){
-  if(isAdmin()) return true;
-  // Open reports can be edited by every shoreside user.
-  return isReportUser() && String(report?.status || 'open') === 'open';
-}
-
-function canEditActiveReport(){
-  if(isAdmin()) return true;
-  const meta = getMeta() || {};
-  const active = activeReportRecord || {};
-  const candidate = {
-    ...active,
-    id: getReportId() || active.id,
-    status: active.status || 'open',
-    reviewer: meta.reviewer || active.reviewer || '',
-    report_data: {
-      ...(active.report_data || {}),
-      meta: { ...(active.report_data?.meta || {}), ...meta }
-    }
-  };
-  return canEditReport(candidate);
-}
-
-
-
-/* ============================================================
-   SCREENS
-============================================================ */
-
-const SCREENS = [
-  'login',
-  'home',
-  'setup',
-  'checklist',
-  'review',
-  'summary',
-  'followups',
-  'open',
-  'submitted',
-  'responses'
-];
-
-
-/* ============================================================
-   GLOBAL ADMIN FUNCTION
-============================================================ */
-
-window.shipVisitIsAdmin =
-function(){
-
-  return Boolean(
-    adminMode
-  );
-
-};
-
-/* ============================================================
-   ADMIN DELETE BUTTON
-============================================================ */
-
-function reportDeleteButton(report){
-  if(!canDeleteReport(report)) return '';
-  const reportId = report?.id;
-  if(!reportId) return '';
-  return `
-    <button
-      type="button"
-      class="admin-delete"
-      data-admin-delete="${escapeHtml(reportId)}"
-      style="width:100%;min-height:34px;margin-top:8px;padding:7px 10px;border:1px solid #CC0000;border-radius:7px;background:#FFFFFF;color:#CC0000;font-family:inherit;font-size:9px;font-weight:800;cursor:pointer;"
-    >DELETE REPORT</button>
-  `;
-}
-
-/* ============================================================
-   START
-============================================================ */
-
-document.addEventListener(
-  'DOMContentLoaded',
-  initializeApp
-);
-
-
-/* ============================================================
-   INITIALIZE AND AUTHENTICATE
-============================================================ */
-
-async function initializeApp(){
-  console.log('Ship Visit Report starting...');
-  window.__SHIP_VISIT_SECTIONS__ = SECTIONS;
-  bindLoginForm();
-
-  try{
-    const context = await getAuthContext();
-    if(!context){
-      showScreen('login');
-      return;
-    }
-    if(!['admin','reviewer','user','shipboard'].includes(context.role)){
-      await signOutUser().catch(() => {});
-      showLoginMessage('This email account is not enabled for Ship Visit Report. Contact the administrator.');
-      showScreen('login');
-      return;
-    }
-    await initializeAuthorizedApp(context);
-  }catch(error){
-    console.error('Authentication check failed:', error);
-    showLoginMessage('Could not verify access. Please sign in again. ' + (error?.message || ''));
-    showScreen('login');
-  }
-}
-
-function bindLoginForm(){
-  const form = document.getElementById('loginForm');
-  if(!form || loginFormBound) return;
-  loginFormBound = true;
-  form.addEventListener('submit', async event => {
-    event.preventDefault();
-    const email = document.getElementById('loginEmail')?.value || '';
-    const password = document.getElementById('loginPassword')?.value || '';
-    const button = document.getElementById('loginSubmit');
-    if(button){ button.disabled = true; button.textContent = 'SIGNING IN…'; }
-    showLoginMessage('');
-    try{
-      const result = await signInWithPassword(email, password);
-      if(result?.error) throw result.error;
-
-      // Confirm the authenticated account has an assigned app role before exposing any app screens.
-      const context = await getAuthContext();
-      if(!context || !['admin','reviewer','user','shipboard'].includes(context.role)){
-        await signOutUser().catch(() => {});
-        throw new Error('This account is not enabled for Ship Visit Report. Contact the administrator.');
-      }
-      const passwordField = document.getElementById('loginPassword');
-      if(passwordField) passwordField.value = '';
-      await initializeAuthorizedApp(context);
-    }catch(error){
-      console.error('Password sign-in failed:', error);
-      showLoginMessage(error?.message || 'Could not sign in. Check your email and password, then try again.');
-    }finally{
-      if(button){ button.disabled = false; button.textContent = 'SIGN IN'; }
-    }
-  });
-}
-
-function showLoginMessage(message){
-  const element = document.getElementById('loginError');
-  if(element){
-    element.textContent = String(message || '');
-    element.style.display = message ? 'block' : 'none';
-  }
-}
-
-async function initializeAuthorizedApp(context){
-  if(!context || !['admin','reviewer','user','shipboard'].includes(context.role)){
-    showScreen('login');
-    return;
-  }
-  currentAppRole = context.role;
-  currentAuthUserId = context.user?.id || null;
-  currentAuthUserEmail = String(context.user?.email || '').trim().toLowerCase();
-  adminMode = isAdmin();
-  applyRoleUI();
-
-  if(!appBindingsInitialized){
-    setupDefaultDate();
-    bindAdminButton();
-    bindHomeButtons();
-    bindCreateReport();
-    bindChecklistButtons();
-    bindReviewButtons();
-    bindSummaryButtons();
-    bindFollowUpButtons();
-    bindPDFButtons();
-    bindHeaderBackButtons();
-    bindPhotoMigrationButton();
-    appBindingsInitialized = true;
-  }
-
-  updateAdminButton();
-  if(!handleDirectShipResponseLink()) showScreen('home');
-  console.log('Ship Visit Report ready for role:', currentAppRole);
-}
-
-function applyRoleUI(){
-  // Admins and standard report Users can create. Shipboard can view Open reports only.
-  const mayCreateReports = isAdmin() || isReportUser();
-  const createCard = document.getElementById('createReport');
-  if(createCard) createCard.style.display = mayCreateReports ? '' : 'none';
-  const openCard = document.getElementById('openReport');
-  if(openCard) openCard.style.display = (isAdmin() || isReportUser() || isReviewer() || isShipboard()) ? '' : 'none';
-  ['submittedReports','shipResponseReport'].forEach(id => {
-    const element = document.getElementById(id);
-    if(element) element.style.display = '';
-  });
-  const migration = document.getElementById('migratePhotosButton');
-  if(migration) migration.style.display = isAdmin() ? '' : 'none';
-  const roleLabel = document.getElementById('authRoleLabel');
-  if(roleLabel){
-    roleLabel.textContent = isAdmin()
-      ? 'SIGNED IN • ADMIN'
-      : isShipboard()
-        ? 'SIGNED IN • SHIPBOARD'
-        : isReportUser()
-          ? 'SIGNED IN • SHORESIDE'
-          : 'SIGNED IN • REVIEWER';
-  }
-}
-
-
-/* ============================================================
-   SHIP-ONLY EMAIL MODE
-============================================================ */
-
-function applyShipOnlyUI(){
-
-  if(
-    !shipResponseLinkMode
-  ){
-
-    return;
-
-  }
-
-
-  /* Hide Home cards and Admin control if present. */
-  [
-    'createReport',
-    'openReport',
-    'submittedReports',
-    'shipResponseReport'
-  ].forEach(
-    id => {
-
-      const element =
-        document.getElementById(id);
-
-      if(element){
-        element.style.display = 'none';
-      }
-
-    }
-  );
-
-
-  /* Hide all report navigation buttons/back buttons. */
-  [
-    'setupHeaderBack',
-    'checklistHeaderBack',
-    'reviewHeaderBack',
-    'summaryHeaderBack',
-    'followupsHeaderBack',
-    'openHeaderBack',
-    'submittedHeaderBack',
-    'responsesHeaderBack',
-    'responsesHomeBtn'
-  ].forEach(
-    id => {
-
-      const element =
-        document.getElementById(id);
-
-      if(element){
-        element.style.display = 'none';
-      }
-
-    }
-  );
-
-}
-
-
-/* ============================================================
-   DIRECT SHIP RESPONSE LINK
-============================================================ */
-
-function handleDirectShipResponseLink(){
-
-  const params =
-    new URLSearchParams(
-      window.location.search
-    );
-
-  const reportRef =
-    String(
-      params.get('ref') ||
-      ''
-    ).trim();
-
-  const reportId =
-    String(
-      params.get('report') ||
-      params.get('reportId') ||
-      ''
-    ).trim();
-
-  if (!reportRef && !reportId) {
-    return false;
-  }
-
-  shipResponseLinkMode = true;
-
-  applyShipOnlyUI();
-
-  showScreen('responses');
-
-  /*
-    The email link contains both report and token.
-    The token is intentionally not exposed to the normal
-    application state. A later server-side validation step
-    can enforce the token before allowing a public response.
-  */
-
-  window.__SHIP_RESPONSE_LINK__ = {
-    reportId,
-    reportRef,
-    token: params.get('token') || ''
-  };
-
-  /*
-    Open the report after the normal startup bindings exist.
-    This keeps the existing app flow intact for normal users.
-  */
-
-  Promise.resolve()
-    .then(async function(){
-
-      try {
-
-        const result =
-          await withTimeout(
-            reportRef
-              ? getReportByReference(reportRef)
-              : getReport(reportId),
-            15000,
-            'Loading linked report timed out.'
-          );
-
-        if (
-          !result ||
-          !result.success ||
-          !result.data
-        ) {
-
-          throw (
-            result?.error ||
-            new Error(
-              'This report could not be opened.'
-            )
-          );
-
-        }
-
-        const report =
-          result.data;
-
-        if (
-          report.status !==
-          'ship_review'
-        ) {
-
-          showScreen('home');
-
-          alert(
-            'This Ship Visit Report is no longer waiting for ship response.'
-          );
-
-          return;
-
-        }
-
-        openShipResponseReport(
-          report
-        );
-
-        showScreen(
-          'responses'
-        );
-
-      } catch (error) {
-
-        console.error(
-          'Direct Ship Response Link:',
-          error
-        );
-
-        showScreen('home');
-
-        showError(
-          'Could not open the report from the email link.',
-          error
-        );
-
-      }
-
-    });
-
-  return true;
-
-}
-
-
-/* ============================================================
-   SAFE MODULE LOADERS
-============================================================ */
-
-async function getChecklistModule(){
-
-  if(
-    checklistModule
-  ){
-
-    return checklistModule;
-
-  }
-
-
-  try{
-
-    checklistModule =
-      await import(
-        './checklist.js'
-      );
-
-
-    return checklistModule;
-
-  }catch(error){
-
-    console.error(
-      'checklist.js:',
-      error
-    );
-
-
-    showError(
-      'Checklist module could not be loaded.',
-      error
-    );
-
-
-    return null;
-
-  }
-
-}
-
-
-async function getReviewModule(){
-
-  if(
-    reviewModule
-  ){
-
-    return reviewModule;
-
-  }
-
-
-  try{
-
-    reviewModule =
-      await import(
-        './review.js'
-      );
-
-
-    return reviewModule;
-
-  }catch(error){
-
-    console.error(
-      'review.js:',
-      error
-    );
-
-
-    showError(
-      'Ship Review module could not be loaded.',
-      error
-    );
-
-
-    return null;
-
-  }
-
-}
-
-
-async function getPDFModule(){
-
-  if(
-    pdfModule
-  ){
-
-    return pdfModule;
-
-  }
-
-
-  try{
-
-    pdfModule =
-      await import(
-        './pdf.js'
-      );
-
-
-    return pdfModule;
-
-  }catch(error){
-
-    console.error(
-      'pdf.js:',
-      error
-    );
-
-
-    showError(
-      'PDF module could not be loaded.',
-      error
-    );
-
-
-    return null;
-
-  }
-
-}
-
-
-/* ============================================================
-   SCREEN NAVIGATION
-============================================================ */
-
-export function showScreen(
-  screen
+export function setChecklistChangedCallback(
+  callback
 ){
 
-  let target =
-    SCREENS.includes(
-      screen
-    )
-      ? screen
-      : 'home';
-
-  if(!currentAppRole && target !== 'login') target = 'login';
-  if(isReviewer() && ['setup','checklist','review'].includes(target)) target = 'home';
-  if(isShipboard() && ['setup','checklist','review','followups'].includes(target)) target = 'home';
-
-  /*
-    A direct Ship Response link may only display the responses screen.
-    All normal application navigation is blocked in this mode.
-  */
-  if(
-    shipResponseLinkMode &&
-    target !== 'responses'
-  ){
-
-    target = 'responses';
-
-  }
-
-
-  SCREENS.forEach(
-    id => {
-
-      const element =
-        document.getElementById(
-          id
-        );
-
-
-      if(
-        !element
-      ){
-
-        return;
-
-      }
-
-
-      if(
-        id === target
-      ){
-
-        element.classList.remove(
-          'hidden'
-        );
-
-
-        element.style.display =
-          '';
-
-      }else{
-
-        element.classList.add(
-          'hidden'
-        );
-
-
-        element.style.display =
-          'none';
-
-      }
-
-    }
-  );
-
-
-  if(target === 'checklist'){
-    const reviewBtn = document.getElementById('shipReviewBtn');
-    const summaryButton = document.getElementById('summaryBtn');
-    if(reviewBtn){
-      reviewBtn.textContent = 'Review Report';
-      // Report Summary is no longer needed: Review Report shows the full PDF.
-      if(summaryButton){
-        reviewBtn.className = summaryButton.className;
-        summaryButton.style.display = 'none';
-      }
-    }
-  }
-
-  window.scrollTo(
-    0,
-    0
-  );
+  checklistChangedCallback =
+    typeof callback === 'function'
+      ? callback
+      : null;
 
 }
 
 
 /* ============================================================
-   CLICK HELPER
+   HTML ESCAPE
 ============================================================ */
 
-function bindClick(
-  id,
-  handler
+function escapeHtml(
+  value
 ){
 
-  const element =
-    document.getElementById(
-      id
-    );
+  return String(
+    value ?? ''
+  ).replace(
+    /[&<>"']/g,
+    function(character){
 
+      const map = {
 
-  if(
-    !element
-  ){
+        '&':'&amp;',
+        '<':'&lt;',
+        '>':'&gt;',
+        '"':'&quot;',
+        "'":'&#39;'
 
-    return;
+      };
 
-  }
-
-
-  element.addEventListener(
-    'click',
-    handler
-  );
-
-}
-
-
-/* ============================================================
-   HOME
-============================================================ */
-
-function bindHomeButtons(){
-
-  bindClick(
-    'createReport',
-    function(){
-
-      clearSetupFields();
-
-      setupDefaultDate();
-
-      currentSubmittedReport =
-        null;
-
-      checklistReturnScreen =
-        'setup';
-
-      summaryReturnScreen =
-        'checklist';
-
-      showScreen(
-        'setup'
-      );
-
-    }
-  );
-
-
-  bindClick(
-    'openReport',
-    async function(){
-
-      showScreen(
-        'open'
-      );
-
-
-      await loadOpenReportsScreen();
-
-    }
-  );
-
-
-  bindClick(
-    'submittedReports',
-    async function(){
-
-      showScreen(
-        'submitted'
-      );
-
-
-      await loadSubmittedReportsScreen();
-
-    }
-  );
-
-
-  bindClick(
-    'shipResponseReport',
-    async function(){
-
-      /*
-        IMPORTANT:
-        Show the page first.
-        The Back button is therefore immediately available.
-      */
-
-      showScreen(
-        'responses'
-      );
-
-
-      await loadShipResponsesScreen();
-
-    }
-  );
-
-
-  bindClick(
-    'setupHome',
-    function(){
-
-      showScreen(
-        'home'
-      );
-
-    }
-  );
-
-
-  bindClick(
-    'openHomeBtn',
-    function(){
-
-      showScreen(
-        'home'
-      );
-
-    }
-  );
-
-
-  bindClick(
-    'reportsHomeBtn',
-    function(){
-
-      showScreen(
-        'home'
-      );
-
-    }
-  );
-
-
-  bindClick(
-    'responsesHomeBtn',
-    function(){
-
-      showScreen(
-        'home'
-      );
-
-    }
-  );
-
-
-  bindClick(
-    'followupsHomeBtn',
-    function(){
-
-      showScreen(
-        'home'
-      );
+      return map[character];
 
     }
   );
@@ -1218,267 +138,16 @@ function bindHomeButtons(){
 
 
 /* ============================================================
-   SETUP
+   GET ELEMENT
 ============================================================ */
 
-function bindCreateReport(){
+function getElement(
+  id
+){
 
-  bindClick(
-    'startBtn',
-    handleStartReport
+  return document.getElementById(
+    id
   );
-
-}
-
-
-function clearSetupFields(){
-
-  [
-    'ship',
-    'dateOn',
-    'dateOff',
-    'reviewer'
-
-  ].forEach(
-    id => {
-
-      const element =
-        document.getElementById(
-          id
-        );
-
-
-      if(
-        element
-      ){
-
-        element.value =
-          '';
-
-      }
-
-    }
-  );
-
-}
-
-
-function setupDefaultDate(){
-
-  const element =
-    document.getElementById(
-      'dateOn'
-    );
-
-
-  if(
-    element &&
-    !element.value
-  ){
-
-    element.value =
-      new Date()
-        .toISOString()
-        .slice(
-          0,
-          10
-        );
-
-  }
-
-}
-
-
-/* ============================================================
-   CREATE REPORT
-============================================================ */
-
-async function handleStartReport(){
-
-  if(!isAdmin() && !isReportUser()){ alert('Admin or Shoreside access is required to create reports.'); return; }
-
-  const ship =
-    document
-      .getElementById(
-        'ship'
-      )
-      ?.value
-      .trim() ||
-    '';
-
-
-  const dateOn =
-    document
-      .getElementById(
-        'dateOn'
-      )
-      ?.value ||
-    '';
-
-
-  const dateOff =
-    document
-      .getElementById(
-        'dateOff'
-      )
-      ?.value ||
-    '';
-
-
-  const reviewer =
-    document
-      .getElementById(
-        'reviewer'
-      )
-      ?.value
-      .trim() ||
-    '';
-
-
-  if(
-    !ship
-  ){
-
-    alert(
-      'Please enter the ship.'
-    );
-
-
-    return;
-
-  }
-
-
-  if(
-    !reviewer
-  ){
-
-    alert(
-      'Please enter the reviewer.'
-    );
-
-
-    return;
-
-  }
-
-
-  try{
-
-    startNewReport({
-
-      ship,
-
-      dateOn,
-
-      dateOff,
-
-      reviewer
-
-    });
-
-
-    checklistReturnScreen =
-      'setup';
-
-
-    summaryReturnScreen =
-      'checklist';
-
-
-    /*
-      Create database record first.
-    */
-
-    const result =
-      await withTimeout(
-        saveOpenReport({
-
-          reportId:null,
-
-          meta:
-            getMeta(),
-
-          state:
-            getState()
-
-        }),
-        15000,
-        'Creating report timed out.'
-      );
-
-
-    if(
-      !result ||
-      !result.success ||
-      !result.data
-    ){
-
-      throw (
-        result?.error ||
-        new Error(
-          'Could not create the report.'
-        )
-      );
-
-    }
-
-
-    setReportId(
-      result.data.id
-    );
-    activeReportRecord = result.data;
-
-
-    const checklist =
-      await getChecklistModule();
-
-
-    if(
-      !checklist
-    ){
-
-      return;
-
-    }
-
-
-    if(
-      typeof checklist.updateChecklistHeader ===
-      'function'
-    ){
-
-      checklist.updateChecklistHeader();
-
-    }
-
-
-    checklist.renderChecklist();
-
-
-    showScreen(
-      'checklist'
-    );
-
-
-    showToast(
-      'OPEN REPORT CREATED'
-    );
-
-  }catch(error){
-
-    console.error(
-      'handleStartReport:',
-      error
-    );
-
-
-    showError(
-      'Could not create the report.',
-      error
-    );
-
-  }
 
 }
 
@@ -1497,49 +166,77 @@ async function saveCurrentReport(){
     !reportId
   ){
 
+    /*
+      New report may not have a database
+      ID yet.
+    */
+
     return false;
 
-  }
-
-  if(!canEditActiveReport()){
-    alert('You can only edit reports you created or Open reports that list your name as Reviewer.');
-    return false;
   }
 
 
   try{
 
     const result =
-      await withTimeout(
-        saveOpenReport({
+      await saveOpenReport({
 
-          reportId,
+        reportId,
 
-          meta:
-            getMeta(),
+        meta:
+          getMeta(),
 
-          state:
-            getState()
+        state:
+          getState()
 
-        }),
-        15000,
-        'Saving report timed out.'
+      });
+
+
+    if(
+      !result ||
+      !result.success
+    ){
+
+      console.error(
+        'Could not save report:',
+        result?.error
       );
 
 
-    if(result?.success && result.data){
-      activeReportRecord = result.data;
+      return false;
+
     }
 
-    return Boolean(
-      result &&
-      result.success
-    );
+
+    if(
+      typeof checklistChangedCallback ===
+      'function'
+    ){
+
+      try{
+
+        await checklistChangedCallback(
+          result.data
+        );
+
+      }catch(error){
+
+        console.error(
+          'Checklist callback failed:',
+          error
+        );
+
+      }
+
+    }
+
+
+    return true;
 
   }catch(error){
 
     console.error(
-      'saveCurrentReport:',
+      'saveCurrentReport error:',
       error
     );
 
@@ -1552,521 +249,26 @@ async function saveCurrentReport(){
 
 
 /* ============================================================
-   CHECKLIST BUTTONS
+   GLOBAL CHECKLIST COUNTS
 ============================================================ */
 
-function bindChecklistButtons(){
-
-  bindClick(
-    'summaryBtn',
-    async function(){
-
-      const saved =
-        await saveCurrentReport();
-
-
-      if(
-        !saved
-      ){
-
-        alert(
-          'Could not save the report.'
-        );
-
-
-        return;
-
-      }
-
-
-      summaryReturnScreen =
-        'checklist';
-
-
-      renderCurrentReportSummary(
-        {
-          id:
-            getReportId(),
-
-          ship:
-            getMeta().ship,
-
-          date_on:
-            getMeta().dateOn,
-
-          date_off:
-            getMeta().dateOff,
-
-          reviewer:
-            getMeta().reviewer,
-
-          report_data:{
-
-            meta:
-              getMeta(),
-
-            state:
-              getState()
-
-          }
-
-        }
-      );
-
-
-      setSummaryMode(
-        false
-      );
-
-
-      showScreen(
-        'summary'
-      );
-
-    }
-  );
-
-
-  bindClick(
-    'shipReviewBtn',
-    async function(){
-
-      await openShipReview();
-
-    }
-  );
-
-
-  const reviewer =
-    document.getElementById(
-      'hdrReviewer'
-    );
-
-
-  if(
-    reviewer
-  ){
-
-    reviewer.addEventListener(
-      'change',
-      async function(
-        event
-      ){
-
-        setReviewer(
-          event.target.value
-        );
-
-
-        await saveCurrentReport();
-
-      }
-    );
-
-  }
-
-}
-
-
-/* ============================================================
-   OPEN SHIP REVIEW
-============================================================ */
-
-async function openShipReview(){
-
-  if(!isAdmin() && !canEditActiveReport()){ alert('You can send a report to Ship Review only if you created it or your name is listed as Reviewer on this Open report.'); return; }
-
-  const saved =
-    await saveCurrentReport();
-
-
-  if(
-    !saved
-  ){
-
-    alert(
-      'Could not save the report.'
-    );
-
-
-    return;
-
-  }
-
-
-  const review =
-    await getReviewModule();
-
-
-  if(
-    !review
-  ){
-
-    return;
-
-  }
-
-
-  try{
-
-    if(
-      typeof review.setReviewCallbacks ===
-      'function'
-    ){
-
-      review.setReviewCallbacks({
-
-        sentToShip:
-          async function(){
-
-            showToast(
-              'REPORT SUBMITTED'
-            );
-
-
-            showScreen(
-              'submitted'
-            );
-
-
-            await loadSubmittedReportsScreen();
-
-          }
-
-      });
-
-    }
-
-
-    const prepared =
-      await withTimeout(
-        review.prepareShipReview(),
-        15000,
-        'Preparing Ship Review timed out.'
-      );
-
-
-    if(
-      prepared === false
-    ){
-
-      return;
-
-    }
-
-
-    showScreen(
-      'review'
-    );
-
-  }catch(error){
-
-    console.error(
-      'openShipReview:',
-      error
-    );
-
-
-    showError(
-      'Could not open Ship Review.',
-      error
-    );
-
-  }
-
-}
-
-
-/* ============================================================
-   REVIEW
-============================================================ */
-
-function bindReviewButtons(){
-
-  bindClick(
-    'reviewBackBtn',
-    async function(){
-
-      await returnToChecklist();
-
-    }
-  );
-
-
-  bindClick(
-    'reviewSubmitBtn',
-    async function(){
-
-      const review =
-        await getReviewModule();
-
-
-      if(
-        !review
-      ){
-
-        return;
-
-      }
-
-
-      try{
-
-        await review.sendCurrentReportToShip();
-
-      }catch(error){
-
-        console.error(
-          'reviewSubmitBtn:',
-          error
-        );
-
-
-        showError(
-          'Could not send the report to Ship Review.',
-          error
-        );
-
-      }
-
-    }
-  );
-
-}
-
-
-async function returnToChecklist(){
-
-  const checklist =
-    await getChecklistModule();
-
-
-  if(
-    !checklist
-  ){
-
-    return;
-
-  }
-
-
-  if(
-    typeof checklist.updateChecklistHeader ===
-    'function'
-  ){
-
-    checklist.updateChecklistHeader();
-
-  }
-
-
-  checklist.renderChecklist();
-
-
-  showScreen(
-    'checklist'
-  );
-
-}
-
-
-/* ============================================================
-   SUMMARY
-============================================================ */
-
-function bindSummaryButtons(){
-
-  bindClick(
-    'summaryBackToReportBtn',
-    async function(){
-
-      await returnToChecklist();
-
-    }
-  );
-
-
-  bindClick(
-    'summarySubmitBtn',
-    async function(){
-
-      await openShipReview();
-
-    }
-  );
-
-
-  bindClick(
-    'summaryBackToSubmittedBtn',
-    async function(){
-
-      const returnToOpen = summaryReturnScreen === 'open';
-      showScreen(returnToOpen ? 'open' : 'submitted');
-      if(returnToOpen){
-        await loadOpenReportsScreen();
-      }else{
-        await loadSubmittedReportsScreen();
-      }
-
-    }
-  );
-
-
-  bindClick(
-    'summaryPdfBtn',
-    async function(){
-
-      if(
-        !currentSubmittedReport
-      ){
-
-        alert(
-          'No submitted report selected.'
-        );
-
-
-        return;
-
-      }
-
-
-      // Open / in-review reports: REVIEW REPORT shows the full PDF (shipboard + shoreside,
-      // all points and photos) right here, with a way back to the points.
-      if(String(currentSubmittedReport?.status || 'open') !== 'submitted'){
-        try{
-          const fresh = currentSubmittedReport?.id ? await getReport(currentSubmittedReport.id) : null;
-          const reportForPdf = fresh?.success && fresh.data ? fresh.data : currentSubmittedReport;
-          loadReport(reportForPdf);
-          const container = document.getElementById('report-overall-content');
-          if(!container) return;
-          const back = () => openReadOnlyReport(reportForPdf, summaryReturnScreen);
-          await renderSubmittedReportPdf(container, reportForPdf, { title: 'REVIEW REPORT', onBack: back });
-        }catch(error){
-          console.error('summaryPdfBtn review:', error);
-          showError('Could not open the review.', error);
-        }
-        return;
-      }
-
-
-      const pdf =
-        await getPDFModule();
-
-
-      if(
-        !pdf
-      ){
-
-        return;
-
-      }
-
-
-      try{
-
-        loadReport(
-          currentSubmittedReport
-        );
-
-
-        await pdf.generatePDF();
-
-      }catch(error){
-
-        console.error(
-          'summaryPdfBtn:',
-          error
-        );
-
-
-        showError(
-          'Could not save PDF.',
-          error
-        );
-
-      }
-
-    }
-  );
-
-}
-
-
-/* ============================================================
-   SUMMARY MODE
-============================================================ */
-
-function setSummaryMode(
-  submitted
-){
-
-  const active =
-    document.getElementById(
-      'summaryActiveActions'
-    );
-
-
-  const submittedActions =
-    document.getElementById(
-      'summarySubmittedActions'
-    );
-
-
-  if(
-    active
-  ){
-
-    active.classList.toggle(
-      'hidden',
-      Boolean(
-        submitted
-      )
-    );
-
-  }
-
-
-  if(
-    submittedActions
-  ){
-
-    submittedActions.classList.toggle(
-      'hidden',
-      !submitted
-    );
-
-  }
-
-}
-
-
-/* ============================================================
-   REPORT POINTS
-============================================================ */
-
-function getReportPoints(
-  report,
-  onlyChecked = true
-){
+export function getChecklistCounts(){
 
   const state =
-    report
-      ?.report_data
-      ?.state ||
-    {};
+    getState();
 
 
-  const reviewer =
-    report?.reviewer ||
-    report
-      ?.report_data
-      ?.meta
-      ?.reviewer ||
-    '';
+  let total = 0;
 
+  let checked = 0;
 
-  const points =
-    [];
+  let comments = 0;
+
+  let photos = 0;
+
+  let followUps = 0;
+
+  let shipComments = 0;
 
 
   SECTIONS.forEach(
@@ -2083,9 +285,13 @@ function getReportPoints(
       }
 
 
+      total +=
+        section.items.length;
+
+
       section.items.forEach(
         (
-          text,
+          _text,
           index
         ) => {
 
@@ -2107,13 +313,3235 @@ function getReportPoints(
 
 
           if(
-            onlyChecked &&
-            !item.checked
+            item.checked
           ){
+
+            checked++;
+
+          }
+
+
+          if(
+            Array.isArray(
+              item.comments
+            )
+          ){
+
+            comments +=
+              item.comments.length;
+
+          }
+
+
+          if(
+            Array.isArray(
+              item.photos
+            )
+          ){
+
+            photos +=
+              item.photos.length;
+
+          }
+
+
+          if(
+            item.followUpNeeded || item.shoreFollowUpNeeded
+          ){
+
+            followUps++;
+
+          }
+
+
+          if(
+            Array.isArray(
+              item.shipComments
+            )
+          ){
+
+            shipComments +=
+              item.shipComments.length;
+
+          }
+
+        }
+      );
+
+    }
+  );
+
+
+  return {
+
+    total,
+
+    checked,
+
+    comments,
+
+    photos,
+
+    followUps,
+
+    shipComments
+
+  };
+
+}
+
+
+/* ============================================================
+   DEPARTMENT COUNT
+============================================================ */
+
+function getDepartmentCount(
+  section
+){
+
+  const state =
+    getState();
+
+
+  let checked = 0;
+
+
+  const total =
+    Array.isArray(
+      section.items
+    )
+      ? section.items.length
+      : 0;
+
+
+  section.items.forEach(
+    (
+      _text,
+      index
+    ) => {
+
+      const key =
+        `${section.id}__${index}`;
+
+
+      if(
+        state[key]?.checked
+      ){
+
+        checked++;
+
+      }
+
+    }
+  );
+
+
+  return {
+
+    checked,
+
+    total
+
+  };
+
+}
+
+
+/* ============================================================
+   MAIN CHECKLIST RENDER
+============================================================ */
+
+export function renderChecklist(){
+
+  const container =
+    getElement(
+      'sections'
+    );
+
+
+  if(
+    !container
+  ){
+
+    console.error(
+      'Checklist container #sections was not found.'
+    );
+
+
+    return;
+
+  }
+
+
+  currentDepartment =
+    null;
+
+
+  renderDepartmentHome();
+
+}
+
+
+/* ============================================================
+   DEPARTMENT HOME
+============================================================ */
+
+function renderDepartmentHome(){
+
+  const container =
+    getElement(
+      'sections'
+    );
+
+
+  if(
+    !container
+  ){
+
+    return;
+
+  }
+
+
+  const counts =
+    getChecklistCounts();
+
+
+  container.innerHTML = `
+
+    <div class="department-home">
+
+
+      <!-- ================================================
+           REPORT OVERVIEW
+      ================================================= -->
+
+      <div
+        class="department-overview"
+      >
+
+        <div
+          class="department-overview-title"
+        >
+
+          REPORT OVERVIEW
+
+        </div>
+
+
+        <div
+          class="department-overview-grid"
+        >
+
+
+          <div
+            class="department-overview-card"
+          >
+
+            <strong>
+
+              ${counts.checked}
+
+            </strong>
+
+            <span>
+
+              of ${counts.total}
+
+            </span>
+
+
+            <small>
+
+              POINTS CHECKED
+
+            </small>
+
+          </div>
+
+
+          <div
+            class="department-overview-card"
+          >
+
+            <strong>
+
+              ${counts.comments}
+
+            </strong>
+
+
+            <small>
+
+              COMMENTS
+
+            </small>
+
+          </div>
+
+
+          <div
+            class="department-overview-card"
+          >
+
+            <strong>
+
+              ${counts.photos}
+
+            </strong>
+
+
+            <small>
+
+              PHOTOS
+
+            </small>
+
+          </div>
+
+
+          <div
+            class="department-overview-card"
+          >
+
+            <strong>
+
+              ${counts.followUps}
+
+            </strong>
+
+
+            <small>
+
+              SHIP / SHORESIDE FOLLOW-UPS
+
+            </small>
+
+          </div>
+
+
+        </div>
+
+      </div>
+
+
+      <!-- ================================================
+           LEADERS ONBOARD
+      ================================================= -->
+
+      <div
+        class="leaders-onboard"
+        style="
+          margin-top:18px;
+          padding:16px;
+          background:#FFFFFF;
+          border:1px solid var(--vv-line);
+          border-radius:10px;
+        "
+      >
+        <div
+          style="
+            color:var(--vv-squid);
+            font-size:15px;
+            font-weight:800;
+            margin-bottom:10px;
+          "
+        >
+          LEADERS ONBOARD
+        </div>
+
+        <div
+          style="
+            display:grid;
+            grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+            gap:10px;
+          "
+        >
+          ${LEADER_ROLES.map(role => `
+            <label style="display:flex;flex-direction:column;gap:4px;font-size:11px;font-weight:800;color:var(--vv-gray);">
+              ${escapeHtml(role.label)}
+              <input
+                type="text"
+                data-leader-role="${escapeHtml(role.id)}"
+                value="${escapeHtml(getLeaders()[role.id] || '')}"
+                placeholder="Name"
+                style="
+                  width:100%;
+                  box-sizing:border-box;
+                  padding:10px 12px;
+                  border:1px solid var(--vv-line);
+                  border-radius:8px;
+                  font:inherit;
+                  font-size:14px;
+                  font-weight:400;
+                  color:var(--vv-squid);
+                "
+              >
+            </label>
+          `).join('')}
+        </div>
+      </div>
+
+
+      <!-- ================================================
+           REPORT GENERAL COMMENTS
+      ================================================= -->
+
+      <div
+        class="report-general-comments"
+        style="
+          margin-top:18px;
+          margin-bottom:22px;
+          padding:16px;
+          background:#FFFFFF;
+          border:1px solid var(--vv-line);
+          border-radius:10px;
+        "
+      >
+
+        <div
+          style="
+            color:var(--vv-squid);
+            font-size:15px;
+            font-weight:800;
+            margin-bottom:8px;
+          "
+        >
+          GENERAL REPORT COMMENTS
+        </div>
+
+        <div
+          id="report-general-comments-list"
+          style="margin-bottom:10px;"
+        ></div>
+
+        <div
+          style="
+            display:flex;
+            flex-direction:column;
+            gap:10px;
+            align-items:stretch;
+            width:100%;
+          "
+        >
+          <textarea
+            id="report-general-comment-input"
+            placeholder="Add general comments for the overall ship visit report"
+            style="
+              display:block;
+              flex:none;
+              min-height:105px;
+              width:100%;
+              box-sizing:border-box;
+              padding:12px;
+              border:1px solid var(--vv-line);
+              border-radius:8px;
+              resize:vertical;
+              font:inherit;
+            "
+          ></textarea>
+
+          <button
+            type="button"
+            id="report-general-comment-add"
+            class="btn-primary"
+            style="
+              align-self:stretch;
+              width:100%;
+              min-width:0;
+              min-height:44px;
+            "
+          >
+            Add Comment
+          </button>
+        </div>
+
+      </div>
+
+
+      <!-- ================================================
+           DEPARTMENTS
+      ================================================= -->
+
+      <div
+        class="department-heading"
+      >
+
+        DEPARTMENTS
+
+      </div>
+
+
+      <div
+        class="department-grid"
+      >
+
+        ${
+          SECTIONS
+            .map(
+              section =>
+                renderDepartmentCard(
+                  section
+                )
+            )
+            .join('')
+        }
+
+      </div>
+
+
+      <div
+        class="department-help"
+      >
+
+        Select a department to open its checklist.
+
+      </div>
+
+
+    </div>
+
+  `;
+
+
+  renderReportGeneralComments();
+  bindReportGeneralComment();
+  bindLeaders();
+  bindDepartmentButtons();
+
+}
+
+
+/* ============================================================
+   REPORT GENERAL COMMENTS
+============================================================ */
+
+function renderReportGeneralComments(){
+  const container = getElement('report-general-comments-list');
+  if(!container) return;
+
+  const comments = getReportGeneralComments();
+
+  container.innerHTML = comments.map((comment, index) => `
+    <div
+      style="
+        position:relative;
+        margin-bottom:8px;
+        padding:10px 42px 10px 12px;
+        border-left:4px solid var(--vv-squid);
+        border-radius:7px;
+        background:#F8F5FA;
+        font-size:12px;
+        line-height:1.5;
+      "
+    >
+      <button
+        type="button"
+        data-remove-report-general-comment="${index}"
+        aria-label="Delete general report comment"
+        title="Delete comment"
+        style="
+          position:absolute;
+          top:8px;
+          right:8px;
+          width:26px;
+          height:26px;
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          padding:0;
+          border:1px solid rgba(60,16,83,.18);
+          border-radius:50%;
+          background:#FFFFFF;
+          color:var(--vv-squid);
+          font-size:18px;
+          line-height:1;
+          font-weight:800;
+          cursor:pointer;
+        "
+      >×</button>
+
+      <strong>${escapeHtml(comment.name || getReviewer() || 'Reviewer')}:</strong>
+      <div style="margin-top:3px;">${escapeHtml(comment.text || '')}</div>
+    </div>
+  `).join('');
+
+  container
+    .querySelectorAll('[data-remove-report-general-comment]')
+    .forEach(button => {
+      button.addEventListener('click', async function(event){
+        event.stopPropagation();
+
+        const index = Number(button.dataset.removeReportGeneralComment);
+
+        if(!Number.isInteger(index)) return;
+        if(!window.confirm('Delete this comment?')) return;
+        if(!removeReportGeneralComment(index)) return;
+
+        renderReportGeneralComments();
+        await saveCurrentReport();
+      });
+    });
+}
+
+function bindLeaders(){
+  document.querySelectorAll('[data-leader-role]').forEach(input => {
+    input.addEventListener('change', async function(){
+      if(!setLeader(input.dataset.leaderRole, input.value)) return;
+      await saveCurrentReport();
+    });
+  });
+}
+
+function bindReportGeneralComment(){
+  const button = getElement('report-general-comment-add');
+  const input = getElement('report-general-comment-input');
+
+  if(!button || !input) return;
+
+  button.addEventListener('click', async function(){
+    const text = input.value.trim();
+
+    if(!text){
+      input.focus();
+      return;
+    }
+
+    if(!addReportGeneralComment(text)) return;
+
+    input.value = '';
+    renderReportGeneralComments();
+    await saveCurrentReport();
+  });
+}
+
+
+/* ============================================================
+   DEPARTMENT CARD
+   NO ICONS / NO PICTURES
+============================================================ */
+
+function renderDepartmentCard(
+  section
+){
+
+  const count =
+    getDepartmentCount(
+      section
+    );
+
+
+  const complete =
+    count.checked ===
+    count.total;
+
+
+  return `
+
+    <button
+      type="button"
+      class="department-card ${
+        complete
+          ? 'complete'
+          : ''
+      }"
+      data-department="${escapeHtml(
+        section.id
+      )}"
+    >
+
+      <div
+        class="department-card-name"
+      >
+
+        ${escapeHtml(
+          section.title
+        )}
+
+      </div>
+
+
+      <div
+        class="department-card-count"
+      >
+
+        ${count.checked}/${count.total}
+
+      </div>
+
+
+      <div
+        class="department-card-label"
+      >
+
+        ${
+          complete
+            ? 'COMPLETE'
+            : 'OPEN CHECKLIST'
+        }
+
+      </div>
+
+    </button>
+
+  `;
+
+}
+
+
+/* ============================================================
+   DEPARTMENT BUTTON EVENTS
+============================================================ */
+
+function bindDepartmentButtons(){
+
+  const buttons =
+    document.querySelectorAll(
+      '[data-department]'
+    );
+
+
+  buttons.forEach(
+    button => {
+
+      button.addEventListener(
+        'click',
+        function(){
+
+          const departmentId =
+            button.dataset.department;
+
+
+          openDepartment(
+            departmentId
+          );
+
+        }
+      );
+
+    }
+  );
+
+}
+
+
+/* ============================================================
+   OPEN DEPARTMENT
+============================================================ */
+
+export function openDepartment(
+  departmentId
+){
+
+  const section =
+    SECTIONS.find(
+      item =>
+        item.id ===
+        departmentId
+    );
+
+
+  if(
+    !section
+  ){
+
+    console.error(
+      'Department not found:',
+      departmentId
+    );
+
+
+    return;
+
+  }
+
+
+  currentDepartment =
+    departmentId;
+
+
+  renderDepartment(
+    section
+  );
+
+
+  window.scrollTo(
+    0,
+    0
+  );
+
+}
+
+
+/* ============================================================
+   BACK TO DEPARTMENTS
+============================================================ */
+
+export function closeDepartment(){
+
+  currentDepartment =
+    null;
+
+
+  renderDepartmentHome();
+
+
+  window.scrollTo(
+    0,
+    0
+  );
+
+}
+
+
+/* ============================================================
+   DEPARTMENT CHECKLIST
+============================================================ */
+
+function renderDepartment(
+  section
+){
+
+  const container =
+    getElement(
+      'sections'
+    );
+
+
+  if(
+    !container
+  ){
+
+    return;
+
+  }
+
+
+  const count =
+    getDepartmentCount(
+      section
+    );
+
+
+  container.innerHTML = `
+
+    <div
+      class="department-checklist"
+    >
+
+
+      <!-- ==============================================
+           DEPARTMENT HEADER
+      =============================================== -->
+
+      <div
+        class="department-checklist-top"
+      >
+
+
+        <button
+          type="button"
+          id="departmentBackBtn"
+          class="department-back"
+        >
+
+          ← Departments
+
+        </button>
+
+
+        <div
+          class="department-checklist-title"
+        >
+
+          <div>
+
+            <div
+              class="department-checklist-name"
+            >
+
+              ${escapeHtml(
+                section.title
+              )}
+
+            </div>
+
+
+            <div
+              class="department-checklist-count"
+              id="departmentCurrentCount"
+            >
+
+              ${count.checked}/${count.total}
+              checked
+
+            </div>
+
+          </div>
+
+        </div>
+
+
+      </div>
+
+
+      <!-- ==============================================
+           GENERAL COMMENTS
+      =============================================== -->
+
+      <div class="department-general-comments">
+
+        <div class="department-general-comments-title">
+          GENERAL COMMENTS
+        </div>
+
+        <div
+          id="general-comments-${escapeHtml(section.id)}"
+          class="department-general-comments-list"
+        ></div>
+
+        <div
+          id="ship-focus-request-display-${escapeHtml(section.id)}"
+          class="ship-focus-request-display"
+          style="display:none;margin:12px 0;padding:12px 14px;border:1px solid #b9e6cf;border-left:4px solid #009b68;border-radius:8px;background:#eefaf4;"
+        ></div>
+
+        <div class="department-general-comment-row">
+
+          <textarea
+            id="general-comment-input-${escapeHtml(section.id)}"
+            placeholder="Add general comments for this department..."
+          ></textarea>
+
+          <button
+            type="button"
+            class="department-general-comment-add"
+            data-general-comment-section="${escapeHtml(section.id)}"
+          >
+            Add Comment
+          </button>
+
+        </div>
+
+      </div>
+
+
+      <!-- ==============================================
+           CHECKLIST POINTS
+      =============================================== -->
+
+      <div
+        id="departmentPoints"
+        class="department-point-list"
+      ></div>
+
+
+    </div>
+
+  `;
+
+
+  const back =
+    getElement(
+      'departmentBackBtn'
+    );
+
+
+  if(
+    back
+  ){
+
+    back.addEventListener(
+      'click',
+      closeDepartment
+    );
+
+  }
+
+
+  bindDepartmentGeneralComment(section);
+  renderDepartmentGeneralComments(section);
+  renderShipFocusRequestForDepartment(section);
+
+  renderDepartmentPoints(
+    section
+  );
+
+}
+
+
+
+
+/* ============================================================
+   SHIP FOCUS REQUEST (READ-ONLY FOR SHORESIDE)
+============================================================ */
+
+function renderShipFocusRequestForDepartment(section){
+  const container = getElement(`ship-focus-request-display-${section.id}`);
+  if(!container) return;
+
+  const requests = window.__shipVisitShipFocusRequests || {};
+  const raw = requests[section.id];
+  const text = typeof raw === 'string' ? raw : String(raw?.text || raw?.request || '').trim();
+  const canManage = Boolean(window.__shipVisitCanManageShipFocus);
+
+  if(!text && !canManage){
+    container.style.display = 'none';
+    container.innerHTML = '';
+    return;
+  }
+
+  container.style.display = 'block';
+  if(canManage){
+    container.innerHTML = `
+      <div style="margin-bottom:6px;color:#087443;font-size:11px;font-weight:800;letter-spacing:.04em;">SHIP FOCUS REQUEST</div>
+      <div style="position:relative;width:100%;">
+        <textarea data-ship-focus-edit="${escapeHtml(section.id)}"
+          aria-label="Ship Focus Request for ${escapeHtml(section.title || section.name || section.id)}"
+          placeholder="Add or update the ship focus request for this department..."
+          style="display:block;width:100%;min-height:76px;box-sizing:border-box;padding:10px 44px 10px 10px;border:1px solid var(--vv-line);border-radius:8px;font:inherit;resize:vertical;">${escapeHtml(text)}</textarea>
+        ${text ? `<button type="button" data-delete-ship-focus="${escapeHtml(section.id)}" aria-label="Delete Ship Focus Request" title="Delete Ship Focus Request" style="position:absolute;top:8px;right:8px;width:27px;height:27px;display:flex;align-items:center;justify-content:center;padding:0;border:1px solid rgba(60,16,83,.18);border-radius:50%;background:#fff;color:#c41425;font-size:19px;line-height:1;font-weight:800;cursor:pointer;">×</button>` : ''}
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px;">
+        <button type="button" data-save-ship-focus="${escapeHtml(section.id)}" class="btn-primary">SAVE SHIP FOCUS REQUEST</button>
+        <span data-ship-focus-status="${escapeHtml(section.id)}" role="status" style="font-size:12px;color:#655A70;"></span>
+      </div>
+      <div style="margin-top:6px;color:#47715e;font-size:10px;">Shoreside can add, update, or delete this request while the report is open.</div>
+    `;
+    const input = container.querySelector('[data-ship-focus-edit]');
+    const status = container.querySelector('[data-ship-focus-status]');
+    const save = container.querySelector('[data-save-ship-focus]');
+    const remove = container.querySelector('[data-delete-ship-focus]');
+
+    const saveValue = async (value) => {
+      if(save) save.disabled = true;
+      if(remove) remove.disabled = true;
+      if(status) status.textContent = 'Saving...';
+      try{
+        const result = await manageShipFocusRequest({
+          reportId: window.__shipVisitActiveReportId,
+          sectionId: section.id,
+          text: value
+        });
+        if(!result?.success) throw (result?.error || new Error('Could not save Ship Focus Request.'));
+        const next = { ...(window.__shipVisitShipFocusRequests || {}) };
+        if(String(value || '').trim()){
+          next[section.id] = result.data?.request || {
+            sectionId: section.id,
+            text: String(value).trim(),
+            name: result.data?.name || 'Shoreside',
+            timestamp: new Date().toISOString()
+          };
+        } else {
+          delete next[section.id];
+        }
+        window.__shipVisitShipFocusRequests = next;
+        if(status) status.textContent = 'Saved successfully';
+        renderShipFocusRequestForDepartment(section);
+      }catch(error){
+        console.error('manageShipFocusRequest failed:', error);
+        if(status) status.textContent = `Save failed: ${error?.message || 'Please try again.'}`;
+      }finally{
+        if(save) save.disabled = false;
+        if(remove) remove.disabled = false;
+      }
+    };
+
+    if(save) save.addEventListener('click', () => saveValue(input?.value || ''));
+    if(remove) remove.addEventListener('click', async () => {
+      if(!window.confirm('Delete this Ship Focus Request for this department?')) return;
+      await saveValue('');
+    });
+    return;
+  }
+
+  container.innerHTML = `
+    <div style="margin-bottom:6px;color:#087443;font-size:11px;font-weight:800;letter-spacing:.04em;">SHIP FOCUS REQUEST</div>
+    <div style="color:#173d2d;font-size:13px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere;">${escapeHtml(text)}</div>
+    <div style="margin-top:6px;color:#47715e;font-size:10px;">Submitted by the ship team</div>
+  `;
+}
+
+
+/* ============================================================
+   GENERAL COMMENTS
+============================================================ */
+
+function renderDepartmentGeneralComments(section){
+
+  const container = getElement(`general-comments-${section.id}`);
+  if(!container) return;
+
+  const comments = getDepartmentGeneralComments(section.id);
+
+  container.innerHTML = comments.map((comment, index) => `
+    <div
+      class="department-general-comment"
+      style="position:relative;padding-right:42px;"
+    >
+      <button
+        type="button"
+        data-remove-department-general-comment="${index}"
+        aria-label="Delete department general comment"
+        title="Delete comment"
+        style="
+          position:absolute;
+          top:7px;
+          right:7px;
+          width:25px;
+          height:25px;
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          padding:0;
+          border:1px solid rgba(60,16,83,.18);
+          border-radius:50%;
+          background:#FFFFFF;
+          color:var(--vv-squid);
+          font-size:17px;
+          line-height:1;
+          font-weight:800;
+          cursor:pointer;
+        "
+      >×</button>
+
+      <strong>${escapeHtml(comment.name || getReviewer() || 'Reviewer')}:</strong>
+      <div style="margin-top:3px;">${escapeHtml(comment.text || '')}</div>
+    </div>
+  `).join('');
+
+  container
+    .querySelectorAll('[data-remove-department-general-comment]')
+    .forEach(button => {
+      button.addEventListener('click', async function(event){
+        event.stopPropagation();
+
+        const index = Number(button.dataset.removeDepartmentGeneralComment);
+
+        if(!Number.isInteger(index)) return;
+        if(!window.confirm('Delete this comment?')) return;
+        if(!removeDepartmentGeneralComment(section.id, index)) return;
+
+        renderDepartmentGeneralComments(section);
+        await saveCurrentReport();
+      });
+    });
+
+}
+
+function bindDepartmentGeneralComment(section){
+
+  const button = document.querySelector(
+    `[data-general-comment-section="${section.id}"]`
+  );
+  const input = getElement(
+    `general-comment-input-${section.id}`
+  );
+
+  if(!button || !input) return;
+
+  button.addEventListener('click', async function(){
+
+    const text = input.value.trim();
+    if(!text){
+      input.focus();
+      return;
+    }
+
+    if(!addDepartmentGeneralComment(section.id, text)) return;
+
+    input.value = '';
+    renderDepartmentGeneralComments(section);
+    await saveCurrentReport();
+
+  });
+
+}
+
+
+/* ============================================================
+   RENDER DEPARTMENT POINTS
+============================================================ */
+
+function renderDepartmentPoints(
+  section
+){
+
+  const container =
+    getElement(
+      'departmentPoints'
+    );
+
+
+  if(
+    !container
+  ){
+
+    return;
+
+  }
+
+
+  container.innerHTML =
+    '';
+
+
+  section.items.forEach(
+    (
+      text,
+      index
+    ) => {
+
+      const point =
+        createChecklistPoint(
+          section,
+          text,
+          index
+        );
+
+
+      container.appendChild(
+        point
+      );
+
+    }
+  );
+
+
+  refreshChecklistUI();
+
+}
+
+
+/* ============================================================
+   CREATE CHECKLIST POINT
+============================================================ */
+
+function createChecklistPoint(
+  section,
+  text,
+  index
+){
+
+  const key =
+    `${section.id}__${index}`;
+
+
+  const item =
+    getItem(
+      key
+    ) || {};
+
+
+  const wrapper =
+    document.createElement(
+      'div'
+    );
+
+
+  wrapper.className =
+    'item';
+
+
+  wrapper.id =
+    `item-${key}`;
+
+
+  wrapper.innerHTML = `
+
+    <div
+      class="item-row"
+    >
+
+
+      <!-- CHECK CIRCLE -->
+
+      <button
+        type="button"
+        class="check-btn ${
+          item.checked
+            ? 'checked'
+            : ''
+        }"
+        data-key="${escapeHtml(
+          key
+        )}"
+        aria-label="Mark checklist point reviewed"
+      >
+
+        ${
+          item.checked
+            ? '✓'
+            : ''
+        }
+
+      </button>
+
+
+      <!-- POINT -->
+
+      <div
+        class="item-text"
+      >
+
+        ${escapeHtml(
+          text
+        )}
+
+      </div>
+
+
+      <!-- ACTIONS -->
+
+      <div
+        class="item-actions"
+      >
+
+
+        <button
+          type="button"
+          class="action note-button"
+          data-key="${escapeHtml(
+            key
+          )}"
+        >
+
+          Comment
+
+        </button>
+
+
+        <button
+          type="button"
+          class="action photo-button"
+          data-key="${escapeHtml(
+            key
+          )}"
+        >
+
+          Photo
+
+        </button>
+
+
+      </div>
+
+
+    </div>
+
+
+    <!-- ==============================================
+         DETAILS
+    =============================================== -->
+
+    <div
+      class="extra ${
+        hasDetails(item)
+          ? ''
+          : 'hidden'
+      }"
+      id="extra-${escapeHtml(
+        key
+      )}"
+    >
+
+
+      <!-- REVIEWER COMMENTS -->
+
+      <div
+        id="comments-${escapeHtml(
+          key
+        )}"
+        class="comments-list"
+      ></div>
+
+
+      <!-- ADD COMMENT -->
+
+      <div
+        class="comment-row"
+      >
+
+
+        <textarea
+          id="comment-input-${escapeHtml(
+            key
+          )}"
+          placeholder="Add reviewer comment"
+        ></textarea>
+
+
+        <button
+          type="button"
+          class="add-comment"
+          data-key="${escapeHtml(
+            key
+          )}"
+        >
+
+          Add
+
+        </button>
+
+
+      </div>
+
+
+      <!-- PHOTOS -->
+
+      <div
+        id="photos-${escapeHtml(
+          key
+        )}"
+        class="photos"
+      ></div>
+
+
+      <!-- SHIP FOLLOW-UP -->
+
+      <div
+        class="followup-row"
+      >
+
+        <input
+          type="checkbox"
+          id="followup-${escapeHtml(key)}"
+          class="followup-check"
+          data-key="${escapeHtml(key)}"
+          ${item.followUpNeeded ? 'checked' : ''}
+        >
+
+        <label for="followup-${escapeHtml(key)}">
+          Follow-Up Needed from Ship
+        </label>
+
+      </div>
+
+
+      <!-- SHORESIDE FOLLOW-UP -->
+
+      <div
+        class="followup-row shore-followup-row"
+      >
+
+        <input
+          type="checkbox"
+          id="shore-followup-${escapeHtml(key)}"
+          class="shore-followup-check"
+          data-key="${escapeHtml(key)}"
+          ${item.shoreFollowUpNeeded ? 'checked' : ''}
+        >
+
+        <label for="shore-followup-${escapeHtml(key)}">
+          Follow-Up Needed from Shoreside
+        </label>
+
+      </div>
+
+
+      <!-- SHIP RESPONSES -->
+
+      <div
+        id="ship-comments-${escapeHtml(
+          key
+        )}"
+      ></div>
+
+
+      <!-- PHOTO INPUT -->
+
+      <input
+        type="file"
+        id="photo-input-${escapeHtml(
+          key
+        )}"
+        class="photo-input hidden"
+        data-key="${escapeHtml(
+          key
+        )}"
+        accept="image/*"
+      >
+
+
+    </div>
+
+  `;
+
+
+  bindPointEvents(
+    wrapper,
+    key
+  );
+
+
+  renderComments(
+    key
+  );
+
+
+  renderPhotos(
+    key
+  );
+
+
+  renderShipComments(
+    key
+  );
+
+
+  return wrapper;
+
+}
+
+
+/* ============================================================
+   CHECK IF ITEM HAS DETAILS
+============================================================ */
+
+function hasDetails(
+  item
+){
+
+  if(
+    !item
+  ){
+
+    return false;
+
+  }
+
+
+  return (
+
+    (
+      Array.isArray(
+        item.comments
+      ) &&
+      item.comments.length > 0
+    )
+
+    ||
+
+    (
+      Array.isArray(
+        item.photos
+      ) &&
+      item.photos.length > 0
+    )
+
+    ||
+
+    Boolean(
+      item.followUpNeeded || item.shoreFollowUpNeeded
+    )
+
+    ||
+
+    (
+      Array.isArray(
+        item.shipComments
+      ) &&
+      item.shipComments.length > 0
+    )
+
+    ||
+
+    (
+      Array.isArray(
+        item.shipPhotos
+      ) &&
+      item.shipPhotos.length > 0
+    )
+
+  );
+
+}
+
+
+/* ============================================================
+   POINT EVENTS
+============================================================ */
+
+function bindPointEvents(
+  element,
+  key
+){
+
+  const checkButton =
+    element.querySelector(
+      '.check-btn'
+    );
+
+
+  const commentButton =
+    element.querySelector(
+      '.note-button'
+    );
+
+
+  const photoButton =
+    element.querySelector(
+      '.photo-button'
+    );
+
+
+  const addCommentButton =
+    element.querySelector(
+      '.add-comment'
+    );
+
+
+  const followUp =
+    element.querySelector(
+      '.followup-check'
+    );
+
+
+  const shoreFollowUp =
+    element.querySelector(
+      '.shore-followup-check'
+    );
+
+
+  const photoInput =
+    element.querySelector(
+      '.photo-input'
+    );
+
+
+  /* ==========================================================
+     CHECK
+  ========================================================== */
+
+  if(
+    checkButton
+  ){
+
+    checkButton.addEventListener(
+      'click',
+      async function(
+        event
+      ){
+
+        event.stopPropagation();
+
+
+        const checked =
+          toggleChecked(
+            key
+          );
+
+
+        checkButton.classList.toggle(
+          'checked',
+          checked
+        );
+
+
+        checkButton.textContent =
+          checked
+            ? '✓'
+            : '';
+
+
+        refreshChecklistUI();
+
+
+        await saveCurrentReport();
+
+      }
+    );
+
+  }
+
+
+  /* ==========================================================
+     COMMENT
+  ========================================================== */
+
+  if(
+    commentButton
+  ){
+
+    commentButton.addEventListener(
+      'click',
+      function(
+        event
+      ){
+
+        event.stopPropagation();
+
+
+        openDetails(
+          key
+        );
+
+
+        const input =
+          getElement(
+            `comment-input-${key}`
+          );
+
+
+        if(
+          input
+        ){
+
+          input.focus();
+
+        }
+
+      }
+    );
+
+  }
+
+
+  /* ==========================================================
+     PHOTO
+  ========================================================== */
+
+  if(
+    photoButton
+  ){
+
+    photoButton.addEventListener(
+      'click',
+      function(
+        event
+      ){
+
+        event.stopPropagation();
+
+
+        openDetails(
+          key
+        );
+
+
+        if(
+          photoInput
+        ){
+
+          photoInput.click();
+
+        }
+
+      }
+    );
+
+  }
+
+
+  /* ==========================================================
+     ADD COMMENT
+  ========================================================== */
+
+  if(
+    addCommentButton
+  ){
+
+    addCommentButton.addEventListener(
+      'click',
+      async function(
+        event
+      ){
+
+        event.stopPropagation();
+
+
+        const input =
+          getElement(
+            `comment-input-${key}`
+          );
+
+
+        if(
+          !input
+        ){
+
+          return;
+
+        }
+
+
+        const text =
+          input.value.trim();
+
+
+        if(
+          !text
+        ){
+
+          input.focus();
+
+
+          return;
+
+        }
+
+
+        addReviewerComment(
+          key,
+          text
+        );
+
+
+        input.value =
+          '';
+
+
+        openDetails(
+          key
+        );
+
+
+        renderComments(
+          key
+        );
+
+
+        await saveCurrentReport();
+
+      }
+    );
+
+  }
+
+
+  /* ==========================================================
+     FOLLOW-UP
+  ========================================================== */
+
+  if(
+    followUp
+  ){
+
+    followUp.addEventListener(
+      'change',
+      async function(
+        event
+      ){
+
+        event.stopPropagation();
+
+
+        setFollowUp(
+          key,
+          followUp.checked
+        );
+
+
+        openDetails(
+          key
+        );
+
+
+        await saveCurrentReport();
+
+      }
+    );
+
+  }
+
+
+  /* ==========================================================
+     SHORESIDE FOLLOW-UP
+  ========================================================== */
+
+  if(
+    shoreFollowUp
+  ){
+
+    shoreFollowUp.addEventListener(
+      'change',
+      async function(event){
+
+        event.stopPropagation();
+
+        setShoreFollowUp(
+          key,
+          shoreFollowUp.checked
+        );
+
+        openDetails(key);
+
+        await saveCurrentReport();
+
+      }
+    );
+
+  }
+
+
+  /* ==========================================================
+     PHOTO INPUT & DRAG AND DROP
+  ========================================================== */
+
+  if(
+    photoInput
+  ){
+
+    const addPhotoFile = async function(
+      file
+    ){
+
+      if(
+        !file ||
+        !file.type.startsWith('image/')
+      ){
+
+        return;
+
+      }
+
+
+      try{
+
+        const reportId = getReportId();
+        if(!reportId){
+          throw new Error('Create or open a report before attaching photos.');
+        }
+
+        const dataUrl = await readAndResizeImage(file);
+        const photoRef = await uploadPhotoDataUrl(
+          reportId,
+          key,
+          dataUrl,
+          file.name || 'photo.jpg'
+        );
+
+        addPhoto(
+          key,
+          photoRef
+        );
+
+        openDetails(key);
+        renderPhotos(key);
+
+        const saved = await saveCurrentReport();
+        if(!saved){
+          throw new Error('The photo uploaded, but the report could not be saved. Please retry saving before closing the report.');
+        }
+
+      }catch(error){
+
+        console.error(
+          'Photo error:',
+          error
+        );
+
+
+        alert(
+          'Could not add the photo.'
+        );
+
+      }
+
+    };
+
+
+    photoInput.addEventListener(
+      'change',
+      async function(
+        event
+      ){
+
+        const file =
+          event.target.files &&
+          event.target.files[0];
+
+
+        if(
+          !file
+        ){
+
+          return;
+
+        }
+
+
+        await addPhotoFile(
+          file
+        );
+
+
+        photoInput.value =
+          '';
+
+      }
+    );
+
+
+    /*
+      Drag & Drop target binding (Card + Button)
+    */
+
+    const dragTargets = [element, photoButton].filter(Boolean);
+
+    dragTargets.forEach(target => {
+
+      target.addEventListener(
+        'dragenter',
+        function(event){
+
+          event.preventDefault();
+
+          event.stopPropagation();
+
+          element.classList.add('drag-over');
+
+        }
+      );
+
+
+      target.addEventListener(
+        'dragover',
+        function(event){
+
+          event.preventDefault();
+
+          event.stopPropagation();
+
+          if(event.dataTransfer){
+
+            event.dataTransfer.dropEffect = 'copy';
+
+          }
+
+          element.classList.add('drag-over');
+
+        }
+      );
+
+
+      target.addEventListener(
+        'dragleave',
+        function(event){
+
+          event.preventDefault();
+
+          event.stopPropagation();
+
+          if(!element.contains(event.relatedTarget)){
+
+            element.classList.remove('drag-over');
+
+          }
+
+        }
+      );
+
+
+      target.addEventListener(
+        'drop',
+        async function(event){
+
+          event.preventDefault();
+
+          event.stopPropagation();
+
+          element.classList.remove('drag-over');
+
+
+          const files =
+            event.dataTransfer &&
+            event.dataTransfer.files;
+
+
+          if(!files || files.length === 0){
 
             return;
 
           }
+
+
+          for(let i = 0; i < files.length; i++){
+
+            if(files[i].type.startsWith('image/')){
+
+              openDetails(key);
+
+              await addPhotoFile(files[i]);
+
+            }
+
+          }
+
+        }
+      );
+
+    });
+
+  }
+
+}
+
+
+/* ============================================================
+   OPEN DETAILS
+============================================================ */
+
+function openDetails(
+  key
+){
+
+  const extra =
+    getElement(
+      `extra-${key}`
+    );
+
+
+  if(
+    extra
+  ){
+
+    extra.classList.remove(
+      'hidden'
+    );
+
+  }
+
+}
+
+
+/* ============================================================
+   REVIEWER COMMENTS
+============================================================ */
+
+function renderComments(
+  key
+){
+
+  const container =
+    getElement(
+      `comments-${key}`
+    );
+
+
+  if(
+    !container
+  ){
+
+    return;
+
+  }
+
+
+  const item =
+    getItem(
+      key
+    );
+
+
+  const comments =
+    Array.isArray(
+      item?.comments
+    )
+      ? item.comments
+      : [];
+
+
+  if(
+    comments.length === 0
+  ){
+
+    container.innerHTML =
+      '';
+
+
+    return;
+
+  }
+
+
+  container.innerHTML = `
+
+    <div
+      style="
+        margin-top:8px;
+        margin-bottom:5px;
+        color:var(--vv-squid);
+        font-size:9px;
+        font-weight:800;
+        letter-spacing:.04em;
+      "
+    >
+
+      REVIEWER COMMENTS
+
+    </div>
+
+
+    ${
+      comments
+        .map(
+          (comment, index) => `
+
+            <div
+              class="comment"
+              style="
+                position:relative;
+                padding-right:42px;
+              "
+            >
+
+              <button
+                type="button"
+                data-remove-reviewer-comment="${index}"
+                aria-label="Delete reviewer comment"
+                title="Delete comment"
+                style="
+                  position:absolute;
+                  top:7px;
+                  right:7px;
+                  width:25px;
+                  height:25px;
+                  display:flex;
+                  align-items:center;
+                  justify-content:center;
+                  padding:0;
+                  border:1px solid rgba(60,16,83,.18);
+                  border-radius:50%;
+                  background:#FFFFFF;
+                  color:var(--vv-squid);
+                  font-size:17px;
+                  line-height:1;
+                  font-weight:800;
+                  cursor:pointer;
+                "
+              >×</button>
+
+              <strong>
+
+                ${escapeHtml(
+                  comment.name ||
+                  getReviewer() ||
+                  'Reviewer'
+                )}:
+
+              </strong>
+
+
+              <div
+                style="
+                  margin-top:3px;
+                "
+              >
+
+                ${escapeHtml(
+                  comment.text ||
+                  ''
+                )}
+
+              </div>
+
+            </div>
+
+          `
+        )
+        .join('')
+    }
+
+  `;
+
+
+  container
+    .querySelectorAll('[data-remove-reviewer-comment]')
+    .forEach(button => {
+      button.addEventListener('click', async function(event){
+        event.stopPropagation();
+
+        const index = Number(button.dataset.removeReviewerComment);
+
+        if(!Number.isInteger(index)) return;
+        if(!window.confirm('Delete this comment?')) return;
+        if(!removeReviewerComment(key, index)) return;
+
+        renderComments(key);
+        await saveCurrentReport();
+      });
+    });
+
+}
+
+
+/* ============================================================
+   PHOTOS
+============================================================ */
+
+/* ============================================================
+   PHOTO LIGHTBOX + LAZY THUMBNAILS
+============================================================ */
+
+let photoLightbox = null;
+let photoLightboxImage = null;
+let photoLightboxStatus = null;
+let photoLightboxPreviousOverflow = '';
+
+function ensurePhotoLightbox(){
+  if(photoLightbox && photoLightbox.isConnected) return;
+
+  if(!document.getElementById('ship-report-photo-lightbox-style')){
+    const style = document.createElement('style');
+    style.id = 'ship-report-photo-lightbox-style';
+    style.textContent = `
+      .photo img { cursor: zoom-in; }
+      #ship-report-photo-lightbox[hidden] { display: none !important; }
+      #ship-report-photo-lightbox {
+        position: fixed; inset: 0; z-index: 10000;
+        display: flex; align-items: center; justify-content: center;
+        padding: 24px; box-sizing: border-box;
+        background: rgba(12, 5, 18, .94);
+      }
+      #ship-report-photo-lightbox .photo-lightbox-panel {
+        position: relative; display: flex; align-items: center; justify-content: center;
+        width: 100%; height: 100%; min-width: 0; min-height: 0;
+      }
+      #ship-report-photo-lightbox .photo-lightbox-image {
+        display: block; max-width: 96vw; max-height: 90vh; width: auto; height: auto;
+        object-fit: contain; border-radius: 8px; box-shadow: 0 8px 40px rgba(0,0,0,.45);
+      }
+      #ship-report-photo-lightbox .photo-lightbox-close {
+        position: absolute; top: 0; right: 0; z-index: 1;
+        width: 44px; height: 44px; border: 1px solid rgba(255,255,255,.65);
+        border-radius: 50%; background: #fff; color: #3C1053; font-size: 30px;
+        line-height: 1; cursor: pointer;
+      }
+      #ship-report-photo-lightbox .photo-lightbox-status {
+        color: #fff; font: 600 16px/1.5 Arial, sans-serif; text-align: center;
+        padding: 16px; max-width: 80vw;
+      }
+      #ship-report-photo-lightbox .photo-lightbox-status[hidden] { display: none; }
+      @media (max-width: 600px) {
+        #ship-report-photo-lightbox { padding: 10px; }
+        #ship-report-photo-lightbox .photo-lightbox-image { max-width: 98vw; max-height: 86vh; }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  const overlay = document.createElement('div');
+  overlay.id = 'ship-report-photo-lightbox';
+  overlay.hidden = true;
+  overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-modal', 'true');
+  overlay.setAttribute('aria-label', 'Photo preview');
+
+  const panel = document.createElement('div');
+  panel.className = 'photo-lightbox-panel';
+
+  const close = document.createElement('button');
+  close.type = 'button';
+  close.className = 'photo-lightbox-close';
+  close.textContent = '×';
+  close.setAttribute('aria-label', 'Close photo preview');
+
+  const status = document.createElement('div');
+  status.className = 'photo-lightbox-status';
+  status.textContent = 'Loading photo…';
+
+  const preview = document.createElement('img');
+  preview.className = 'photo-lightbox-image';
+  preview.alt = 'Enlarged report photo';
+  preview.hidden = true;
+  preview.decoding = 'async';
+
+  panel.append(close, status, preview);
+  overlay.appendChild(panel);
+  document.body.appendChild(overlay);
+
+  close.addEventListener('click', closePhotoLightbox);
+  overlay.addEventListener('click', event => {
+    if(event.target === overlay) closePhotoLightbox();
+  });
+  panel.addEventListener('click', event => {
+    if(event.target === panel) closePhotoLightbox();
+  });
+
+  document.addEventListener('keydown', event => {
+    if(event.key === 'Escape' && photoLightbox && !photoLightbox.hidden){
+      closePhotoLightbox();
+    }
+  });
+
+  photoLightbox = overlay;
+  photoLightboxImage = preview;
+  photoLightboxStatus = status;
+}
+
+function closePhotoLightbox(){
+  if(!photoLightbox) return;
+  photoLightbox.hidden = true;
+  if(photoLightboxImage){
+    photoLightboxImage.removeAttribute('src');
+    photoLightboxImage.hidden = true;
+    photoLightboxImage.onload = null;
+    photoLightboxImage.onerror = null;
+  }
+  if(photoLightboxStatus){
+    photoLightboxStatus.hidden = false;
+    photoLightboxStatus.textContent = 'Loading photo…';
+  }
+  document.body.style.overflow = photoLightboxPreviousOverflow;
+}
+
+function photoStoragePathForChecklist(source){
+  if(source && typeof source === 'object'){
+    // Reviewer uploads use storagePath; shipboard uploads (RPC) use path.
+    const stored = source.storagePath || source.storage_path || source.path;
+    if(typeof stored === 'string' && stored) return stored;
+  }
+  if(typeof source === 'string' && source.startsWith('storage://')){
+    return source.slice('storage://'.length);
+  }
+  return '';
+}
+
+function directPhotoUrlForChecklist(source){
+  if(typeof source === 'string' && !source.startsWith('storage://')) return source;
+  if(source && typeof source === 'object') return source.url || source.src || source.data || '';
+  return '';
+}
+
+async function openPhotoLightbox(source, getThumbnailUrl){
+  ensurePhotoLightbox();
+  photoLightbox.hidden = false;
+  photoLightboxPreviousOverflow = document.body.style.overflow;
+  document.body.style.overflow = 'hidden';
+  photoLightboxImage.hidden = true;
+  photoLightboxImage.removeAttribute('src');
+  photoLightboxStatus.hidden = false;
+  photoLightboxStatus.textContent = 'Loading photo…';
+
+  try{
+    // Reuse the lazy-loaded thumbnail URL when possible. Storage URLs are signed
+    // only when the thumbnail is about to display or the user opens the photo.
+    const url = typeof getThumbnailUrl === 'function'
+      ? await getThumbnailUrl()
+      : (directPhotoUrlForChecklist(source) || await getPhotoDisplayUrl(source));
+    if(!url) throw new Error('Photo reference is missing.');
+    if(!photoLightbox || photoLightbox.hidden) return;
+
+    photoLightboxImage.onload = () => {
+      photoLightboxImage.hidden = false;
+      photoLightboxStatus.hidden = true;
+    };
+    photoLightboxImage.onerror = () => {
+      photoLightboxImage.hidden = true;
+      photoLightboxStatus.hidden = false;
+      photoLightboxStatus.textContent = 'Could not load this photo. Please close and try again.';
+    };
+    photoLightboxImage.src = url;
+    // Data URLs / cached URLs can finish loading before handlers fire in some browsers.
+    if(photoLightboxImage.complete && photoLightboxImage.naturalWidth > 0){
+      photoLightboxImage.hidden = false;
+      photoLightboxStatus.hidden = true;
+    }
+  }catch(error){
+    console.error('Could not open photo preview:', error);
+    if(photoLightbox && !photoLightbox.hidden){
+      photoLightboxStatus.hidden = false;
+      photoLightboxStatus.textContent = 'Could not load this photo. Please close and try again.';
+    }
+  }
+}
+
+function photoFileDisplayNameForChecklist(source, index){
+  // Existing legacy photos are stored as data URLs, so their original upload
+  // filenames were not retained. Use a stored filename/path when available;
+  // otherwise use a stable, human-readable label.
+  let candidate = '';
+  if(source && typeof source === 'object'){
+    candidate = source.fileName || source.filename || source.originalName || source.name || '';
+    if(!candidate && typeof source.storagePath === 'string') candidate = source.storagePath;
+    if(!candidate && typeof source.path === 'string') candidate = source.path;
+  }else if(typeof source === 'string' && source.startsWith('storage://')){
+    candidate = source.slice('storage://'.length);
+  }
+
+  candidate = String(candidate || '').split(/[?#]/, 1)[0].replace(/\\/g, '/');
+  if(candidate.includes('/')) candidate = candidate.slice(candidate.lastIndexOf('/') + 1);
+  try{ candidate = decodeURIComponent(candidate); }catch(_error){}
+  candidate = candidate.trim();
+  if(candidate && /\.[a-z0-9]{2,5}$/i.test(candidate)) return candidate;
+
+  let extension = 'jpg';
+  const mimeMatch = (typeof source === 'string' ? source : '')
+    .match(/^data:image\/([a-z0-9.+-]+);/i);
+  if(mimeMatch){
+    const mimeExtension = mimeMatch[1].toLowerCase();
+    extension = mimeExtension === 'jpeg' ? 'jpg' : mimeExtension.replace(/^svg\+xml$/, 'svg');
+  }else if(source && typeof source === 'object' && typeof source.type === 'string'){
+    const typeExtension = source.type.split('/')[1];
+    if(typeExtension) extension = typeExtension.toLowerCase() === 'jpeg' ? 'jpg' : typeExtension.toLowerCase();
+  }
+  return `Photo ${String(index + 1).padStart(2, '0')}.${extension}`;
+}
+
+function renderPhotos(
+  key
+){
+  const container = getElement(`photos-${key}`);
+  if(!container) return;
+
+  const item = getItem(key);
+  const photos = Array.isArray(item?.photos) ? item.photos : [];
+  container.innerHTML = '';
+
+  // Display an attachment-style list rather than downloading/rendering every
+  // image inline. Actual image bytes are requested only after a file is clicked.
+  container.style.display = 'flex';
+  container.style.flexDirection = 'column';
+  container.style.alignItems = 'stretch';
+  container.style.gap = '5px';
+
+  photos.forEach((source, index) => {
+    const wrapper = document.createElement('div');
+    // Do not use the generic 'photo' class: its thumbnail styles make these
+    // filename-only attachment rows unnecessarily large.
+    wrapper.className = 'photo-file-entry';
+    Object.assign(wrapper.style, {
+      position: 'relative',
+      display: 'flex',
+      alignItems: 'center',
+      width: '100%',
+      maxWidth: '300px',
+      height: '34px',
+      minHeight: '34px',
+      boxSizing: 'border-box',
+      padding: '3px 32px 3px 8px',
+      margin: '0',
+      border: '1px solid rgba(60, 16, 83, 0.22)',
+      borderRadius: '6px',
+      background: '#fff'
+    });
+
+    const fileButton = document.createElement('button');
+    fileButton.type = 'button';
+    fileButton.className = 'photo-file-open';
+    fileButton.textContent = photoFileDisplayNameForChecklist(source, index);
+    fileButton.title = 'Click to open photo preview';
+    fileButton.setAttribute('aria-label', `Open photo ${index + 1}: ${fileButton.textContent}`);
+    Object.assign(fileButton.style, {
+      display: 'block',
+      flex: '1 1 auto',
+      minWidth: '0',
+      padding: '0',
+      border: '0',
+      background: 'transparent',
+      color: '#3C1053',
+      font: '600 12px/1.2 Arial, sans-serif',
+      textAlign: 'left',
+      textDecoration: 'underline',
+      overflowWrap: 'anywhere',
+      cursor: 'pointer'
+    });
+    fileButton.addEventListener('click', () => {
+      openPhotoLightbox(source, async () => {
+        const storagePath = photoStoragePathForChecklist(source);
+        if(storagePath) return await getPhotoDisplayUrl(source);
+        return directPhotoUrlForChecklist(source) || await getPhotoDisplayUrl(source);
+      });
+    });
+    wrapper.appendChild(fileButton);
+
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'photo-remove';
+    remove.textContent = '×';
+    Object.assign(remove.style, {
+      position: 'absolute',
+      top: '6px',
+      right: '6px',
+      width: '20px',
+      height: '20px',
+      minWidth: '20px',
+      minHeight: '20px',
+      padding: '0',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      border: '0',
+      borderRadius: '50%',
+      background: '#d71920',
+      color: '#fff',
+      font: '700 15px/20px Arial, sans-serif',
+      cursor: 'pointer'
+    });
+    remove.setAttribute('aria-label', `Remove ${fileButton.textContent}`);
+    remove.addEventListener('click', async function(event){
+      event.stopPropagation();
+      const removedPhoto = getItem(key)?.photos?.[index];
+      removePhoto(key, index);
+      renderPhotos(key);
+
+      const saved = await saveCurrentReport();
+      if(saved && removedPhoto && typeof removedPhoto === 'object'){
+        try{
+          if(removedPhoto.storagePath){
+            await deleteStoragePhoto(removedPhoto.storagePath);
+          }else if(removedPhoto.legacyPhotoId){
+            await deleteLegacyPhotoData(removedPhoto.legacyPhotoId);
+          }
+        }catch(storageError){
+          console.warn('Photo reference removed, but photo cleanup failed:', storageError);
+        }
+      }
+    });
+    wrapper.appendChild(remove);
+    container.appendChild(wrapper);
+  });
+}
+
+
+/* ============================================================
+   SHIP COMMENTS
+============================================================ */
+
+function renderShipComments(
+  key
+){
+
+  const container = getElement(`ship-comments-${key}`);
+  if(!container) return;
+
+  const item = getItem(key);
+  const comments = Array.isArray(item?.shipComments) ? item.shipComments : [];
+  const photos = Array.isArray(item?.shipPhotos) ? item.shipPhotos : [];
+
+  container.innerHTML = '';
+  if(comments.length === 0 && photos.length === 0) return;
+
+  const heading = document.createElement('div');
+  heading.textContent = 'SHIP COMMENTS / RESPONSES';
+  heading.style.cssText = 'margin-top:10px;margin-bottom:5px;color:var(--vv-squid);font-size:9px;font-weight:800;letter-spacing:.04em;';
+  container.appendChild(heading);
+
+  comments.forEach(comment => {
+    const box = document.createElement('div');
+    box.className = 'ship-response-display';
+    box.innerHTML = `<strong>${escapeHtml(comment.name || 'Ship')}:</strong>` +
+      `<div style="margin-top:3px;">${escapeHtml(comment.text || '')}</div>`;
+    container.appendChild(box);
+  });
+
+  if(photos.length > 0){
+    const label = document.createElement('div');
+    label.textContent = 'SHIP PHOTOS (read-only)';
+    label.style.cssText = 'margin-top:8px;margin-bottom:4px;color:var(--vv-squid);font-size:9px;font-weight:800;letter-spacing:.04em;';
+    container.appendChild(label);
+
+    photos.forEach((source, index) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'photo-file-open';
+      button.textContent = photoFileDisplayNameForChecklist(source, index);
+      button.title = 'Click to open ship photo';
+      button.style.cssText = 'display:block;max-width:300px;margin:0 0 5px;padding:6px 8px;border:1px solid rgba(60,16,83,.22);border-radius:6px;background:#fff;color:#3C1053;font:600 12px/1.2 Arial,sans-serif;text-align:left;text-decoration:underline;overflow-wrap:anywhere;cursor:pointer;';
+      button.addEventListener('click', () => {
+        openPhotoLightbox(source, async () =>
+          directPhotoUrlForChecklist(source) || await getPhotoDisplayUrl(source)
+        );
+      });
+      container.appendChild(button);
+    });
+  }
+
+}
+
+
+/* ============================================================
+   IMAGE RESIZE
+============================================================ */
+
+function readAndResizeImage(
+  file
+){
+
+  return new Promise(
+    function(
+      resolve,
+      reject
+    ){
+
+      const reader =
+        new FileReader();
+
+
+      reader.onload =
+        function(){
+
+          const image =
+            new Image();
+
+
+          image.onload =
+            function(){
+
+              const maxWidth =
+                1280;
+
+
+              const ratio =
+                Math.min(
+                  1,
+                  maxWidth /
+                  image.width
+                );
+
+
+              const width =
+                Math.max(
+                  1,
+                  Math.round(
+                    image.width *
+                    ratio
+                  )
+                );
+
+
+              const height =
+                Math.max(
+                  1,
+                  Math.round(
+                    image.height *
+                    ratio
+                  )
+                );
+
+
+              const canvas =
+                document.createElement(
+                  'canvas'
+                );
+
+
+              canvas.width =
+                width;
+
+
+              canvas.height =
+                height;
+
+
+              const context =
+                canvas.getContext(
+                  '2d'
+                );
+
+
+              if(
+                !context
+              ){
+
+                reject(
+                  new Error(
+                    'Could not create image canvas.'
+                  )
+                );
+
+
+                return;
+
+              }
+
+
+              context.drawImage(
+                image,
+                0,
+                0,
+                width,
+                height
+              );
+
+
+              resolve(
+                canvas.toDataURL(
+                  'image/jpeg',
+                  0.78
+                )
+              );
+
+            };
+
+
+          image.onerror =
+            function(){
+
+              reject(
+                new Error(
+                  'Could not load image.'
+                )
+              );
+
+            };
+
+
+          image.src =
+            reader.result;
+
+        };
+
+
+      reader.onerror =
+        function(){
+
+          reject(
+            new Error(
+              'Could not read image.'
+            )
+          );
+
+        };
+
+
+      reader.readAsDataURL(
+        file
+      );
+
+    }
+  );
+
+}
+
+
+/* ============================================================
+   REFRESH CHECKLIST UI
+============================================================ */
+
+export function refreshChecklistUI(){
+
+  const state =
+    getState();
+
+
+  let total =
+    0;
+
+
+  let checked =
+    0;
+
+
+  SECTIONS.forEach(
+    section => {
+
+      if(
+        !Array.isArray(
+          section.items
+        )
+      ){
+
+        return;
+
+      }
+
+
+      section.items.forEach(
+        (
+          _text,
+          index
+        ) => {
+
+          total++;
+
+
+          const key =
+            `${section.id}__${index}`;
+
+
+          const item =
+            state[key];
+
+
+          if(
+            item?.checked
+          ){
+
+            checked++;
+
+          }
+
+
+          const button =
+            document.querySelector(
+              `.check-btn[data-key="${key}"]`
+            );
+
+
+          if(
+            button
+          ){
+
+            const isChecked =
+              Boolean(
+                item?.checked
+              );
+
+
+            button.classList.toggle(
+              'checked',
+              isChecked
+            );
+
+
+            button.textContent =
+              isChecked
+                ? '✓'
+                : '';
+
+          }
+
+        }
+      );
+
+    }
+  );
+
+
+  /*
+    GLOBAL PROGRESS
+  */
+
+  const progress =
+    getElement(
+      'progress'
+    );
+
+
+  const fill =
+    getElement(
+      'fill'
+    );
+
+
+  const percentage =
+    total > 0
+      ? Math.round(
+          checked /
+          total *
+          100
+        )
+      : 0;
+
+
+  if(
+    progress
+  ){
+
+    progress.textContent =
+      `${checked} of ${total} points reviewed`;
+
+  }
+
+
+  if(
+    fill
+  ){
+
+    fill.style.width =
+      `${percentage}%`;
+
+  }
+
+
+  /*
+    CURRENT DEPARTMENT COUNT
+  */
+
+  if(
+    currentDepartment
+  ){
+
+    const section =
+      SECTIONS.find(
+        item =>
+          item.id ===
+          currentDepartment
+      );
+
+
+    if(
+      section
+    ){
+
+      const count =
+        getDepartmentCount(
+          section
+        );
+
+
+      const element =
+        getElement(
+          'departmentCurrentCount'
+        );
+
+
+      if(
+        element
+      ){
+
+        element.textContent =
+          `${count.checked}/${count.total} checked`;
+
+      }
+
+    }
+
+  }
+
+
+  /*
+    Refresh details for currently
+    displayed points.
+  */
+
+  if(
+    currentDepartment
+  ){
+
+    const section =
+      SECTIONS.find(
+        item =>
+          item.id ===
+          currentDepartment
+      );
+
+
+    if(
+      section
+    ){
+
+      renderDepartmentGeneralComments(section);
+
+      section.items.forEach(
+        (
+          _text,
+          index
+        ) => {
+
+          const key =
+            `${section.id}__${index}`;
+
+
+          renderComments(
+            key
+          );
+
+
+          renderPhotos(
+            key
+          );
+
+
+          renderShipComments(
+            key
+          );
+
+        }
+      );
+
+    }
+
+  }
+
+
+}
+
+
+/* ============================================================
+   UPDATE HEADER
+============================================================ */
+
+export function updateChecklistHeader(){
+
+  const meta =
+    getMeta();
+
+
+  const ship =
+    getElement(
+      'hdrShip'
+    );
+
+
+  const reviewer =
+    getElement(
+      'hdrReviewer'
+    );
+
+
+  const visit =
+    getElement(
+      'visitMeta'
+    );
+
+
+  if(
+    ship
+  ){
+
+    ship.textContent =
+      (
+        meta.ship ||
+        ''
+      ).toUpperCase();
+
+  }
+
+
+  if(
+    reviewer
+  ){
+
+    reviewer.value =
+      getReviewer() ||
+      meta.reviewer ||
+      '';
+
+  }
+
+
+  if(
+    visit
+  ){
+
+    visit.textContent =
+      `${meta.dateOn || ''}` +
+      (
+        meta.dateOff
+          ? ` → ${meta.dateOff}`
+          : ''
+      );
+
+  }
+
+}
+
+
+/* ============================================================
+   FOLLOW-UP POINTS
+============================================================ */
+
+export function getChecklistFollowUps(){
+
+  const state =
+    getState();
+
+
+  const points =
+    [];
+
+
+  SECTIONS.forEach(
+    section => {
+
+      section.items.forEach(
+        (
+          text,
+          index
+        ) => {
+
+          const key =
+            `${section.id}__${index}`;
+
+
+          const item =
+            state[key];
+
+
+          if(
+            item &&
+            item.followUpNeeded
+          ){
+
+            points.push({
+
+              key,
+
+              section:
+                section.title,
+
+              text,
+
+              checked:
+                Boolean(
+                  item.checked
+                ),
+
+              comments:
+                Array.isArray(
+                  item.comments
+                )
+                  ? item.comments
+                  : [],
+
+              photos:
+                Array.isArray(
+                  item.photos
+                )
+                  ? item.photos
+                  : [],
+
+              followUpNeeded:
+                true,
+
+              shipComments:
+                Array.isArray(
+                  item.shipComments
+                )
+                  ? item.shipComments
+                  : [],
+
+ shipPhotos: Array.isArray(item.shipPhotos) ? item.shipPhotos : []
+
+            });
+
+          }
+
+        }
+      );
+
+    }
+  );
+
+
+  return points;
+
+}
+
+
+/* ============================================================
+   ALL CHECKLIST POINTS
+============================================================ */
+
+export function getAllChecklistPoints(){
+
+  const state =
+    getState();
+
+
+  const points =
+    [];
+
+
+  SECTIONS.forEach(
+    section => {
+
+      section.items.forEach(
+        (
+          text,
+          index
+        ) => {
+
+          const key =
+            `${section.id}__${index}`;
+
+
+          const item =
+            state[key] ||
+            {};
 
 
           points.push({
@@ -2131,28 +3559,37 @@ function getReportPoints(
               ),
 
             comments:
-              getReviewerComments(
-                item,
-                reviewer
-              ),
+              Array.isArray(
+                item.comments
+              )
+                ? item.comments
+                : [],
 
             photos:
-              getPhotos(
-                item
-              ),
-
-            shipPhotos:
-              getShipPhotos(item),
+              Array.isArray(
+                item.photos
+              )
+                ? item.photos
+                : [],
 
             followUpNeeded:
               Boolean(
                 item.followUpNeeded
               ),
 
+            shoreFollowUpNeeded:
+              Boolean(
+                item.shoreFollowUpNeeded
+              ),
+
             shipComments:
-              getShipComments(
-                item
+              Array.isArray(
+                item.shipComments
               )
+                ? item.shipComments
+                : [],
+
+ shipPhotos: Array.isArray(item.shipPhotos) ? item.shipPhotos : []
 
           });
 
@@ -2169,3518 +3606,70 @@ function getReportPoints(
 
 
 /* ============================================================
-   REVIEWER COMMENTS
+   SAVE CHECKLIST
 ============================================================ */
 
-function getReviewerComments(
-  item,
-  fallbackReviewer = ''
-){
+export async function saveChecklist(){
 
-  if(
-    !item
-  ){
-
-    return [];
-
-  }
-
-
-  const candidates = [
-
-    item.comments,
-
-    item.reviewerComments,
-
-    item.reviewer_comments,
-
-    item.reviewComments
-
-  ];
-
-
-  for(
-    const candidate of
-    candidates
-  ){
-
-    const normalized =
-      normalizeCommentValue(
-        candidate,
-        fallbackReviewer
-      );
-
-
-    if(
-      normalized.length
-    ){
-
-      return normalized;
-
-    }
-
-  }
-
-
-  const legacyFields = [
-
-    'reviewerComment',
-
-    'reviewer_comment',
-
-    'reviewComment',
-
-    'review_comment',
-
-    'comment',
-
-    'note'
-
-  ];
-
-
-  for(
-    const field of
-    legacyFields
-  ){
-
-    if(
-      typeof item[field] ===
-      'string' &&
-      item[field].trim()
-    ){
-
-      return [
-
-        {
-
-          name:
-            fallbackReviewer ||
-            'Reviewer',
-
-          text:
-            item[field].trim(),
-
-          timestamp:
-            null
-
-        }
-
-      ];
-
-    }
-
-  }
-
-
-  return [];
-
-}
-
-
-function normalizeCommentValue(
-  value,
-  fallbackName
-){
-
-  if(
-    !value
-  ){
-
-    return [];
-
-  }
-
-
-  if(
-    Array.isArray(
-      value
-    )
-  ){
-
-    return value
-      .map(
-        comment =>
-          normalizeOneComment(
-            comment,
-            fallbackName
-          )
-      )
-      .filter(
-        Boolean
-      );
-
-  }
-
-
-  const one =
-    normalizeOneComment(
-      value,
-      fallbackName
-    );
-
-
-  return one
-    ? [one]
-    : [];
-
-}
-
-
-function normalizeOneComment(
-  value,
-  fallbackName
-){
-
-  if(
-    typeof value ===
-    'string'
-  ){
-
-    const text =
-      value.trim();
-
-
-    if(
-      !text
-    ){
-
-      return null;
-
-    }
-
-
-    return {
-
-      name:
-        fallbackName ||
-        'Reviewer',
-
-      text,
-
-      timestamp:
-        null
-
-    };
-
-  }
-
-
-  if(
-    !value ||
-    typeof value !==
-      'object'
-  ){
-
-    return null;
-
-  }
-
-
-  const text =
-    String(
-      value.text ??
-      value.comment ??
-      value.message ??
-      value.value ??
-      ''
-    ).trim();
-
-
-  if(
-    !text
-  ){
-
-    return null;
-
-  }
-
-
-  return {
-
-    name:
-      String(
-        value.name ??
-        value.reviewer ??
-        value.author ??
-        fallbackName ??
-        'Reviewer'
-      ).trim() ||
-      'Reviewer',
-
-    text,
-
-    timestamp:
-      value.timestamp ??
-      value.createdAt ??
-      null
-
-  };
+  return saveCurrentReport();
 
 }
 
 
 /* ============================================================
-   PHOTOS
+   CLEAR CHECKLIST UI
 ============================================================ */
 
-function getPhotos(
-  item
-){
-
-  if(
-    !item
-  ){
-
-    return [];
-
-  }
-
-
-  if(
-    !Array.isArray(
-      item.photos
-    )
-  ){
-
-    return [];
-
-  }
-
-
-  return item.photos
-    .map(photo => {
-      if(typeof photo === 'string') return photo;
-
-      if(photo && typeof photo === 'object'){
-        // Accept references saved by either the current or older naming format.
-        const legacyPhotoId = photo.legacyPhotoId || photo.legacy_photo_id || photo.photoId || photo.photo_id || null;
-        const storagePath = photo.storagePath || photo.storage_path || photo.path || null;
-
-        if(legacyPhotoId || storagePath){
-          return {
-            ...photo,
-            ...(legacyPhotoId ? { legacyPhotoId: String(legacyPhotoId) } : {}),
-            ...(storagePath ? { storagePath: String(storagePath) } : {})
-          };
-        }
-
-        const directSource = photo.url || photo.src || photo.data || photo.image || '';
-        if(directSource) return directSource;
-      }
-
-      return '';
-    })
-    .filter(Boolean);
-
-}
-
-
-/* ============================================================
-   SHIPBOARD PHOTOS
-============================================================ */
-
-function getShipPhotos(item){
-  if(!item || !Array.isArray(item.shipPhotos)) return [];
-  return item.shipPhotos.map(photo => {
-    if(typeof photo === 'string') return photo;
-    if(!photo || typeof photo !== 'object') return '';
-    const legacyPhotoId = photo.legacyPhotoId || photo.legacy_photo_id || photo.photoId || photo.photo_id || null;
-    const storagePath = photo.storagePath || photo.storage_path || photo.path || null;
-    if(legacyPhotoId || storagePath){
-      return {
-        ...photo,
-        ...(legacyPhotoId ? { legacyPhotoId: String(legacyPhotoId) } : {}),
-        ...(storagePath ? { storagePath: String(storagePath) } : {})
-      };
-    }
-    return photo.url || photo.src || photo.data || photo.image || '';
-  }).filter(Boolean);
-}
-
-
-/* ============================================================
-   SHIP COMMENTS
-============================================================ */
-
-function getShipComments(
-  item
-){
-
-  if(
-    !item
-  ){
-
-    return [];
-
-  }
-
-
-  const value =
-    item.shipComments ??
-    item.ship_comments ??
-    item.shipComment ??
-    [];
-
-
-  if(
-    Array.isArray(
-      value
-    )
-  ){
-
-    return value
-      .map(
-        comment =>
-          normalizeShipComment(
-            comment
-          )
-      )
-      .filter(
-        Boolean
-      )
-      .flatMap(
-        comment =>
-          splitShipCommentText(comment.text).map(
-            part => ({ ...comment, text: part })
-          )
-      );
-
-  }
-
-
-  if(
-    typeof value ===
-    'string' &&
-    value.trim()
-  ){
-
-    return [
-
-      {
-
-        name:
-          'Ship',
-
-        text:
-          value.trim(),
-
-        timestamp:
-          null
-
-      }
-
-    ];
-
-  }
-
-
-  return [];
-
-}
-
-
-function normalizeShipComment(
-  value
-){
-
-  if(
-    typeof value ===
-    'string'
-  ){
-
-    const text =
-      value.trim();
-
-
-    return text
-      ? {
-
-          name:
-            'Ship',
-
-          text,
-
-          timestamp:
-            null
-
-        }
-      : null;
-
-  }
-
-
-  if(
-    !value ||
-    typeof value !==
-      'object'
-  ){
-
-    return null;
-
-  }
-
-
-  const text =
-    String(
-      value.text ??
-      value.comment ??
-      value.message ??
-      ''
-    ).trim();
-
-
-  if(
-    !text
-  ){
-
-    return null;
-
-  }
-
-
-  return {
-
-    name:
-      value.name ||
-      value.ship ||
-      'Ship',
-
-    text,
-
-    timestamp:
-      value.timestamp ??
-      value.createdAt ??
-      null
-
-  };
-
-}
-
-
-function getDepartmentGeneralCommentsFromReport(report, sectionId){
-  const state = report?.report_data?.state || {};
-  const value = state[`__department_general__${sectionId}`]?.comments;
-  return Array.isArray(value) ? value : [];
-}
-
-
-/* ============================================================
-   SUMMARY RENDERER
-============================================================ */
-
-function renderCurrentReportSummary(
-  report,
-  includeUnchecked = false
-){
+export function clearChecklistUI(){
 
   const container =
-    document.getElementById(
-      'report-overall-content'
+    getElement(
+      'sections'
     );
 
 
   if(
-    !container
+    container
   ){
 
-    return;
+    container.innerHTML =
+      '';
 
   }
 
 
-  // Keep the current report's saved ship focus requests available to the PDF/print module.
-  window.__shipVisitShipFocusRequests = report?.report_data?.shipFocusRequests || {};
-  window.__shipVisitCanManageShipFocus = !isShipboard() && String(report?.status || 'open') === 'open';
-  window.__shipVisitActiveReportId = report?.id || null;
-
-  const points =
-    getReportPoints(
-      report,
-      !includeUnchecked
-    );
-
-
-  const departmentsWithComments = SECTIONS.filter(
-    section => getDepartmentGeneralCommentsFromReport(report, section.id).length > 0
-  );
-
-  const hasShipFocusRequests = Object.values(report?.report_data?.shipFocusRequests || {})
-    .some(value => String(typeof value === 'string' ? value : (value?.text || '')).trim());
-
-  if(
-    points.length === 0 &&
-    departmentsWithComments.length === 0 &&
-    !hasShipFocusRequests
-  ){
-
-    container.innerHTML = `
-      <div class="empty">
-        No checklist points were checked.
-      </div>
-    `;
-
-    return;
-  }
-
-
-  const groups =
-    groupPoints(
-      points
-    );
-
-  // When a read-only user is allowed to see unchecked checklist items,
-  // consistently keep checked findings first and leave unchecked items unchecked.
-  groups.forEach(group => {
-    group.points.sort((a, b) => Number(Boolean(b.checked)) - Number(Boolean(a.checked)));
-  });
-
-  const checkedPointCount = points.filter(point => point.checked).length;
-  const uncheckedPointCount = points.length - checkedPointCount;
-
-
-  const meta =
-    report
-      ?.report_data
-      ?.meta ||
-    {};
-
-
-  container.innerHTML = `
-
-    <div
-      style="
-        margin-bottom:18px;
-      "
-    >
-
-      <div
-        style="
-          color:var(--vv-squid);
-          font-size:16px;
-          font-weight:800;
-        "
-      >
-
-        REPORT OVERALL
-
-      </div>
-
-
-      <div
-        style="
-          margin-top:6px;
-          color:var(--vv-gray);
-          font-size:11px;
-          line-height:1.7;
-        "
-      >
-
-        <b>Ship:</b>
-
-        ${escapeHtml(
-          report.ship ||
-          meta.ship ||
-          ''
-        )}
-
-        <br>
-
-
-        <b>Visit:</b>
-
-        ${escapeHtml(
-          report.date_on ||
-          meta.dateOn ||
-          ''
-        )}
-
-        ${
-          report.date_off ||
-          meta.dateOff
-            ? ` → ${escapeHtml(
-                report.date_off ||
-                meta.dateOff ||
-                ''
-              )}`
-            : ''
-        }
-
-        <br>
-
-
-        <b>Reviewer:</b>
-
-        ${escapeHtml(
-          report.reviewer ||
-          meta.reviewer ||
-          ''
-        )}
-
-      </div>
-
-      ${includeUnchecked ? `
-        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:11px;">
-          <span style="display:inline-block;padding:6px 10px;border-radius:6px;background:#FCEBEC;color:#9D1010;font-size:11px;font-weight:800;">${checkedPointCount} CHECKED</span>
-          <span style="display:inline-block;padding:6px 10px;border-radius:6px;background:#F0EDF3;color:#554760;font-size:11px;font-weight:800;">${uncheckedPointCount} NOT YET CHECKED</span>
-        </div>
-      ` : ''}
-
-    </div>
-
-
-    ${(() => {
-      const requests = report?.report_data?.shipFocusRequests || {};
-      const entries = Object.entries(requests).map(([sectionId, value]) => ({
-        sectionId,
-        section: (() => {
-          const isGeneral = String(sectionId).endsWith('-general');
-          const baseId = isGeneral ? String(sectionId).slice(0, -8) : sectionId;
-          const title = SECTIONS.find(item => item.id === baseId)?.title || baseId;
-          return isGeneral ? `${title} — General comments` : title;
-        })(),
-        text: focusDisplayText(value),
-        name: typeof value === 'object' && value ? (value.name || value.email || 'Ship') : 'Ship'
-      })).filter(item => String(item.text || '').trim());
-      if(!entries.length) return '';
-      return `<div style="margin:0 0 18px;padding:12px;border:1px solid var(--vv-line);border-radius:9px;background:#F0FAF5;">
-        <div style="margin-bottom:8px;color:#087443;font-size:12px;font-weight:800;">SHIP FOCUS REQUESTS</div>
-        ${entries.map(item => `<div style="margin-top:8px;padding:8px 10px;border-left:3px solid #079455;border-radius:5px;background:#fff;">
-          <div style="font-size:10px;font-weight:800;color:var(--vv-squid);">${escapeHtml(item.section)}</div>
-          <div style="margin-top:4px;font-size:11px;line-height:1.5;color:var(--vv-body);white-space:pre-wrap;">${escapeHtml(item.text)}</div>
-          <div style="margin-top:4px;font-size:9px;color:var(--vv-gray);">From ship${item.name && item.name !== 'Ship' ? ` — ${escapeHtml(item.name)}` : ''}</div>
-        </div>`).join('')}
-      </div>`;
-    })()}
-
-    ${
-      SECTIONS.map(section => {
-
-        const group = groups.find(item => item.section === section.title);
-        const generalComments = getDepartmentGeneralCommentsFromReport(report, section.id);
-        const checkedPoints = group ? group.points.filter(point => point.checked) : [];
-        const uncheckedPoints = includeUnchecked && group
-          ? group.points.filter(point => !point.checked)
-          : [];
-
-        if((!group || group.points.length === 0) && !generalComments.length){
-          return '';
-        }
-
-        return `
-          <div style="margin-bottom:20px;">
-            <div
-              style="
-                margin-bottom:9px;
-                padding-bottom:6px;
-                border-bottom:2px solid var(--vv-red);
-                color:var(--vv-squid);
-                font-size:14px;
-                font-weight:800;
-              "
-            >
-              ${escapeHtml(section.title)}
-            </div>
-
-            ${
-              generalComments.length
-                ? `
-                  <div
-                    style="
-                      margin-bottom:10px;
-                      padding:10px 12px;
-                      border-left:4px solid var(--vv-squid);
-                      border-radius:8px;
-                      background:#F8F5FA;
-                    "
-                  >
-                    <div style="color:var(--vv-squid);font-size:9px;font-weight:800;letter-spacing:.04em;">GENERAL COMMENTS</div>
-                    ${generalComments.map(comment => `
-                      <div style="margin-top:7px;font-size:11px;line-height:1.5;color:var(--vv-body);">
-                        <strong>${escapeHtml(comment.name || 'Reviewer')}:</strong> ${escapeHtml(comment.text || '')}
-                      </div>
-                    `).join('')}
-                  </div>
-                `
-                : ''
-            }
-
-            ${checkedPoints.map(renderSummaryPoint).join('')}
-
-            ${uncheckedPoints.length ? `
-              <div style="margin:14px 0 8px;padding-top:9px;border-top:1px dashed var(--vv-line);color:var(--vv-gray);font-size:11px;font-weight:800;letter-spacing:.02em;">
-                NOT YET CHECKED (${uncheckedPoints.length})
-              </div>
-              ${uncheckedPoints.map(renderSummaryPoint).join('')}
-            ` : ''}
-          </div>
-        `;
-
-      }).join('')
-    }
-
-  `;
-
-  // The read-only report summary is the screen used by Shipboard and Reviewers.
-  // Bind photo buttons after the markup has been inserted into the page.
-  hydratePhotoElements(container);
-
-}
-
-
-/* ============================================================
-   SHIPBOARD: LOCAL STATE HELPERS (comments and photos appear immediately)
-============================================================ */
-
-// Copies ONLY the ship-owned fields returned by the server into the in-memory report,
-// keeping every other field of the point (checked flag, reviewer comments, etc.) intact.
-function applyShipboardItemToReport(report, pointKey, item){
-  if(!report.report_data) report.report_data = {};
-  if(!report.report_data.state) report.report_data.state = {};
-  const existing = report.report_data.state[pointKey] || {};
-  report.report_data.state[pointKey] = {
-    ...existing,
-    shipComments: Array.isArray(item?.shipComments) ? item.shipComments : (existing.shipComments || []),
-    shipPhotos: Array.isArray(item?.shipPhotos) ? item.shipPhotos : (existing.shipPhotos || [])
-  };
-}
-
-
-// Saves one new comment WITHOUT changing any SQL: the existing save function keeps only one
-// comment per point, so the earlier comments are sent again together with the new one.
-// Returns the point's updated ship fields.
-async function saveShipboardCommentKeepingHistory(report, pointKey, newText, focusRequests){
-  const existingItem = report?.report_data?.state?.[pointKey] || {};
-  const previous = getShipComments(existingItem).map(c => String(c.text || '').trim()).filter(Boolean);
-  const combinedText = [...previous, newText].join(SHIP_COMMENT_SEPARATOR);
-  const result = await saveShipboardOpenUpdates({
-    reportId: report.id,
-    comments: { [pointKey]: combinedText },
-    focusRequests: focusRequests || {},
-    photos: {}
-  });
-  if(!result?.success) throw (result?.error || new Error('Could not save the comment.'));
-  const returned = result.data?.state?.[pointKey];
-  const item = (returned && Array.isArray(returned.shipComments) && returned.shipComments.length)
-    ? returned
-    : { ...existingItem, shipComments: [{ name: 'Ship', text: combinedText, timestamp: new Date().toISOString() }] };
-  return { item, data: result.data };
-}
-
-function currentFocusValues(container){
-  // The focus box is now only a draft for a NEW entry; stored requests are changed by Add / delete.
-  return {};
-}
-
-
-// Reads the saved point back from the server (exactly what a reload would show) and copies
-// its comments and photos into the on-screen report, so changes appear without restarting.
-async function refreshShipboardPointFromServer(report, pointKey){
-  try{
-    const refreshed = await getReport(report.id);
-    const serverItem = refreshed?.success ? refreshed.data?.report_data?.state?.[pointKey] : null;
-    if(!serverItem) return false;
-    if(!report.report_data) report.report_data = {};
-    if(!report.report_data.state) report.report_data.state = {};
-    const existing = report.report_data.state[pointKey] || {};
-    report.report_data.state[pointKey] = {
-      ...existing,
-      photos: Array.isArray(serverItem.photos) ? serverItem.photos : (existing.photos || []),
-      shipPhotos: Array.isArray(serverItem.shipPhotos) ? serverItem.shipPhotos : (existing.shipPhotos || []),
-      shipComments: serverItem.shipComments !== undefined ? serverItem.shipComments : (existing.shipComments || [])
-    };
-    return true;
-  }catch(error){
-    console.warn('Could not refresh point from server:', error);
-    return false;
-  }
-}
-
-/* ---------- WHO ADDED A SHIPBOARD PHOTO ---------- */
-function shipPhotoOwner(photo){
-  const name = String(photo?.filename || '');
-  const at = name.indexOf(SHIP_PHOTO_OWNER_MARK);
-  return at > 0 ? name.slice(0, at).trim().toLowerCase() : '';
-}
-function isMyShipPhoto(photo){
-  if(!photo || typeof photo !== 'object' || !currentAuthUserEmail) return false;
-  const owner = shipPhotoOwner(photo);
-  // Photos added before owners were recorded have no owner: shipboard users may remove them.
-  return owner ? owner === String(currentAuthUserEmail).trim().toLowerCase() : true;
-}
-
-// Removes one photo record with the delete_report_photo_reference function, then tries the file.
-async function removeShipboardPhoto(report, pointKey, storagePath){
-  const { data: stored, error: readError } = await supabase
-    .from('ship_visit_reports')
-    .select('report_data')
-    .eq('id', report.id)
-    .eq('status', 'open')
-    .maybeSingle();
-  if(readError) throw readError;
-  const point = stored?.report_data?.state?.[pointKey];
-  if(!point || !Array.isArray(point.shipPhotos)) throw new Error('The photo was not found on this report.');
-  const photoIndex = point.shipPhotos.findIndex(photo => photoPathOf(photo) === storagePath);
-  if(photoIndex < 0) throw new Error('The photo was not found on this report.');
-
-  const { data: result, error: rpcError } = await supabase.rpc('delete_report_photo_reference', {
-    p_report_id: report.id,
-    p_point_key: pointKey,
-    p_photo_type: 'shipPhotos',
-    p_photo_index: photoIndex
-  });
-  if(rpcError) throw rpcError;
-  if(result && result.success === false) throw new Error('The photo could not be removed from the report.');
-  try{ await deleteStoragePhoto(storagePath); }catch(error){ console.warn('Photo file could not be removed from storage:', error); }
-}
-
-function photoPathOf(photo){
-  if(!photo) return '';
-  if(typeof photo === 'string') return photo;
-  return String(photo.storagePath || photo.storage_path || photo.path || photo.url || '');
-}
-
-// Redraws the current department but keeps anything typed in other boxes.
-// skipDraftKey = the comment box that was just saved (so it comes back empty).
-function rerenderShipboardDepartment(report, departmentId, skipDraftKey){
-  const container = document.getElementById('report-overall-content');
-  if(!container) return;
-  const drafts = [];
-  container.querySelectorAll('[data-ship-comment-key]').forEach(el => {
-    drafts.push({ attr: 'data-ship-comment-key', key: el.getAttribute('data-ship-comment-key'), value: el.value });
-  });
-  container.querySelectorAll('[data-ship-focus-section]').forEach(el => {
-    drafts.push({ attr: 'data-ship-focus-section', key: el.getAttribute('data-ship-focus-section'), value: el.value });
-  });
-  const scrollY = window.scrollY;
-  renderShipboardOpenReportDepartment(report, departmentId);
-  const fresh = document.getElementById('report-overall-content');
-  drafts.forEach(draft => {
-    if(draft.attr === 'data-ship-comment-key' && draft.key === skipDraftKey) return;
-    const target = [...fresh.querySelectorAll(`[${draft.attr}]`)].find(el => el.getAttribute(draft.attr) === draft.key);
-    if(target && draft.value) target.value = draft.value;
-  });
-  window.scrollTo(0, scrollY);
-}
-
-
-/* ============================================================
-   SHIPBOARD READ-ONLY OPEN REPORT — DEPARTMENT HOME
-   Mirrors the Shoreside department-card layout without exposing
-   checklist edit controls to Shipboard users.
-============================================================ */
-
-function renderShipboardOpenReportDepartments(report){
-  const container = document.getElementById('report-overall-content');
-  if(!container) return;
-
-  const points = getReportPoints(report, false);
-  const checkedPoints = points.filter(point => Boolean(point.checked));
-  const uncheckedPoints = points.filter(point => !point.checked);
-  const followUpCount = points.filter(point => Boolean(point.followUpNeeded)).length;
-  const meta = report?.report_data?.meta || {};
-
-  // Read-only copies of what shoreside entered: Leaders Onboard and General Report Comments.
-  const shoreState = report?.report_data?.state || {};
-  const leaderRoles = [
-    ['fb_director', 'F&B Director'],
-    ['sr_exec_chef', 'Sr. Exec Chef'],
-    ['restaurant_ops_manager', 'Restaurant Operations Manager'],
-    ['beverage_ops_manager', 'Beverage Operations Manager'],
-    ['sanitation_officer', 'Sanitation Officer'],
-    ['procurement_manager', 'Procurement Manager'],
-    ['hotel_controller', 'Hotel Controller'],
-    ['public_health_director', 'Public Health Director']
-  ];
-  const leaderNames = shoreState.__leaders_onboard__?.names || {};
-  const leaderRows = leaderRoles.filter(([id]) => String(leaderNames[id] || '').trim());
-  const leadersHtml = leaderRows.length ? `
-    <div style="margin-bottom:16px;padding:14px;background:#FFFFFF;border:1px solid var(--vv-line);border-radius:10px;">
-      <div style="color:var(--vv-squid);font-size:15px;font-weight:800;margin-bottom:10px;">LEADERS ONBOARD</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;">
-        ${leaderRows.map(([id, label]) => `
-          <div>
-            <div style="font-size:10px;font-weight:800;color:var(--vv-gray);">${escapeHtml(label)}</div>
-            <div style="font-size:14px;color:var(--vv-squid);margin-top:2px;">${escapeHtml(String(leaderNames[id]).trim())}</div>
-          </div>
-        `).join('')}
-      </div>
-    </div>` : '';
-  const generalComments = Array.isArray(shoreState.__report_general__?.comments) ? shoreState.__report_general__.comments : [];
-  const generalHtml = generalComments.length ? `
-    <div style="margin-bottom:16px;padding:14px;background:#FFFFFF;border:1px solid var(--vv-line);border-radius:10px;">
-      <div style="color:var(--vv-squid);font-size:15px;font-weight:800;margin-bottom:10px;">GENERAL REPORT COMMENTS</div>
-      ${generalComments.map(comment => `
-        <div style="margin-bottom:8px;padding:10px 12px;background:#F7F5F9;border-left:3px solid var(--vv-squid);border-radius:6px;">
-          <div style="font-size:12px;font-weight:800;color:#1B1B1B;">${escapeHtml(comment?.name || 'Reviewer')}:</div>
-          <div style="font-size:13px;color:#1B1B1B;white-space:pre-wrap;margin-top:2px;">${escapeHtml(comment?.text || '')}</div>
-        </div>
-      `).join('')}
-    </div>` : '';
-
-  container.innerHTML = `
-    <div style="margin-bottom:20px;">
-      <div style="color:var(--vv-squid);font-size:16px;font-weight:800;">REPORT OVERALL</div>
-      <div style="margin-top:6px;color:var(--vv-gray);font-size:11px;line-height:1.7;">
-        <b>Ship:</b> ${escapeHtml(report.ship || meta.ship || '')}<br>
-        <b>Visit:</b> ${escapeHtml(report.date_on || meta.dateOn || '')}
-        ${(report.date_off || meta.dateOff) ? ` → ${escapeHtml(report.date_off || meta.dateOff || '')}` : ''}<br>
-        <b>Reviewer:</b> ${escapeHtml(report.reviewer || meta.reviewer || '')}
-      </div>
-      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;">
-        <span style="display:inline-block;padding:7px 11px;border-radius:7px;background:#FCEBEC;color:#9D1010;font-size:11px;font-weight:800;">${checkedPoints.length} CHECKED</span>
-        <span style="display:inline-block;padding:7px 11px;border-radius:7px;background:#F0EDF3;color:#554760;font-size:11px;font-weight:800;">${uncheckedPoints.length} NOT YET CHECKED</span>
-        <span style="display:inline-block;padding:7px 11px;border-radius:7px;background:#EAF2FC;color:#234A78;font-size:11px;font-weight:800;">${followUpCount} SHIP FOLLOW-UPS</span>
-      </div>
-    </div>
-
-    ${leadersHtml}${generalHtml}
-    <div style="margin-bottom:10px;color:var(--vv-squid);font-size:15px;font-weight:800;">DEPARTMENTS</div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;">
-      ${SECTIONS.map(section => {
-        const departmentPoints = points.filter(point => point.section === section.title);
-        const departmentChecked = departmentPoints.filter(point => Boolean(point.checked)).length;
-        const departmentFollowUps = departmentPoints.filter(point => Boolean(point.followUpNeeded)).length;
-        return `
-          <button type="button" data-shipboard-department="${escapeHtml(section.id)}"
-            style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:150px;padding:20px 16px;border:1px solid var(--vv-line);border-radius:14px;background:#FFFFFF;color:var(--vv-squid);text-align:center;cursor:pointer;font-family:inherit;">
-            <span style="font-size:14px;font-weight:800;line-height:1.45;">${escapeHtml(section.title)}</span>
-            <span style="font-size:26px;font-weight:800;line-height:1;">${departmentChecked}/${departmentPoints.length}</span>
-            <span style="font-size:9px;font-weight:800;color:var(--vv-gray);">POINTS CHECKED</span>
-            <span style="font-size:10px;color:var(--vv-gray);">${departmentFollowUps} ship follow-up${departmentFollowUps === 1 ? '' : 's'}</span>
-            <span style="font-size:10px;font-weight:800;">OPEN DEPARTMENT →</span>
-          </button>
-        `;
-      }).join('')}
-    </div>
-    <div style="margin-top:12px;color:var(--vv-gray);font-size:11px;line-height:1.5;">Select a department to review checked findings, unchecked points, reviewer comments, photos, and ship follow-ups. Reviewer findings are read-only. Shipboard comments and focus requests can be saved.</div>
-  `;
-
-  container.querySelectorAll('[data-shipboard-department]').forEach(button => {
-    button.addEventListener('click', () => {
-      renderShipboardOpenReportDepartment(report, button.dataset.shipboardDepartment);
-    });
-  });
-}
-
-
-/* ============================================================
-   SHIPBOARD READ-ONLY OPEN REPORT — DEPARTMENT DETAIL
-============================================================ */
-
-function renderShipboardShipCommentField(point){
-  // Existing saved comments are displayed once in the report summary
-  // under SHIP COMMENTS / RESPONSES. This panel is only for adding a NEW
-  // ship-side comment, so do not render the saved comment or prefill the
-  // textarea here (that caused the same comment to appear twice).
-  if(!point.followUpNeeded) return '';
-  const key = escapeHtml(point.key);
-  return `
-    <section data-ship-comment-panel="${key}"
-      style="margin:-4px 0 12px 30px;padding:12px;border:1px solid #D9D3E0;border-radius:9px;background:#fff;">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;">
-        <strong style="font-size:11px;color:var(--vv-squid);">SHIP TEAM COMMENT</strong>
-        <div style="display:flex;gap:7px;">
-          <button type="button" data-ship-comment-focus="${key}"
-            style="padding:8px 11px;border:1px solid #D9D3E0;border-radius:7px;background:#fff;color:var(--vv-squid);font:inherit;font-size:11px;font-weight:800;cursor:pointer;">Comment</button>
-          <button type="button" data-ship-photo-notice="${key}"
-            style="padding:8px 11px;border:1px solid #D9D3E0;border-radius:7px;background:#fff;color:var(--vv-squid);font:inherit;font-size:11px;font-weight:800;cursor:pointer;">Photo</button>
-        </div>
-      </div>
-      <textarea data-ship-comment-key="${key}" rows="3" maxlength="3000"
-        placeholder="Add a new ship-side response for this follow-up..."
-        style="display:block;width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--vv-line);border-radius:7px;font:inherit;font-size:12px;resize:vertical;"></textarea>
-      <button type="button" data-add-ship-comment-key="${key}"
-        style="display:block;width:100%;min-height:40px;margin-top:8px;padding:9px;border:0;border-radius:7px;background:var(--vv-squid);color:#fff;font:inherit;font-size:12px;font-weight:800;cursor:pointer;">Add</button>
-      <div data-ship-comment-local-status="${key}" role="status" aria-live="polite"
-        style="margin-top:6px;font-size:11px;color:var(--vv-gray);"></div>
-    </section>`;
-}
-
-/* One entry list + input + Add button, stored under shipFocusRequests[key].
-   Used for the Ship Focus Request and for the department General Comments. */
-function renderFocusBox(report, key, title, placeholder){
-  const entries = focusEntriesFrom(report?.report_data?.shipFocusRequests?.[key]);
-  const me = String(currentAuthUserEmail || '').toLowerCase();
-  return `
-    <div style="margin-bottom:8px;color:var(--vv-squid);font-size:11px;font-weight:800;">${escapeHtml(title)}</div>
-    ${entries.map((entry, entryIndex) => {
-      const mine = isShipboard() && String(entry.name || '').trim().toLowerCase() === me;
-      return `<div style="position:relative;margin-bottom:8px;padding:8px ${mine ? '38px' : '10px'} 8px 10px;border-left:3px solid #079455;border-radius:6px;background:#EAF8F0;">
-        <div style="font-size:11px;font-weight:800;color:#087443;">${escapeHtml(entry.name)}:</div>
-        <div style="margin-top:3px;font-size:12px;line-height:1.5;white-space:pre-wrap;">${escapeHtml(entry.text)}</div>
-        ${mine ? `<button type="button" data-delete-ship-focus="${escapeHtml(key)}" data-ship-focus-index="${entryIndex}"
-          aria-label="Delete your comment" title="Delete your comment"
-          style="position:absolute;top:7px;right:7px;width:24px;height:24px;border:1px solid #E4D8E8;border-radius:50%;background:#fff;color:#C41425;font-size:18px;line-height:1;font-weight:800;cursor:pointer;">×</button>` : ''}
-      </div>`;
-    }).join('')}
-    <textarea id="ship-focus-${escapeHtml(key)}" data-ship-focus-section="${escapeHtml(key)}" rows="2" maxlength="3000"
-      placeholder="${escapeHtml(placeholder)}"
-      style="width:100%;box-sizing:border-box;padding:9px;border:1px solid var(--vv-line);border-radius:6px;font:inherit;font-size:12px;resize:vertical;"></textarea>
-    <button type="button" data-add-ship-focus="${escapeHtml(key)}"
-      style="margin-top:8px;width:100%;min-height:42px;border:0;border-radius:8px;background:#3C1053;color:#fff;font:inherit;font-size:13px;font-weight:800;cursor:pointer;">Add</button>
-    <div style="margin-top:6px;color:var(--vv-gray);font-size:10px;">Each entry is saved separately. Reviewer findings remain unchanged.</div>
-  `;
-}
-
-function renderShipboardOpenReportDepartment(report, departmentId){
-  const container = document.getElementById('report-overall-content');
-  if(!container) return;
-
-  const section = SECTIONS.find(item => item.id === departmentId);
-  if(!section){
-    renderShipboardOpenReportDepartments(report);
-    return;
-  }
-
-  const points = getReportPoints(report, false).filter(point => point.section === section.title);
-  const checkedPoints = points.filter(point => Boolean(point.checked));
-  const uncheckedPoints = points.filter(point => !point.checked);
-  const generalComments = getDepartmentGeneralCommentsFromReport(report, section.id);
-  const meta = report?.report_data?.meta || {};
-
-  container.innerHTML = `
-    <div style="margin-bottom:16px;">
-      <button type="button" data-shipboard-back-departments
-        style="min-height:38px;margin-bottom:15px;padding:8px 13px;border:1px solid var(--vv-squid);border-radius:8px;background:#FFFFFF;color:var(--vv-squid);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;">
-        ← Back to Departments
-      </button>
-      <div style="color:var(--vv-squid);font-size:16px;font-weight:800;">${escapeHtml(section.title)}</div>
-      <div style="margin-top:6px;color:var(--vv-gray);font-size:11px;line-height:1.7;">
-        <b>Ship:</b> ${escapeHtml(report.ship || meta.ship || '')}<br>
-        <b>Visit:</b> ${escapeHtml(report.date_on || meta.dateOn || '')}
-        ${(report.date_off || meta.dateOff) ? ` → ${escapeHtml(report.date_off || meta.dateOff || '')}` : ''}<br>
-        <b>Reviewer:</b> ${escapeHtml(report.reviewer || meta.reviewer || '')}
-      </div>
-      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;">
-        <span style="display:inline-block;padding:6px 10px;border-radius:6px;background:#FCEBEC;color:#9D1010;font-size:11px;font-weight:800;">${checkedPoints.length} CHECKED</span>
-        <span style="display:inline-block;padding:6px 10px;border-radius:6px;background:#F0EDF3;color:#554760;font-size:11px;font-weight:800;">${uncheckedPoints.length} NOT YET CHECKED</span>
-      </div>
-      <div style="margin-top:12px;padding:12px;border:1px solid var(--vv-line);border-radius:9px;background:#FBFAFC;">
-        ${renderFocusBox(report, section.id, 'SHIP FOCUS REQUEST — ' + section.title, 'Add a request or focus area for this department...')}
-      </div>
-    </div>
-
-    ${generalComments.length ? `
-      <div style="margin-bottom:12px;padding:10px 12px;border-left:4px solid var(--vv-squid);border-radius:8px;background:#F8F5FA;">
-        <div style="color:var(--vv-squid);font-size:10px;font-weight:800;letter-spacing:.04em;">DEPARTMENT GENERAL COMMENTS</div>
-        ${generalComments.map(comment => `<div style="margin-top:7px;font-size:11px;line-height:1.5;color:var(--vv-body);"><strong>${escapeHtml(comment.name || 'Reviewer')}:</strong> ${escapeHtml(comment.text || '')}</div>`).join('')}
-      </div>
-    ` : ''}
-
-    <div style="margin:12px 0 8px;padding-bottom:6px;border-bottom:2px solid var(--vv-red);color:var(--vv-squid);font-size:13px;font-weight:800;">CHECKED POINTS${checkedPoints.length ? ` (${checkedPoints.length})` : ''}</div>
-    ${checkedPoints.length ? checkedPoints.map(point => renderSummaryPoint(point) + renderShipboardShipCommentField(point)).join('') : '<div class="empty" style="margin-bottom:12px;">No points have been checked in this department.</div>'}
-
-    <div style="margin:16px 0 8px;padding:9px 0 6px;border-bottom:1px dashed var(--vv-line);color:var(--vv-gray);font-size:12px;font-weight:800;">NOT YET CHECKED (${uncheckedPoints.length})</div>
-    ${uncheckedPoints.length ? uncheckedPoints.map(point => renderSummaryPoint(point) + renderShipboardShipCommentField(point)).join('') : '<div class="empty">All points in this department have been checked.</div>'}
-
-    <div style="position:sticky;bottom:8px;z-index:5;margin:18px 0 6px;padding:12px;border:1px solid var(--vv-line);border-radius:10px;background:#FFFFFF;box-shadow:0 4px 18px rgba(30,15,40,.12);">
-      <button type="button" data-save-shipboard-updates style="width:100%;min-height:44px;padding:11px 16px;border:0;border-radius:8px;background:var(--vv-squid);color:#fff;font:inherit;font-size:12px;font-weight:800;cursor:pointer;">SAVE SHIP COMMENTS AND FOCUS REQUEST</button>
-      <div data-shipboard-save-status role="status" aria-live="polite" style="margin-top:7px;text-align:center;font-size:11px;color:var(--vv-gray);"></div>
-    </div>
-  `;
-
-  const backButton = container.querySelector('[data-shipboard-back-departments]');
-  if(backButton){
-    backButton.addEventListener('click', () => renderShipboardOpenReportDepartments(report));
-  }
-
-  const findByAttr = (attr, key) =>
-    [...container.querySelectorAll(`[${attr}]`)].find(el => el.getAttribute(attr) === key) || null;
-  const localStatusFor = key => findByAttr('data-ship-comment-local-status', key);
-
-  /* ---------- ADD ONE NEW COMMENT (appends; never replaces earlier comments) ---------- */
-  container.querySelectorAll('[data-add-ship-comment-key]').forEach(button => {
-    button.addEventListener('click', async () => {
-      const key = button.dataset.addShipCommentKey;
-      const input = findByAttr('data-ship-comment-key', key);
-      const local = localStatusFor(key);
-      if(!input) return;
-      const text = input.value.trim();
-      if(!text){
-        if(local) local.textContent = 'Enter a comment before saving.';
-        input.focus();
-        return;
-      }
-      button.disabled = true;
-      button.textContent = 'Adding...';
-      if(local) local.textContent = 'Saving...';
-      try{
-        const saved = await saveShipboardCommentKeepingHistory(report, key, text, currentFocusValues(container));
-        applyShipboardItemToReport(report, key, saved.item);
-        await refreshShipboardPointFromServer(report, key);
-        // Redraw straight away: new comment appears in green, input is cleared.
-        rerenderShipboardDepartment(report, departmentId, key);
-        const freshLocal = document.querySelector(`#report-overall-content [data-ship-comment-local-status="${CSS.escape(key)}"]`);
-        if(freshLocal) freshLocal.textContent = 'Comment added.';
-      }catch(error){
-        console.error('Adding ship comment failed:', error);
-        button.disabled = false;
-        button.textContent = 'Add';
-        if(local) local.textContent = `Could not save comment: ${error?.message || 'Please try again.'}`;
-      }
-    });
-  });
-
-
-  /* ---------- DELETE ONE OF MY SHIPBOARD COMMENTS (the red X) ---------- */
-  container.querySelectorAll('[data-delete-green-ship-comment-key]').forEach(button => {
-    button.addEventListener('click', async () => {
-      const key = button.dataset.deleteGreenShipCommentKey;
-      const index = Number(button.dataset.shipCommentIndex);
-      const item = report?.report_data?.state?.[key] || {};
-      const entries = getShipComments(item);
-      if(!Number.isInteger(index) || index < 0 || index >= entries.length) return;
-      if(!window.confirm('Delete this ship comment?')) return;
-      button.disabled = true;
-      button.style.opacity = '0.5';
-      try{
-        const remaining = entries
-          .filter((_, i) => i !== index)
-          .map(entry => String(entry.text || '').trim())
-          .filter(Boolean);
-        const result = await saveShipboardOpenUpdates({
-          reportId: report.id,
-          comments: { [key]: remaining.join(SHIP_COMMENT_SEPARATOR) },
-          focusRequests: currentFocusValues(container),
-          photos: {}
-        });
-        if(!result?.success) throw (result?.error || new Error('Could not delete the comment.'));
-        // show the result straight away, then confirm with what the server really stored
-        applyShipboardItemToReport(report, key, {
-          shipComments: remaining.length
-            ? [{ name: entries[0]?.name || 'Ship', text: remaining.join(SHIP_COMMENT_SEPARATOR), timestamp: new Date().toISOString() }]
-            : [],
-          shipPhotos: item.shipPhotos || []
-        });
-        await refreshShipboardPointFromServer(report, key);
-        rerenderShipboardDepartment(report, departmentId, null);
-      }catch(error){
-        console.error('Deleting ship comment failed:', error);
-        button.disabled = false;
-        button.style.opacity = '';
-        alert(`Could not delete the comment: ${error?.message || 'Please try again.'}`);
-      }
-    });
-  });
-
-  /* ---------- DELETE ONE OF MY SHIPBOARD PHOTOS (the red X) ---------- */
-  container.querySelectorAll('[data-delete-ship-photo-key]').forEach(button => {
-    button.addEventListener('click', async event => {
-      event.stopPropagation();
-      const key = button.dataset.deleteShipPhotoKey;
-      const path = button.dataset.shipPhotoPath;
-      const item = report?.report_data?.state?.[key] || {};
-      const photos = Array.isArray(item.shipPhotos) ? item.shipPhotos : [];
-      const photo = photos.find(entry => photoPathOf(entry) === path);
-      if(!photo || !isMyShipPhoto(photo)){
-        alert('You can only delete photos that you added with your own login.');
-        return;
-      }
-      if(!window.confirm('Delete this photo?')) return;
-      button.disabled = true;
-      button.style.opacity = '0.5';
-      try{
-        await removeShipboardPhoto(report, key, path);
-        applyShipboardItemToReport(report, key, {
-          shipComments: item.shipComments || [],
-          shipPhotos: photos.filter(entry => photoPathOf(entry) !== path)
-        });
-        await refreshShipboardPointFromServer(report, key);
-        rerenderShipboardDepartment(report, departmentId, null);
-      }catch(error){
-        console.error('Deleting ship photo failed:', error);
-        button.disabled = false;
-        button.style.opacity = '';
-        alert(`Could not delete the photo: ${error?.message || 'Please try again.'}`);
-      }
-    });
-  });
-
-  /* ---------- SHIP FOCUS REQUEST: add / delete entries ---------- */
-  const saveFocusEntries = async (sectionId, entries) => {
-    const encoded = entries.map(entry => `${entry.name}${SHIP_FOCUS_AUTHOR_MARK}${entry.text}`).join(SHIP_COMMENT_SEPARATOR);
-    if(encoded.length > 3000){
-      throw new Error('The focus request is too long (3000 characters in total). Delete an older entry first.');
-    }
-    const result = await saveShipboardOpenUpdates({
-      reportId: report.id,
-      comments: {},
-      focusRequests: { [sectionId]: entries.length ? encoded : '' },
-      photos: {}
-    });
-    if(!result?.success) throw (result?.error || new Error('Could not save the focus request.'));
-    const stored = { ...(report.report_data?.shipFocusRequests || {}) };
-    if(result.data?.shipFocusRequests){
-      report.report_data = { ...(report.report_data || {}), shipFocusRequests: result.data.shipFocusRequests };
-    }else{
-      if(entries.length) stored[sectionId] = { text: encoded, name: currentAuthUserEmail, email: currentAuthUserEmail };
-      else delete stored[sectionId];
-      report.report_data = { ...(report.report_data || {}), shipFocusRequests: stored };
-    }
-  };
-
-  container.querySelectorAll('[data-add-ship-focus]').forEach(button => {
-    button.addEventListener('click', async () => {
-      const sectionId = button.dataset.addShipFocus;
-      const input = container.querySelector(`[data-ship-focus-section="${CSS.escape(sectionId)}"]`);
-      const text = String(input?.value || '').trim();
-      if(!text) return;
-      button.disabled = true;
-      try{
-        const entries = [
-          ...focusEntriesFrom(report?.report_data?.shipFocusRequests?.[sectionId]),
-          { name: currentAuthUserEmail, text }
-        ];
-        await saveFocusEntries(sectionId, entries);
-        if(input) input.value = '';
-        rerenderShipboardDepartment(report, departmentId, null);
-      }catch(error){
-        console.error('Adding ship focus request failed:', error);
-        button.disabled = false;
-        alert(`Could not save the focus request: ${error?.message || 'Please try again.'}`);
-      }
-    });
-  });
-
-  container.querySelectorAll('[data-delete-ship-focus]').forEach(button => {
-    button.addEventListener('click', async () => {
-      const sectionId = button.dataset.deleteShipFocus;
-      const index = Number(button.dataset.shipFocusIndex);
-      const entries = focusEntriesFrom(report?.report_data?.shipFocusRequests?.[sectionId]);
-      if(!Number.isInteger(index) || index < 0 || index >= entries.length) return;
-      if(String(entries[index].name || '').trim().toLowerCase() !== String(currentAuthUserEmail || '').toLowerCase()){
-        alert('You can only delete focus requests that you added with your own login.');
-        return;
-      }
-      if(!window.confirm('Delete this focus request?')) return;
-      button.disabled = true;
-      try{
-        await saveFocusEntries(sectionId, entries.filter((_, i) => i !== index));
-        rerenderShipboardDepartment(report, departmentId, null);
-      }catch(error){
-        console.error('Deleting ship focus request failed:', error);
-        button.disabled = false;
-        alert(`Could not delete the focus request: ${error?.message || 'Please try again.'}`);
-      }
-    });
-  });
-
-  /* ---------- BOTTOM SAVE BUTTON: sends any unsent comments + the focus request ---------- */
-  const saveButtons = [...container.querySelectorAll('[data-save-shipboard-updates]')];
-  const handleShipboardSave = async () => {
-    const status = container.querySelector('[data-shipboard-save-status]');
-    saveButtons.forEach(button => { button.disabled = true; button.textContent = 'SAVING...'; });
-    if(status) status.textContent = 'Saving...';
-    let appended = 0;
-    try{
-      for(const input of [...container.querySelectorAll('[data-ship-comment-key]')]){
-        const text = input.value.trim();
-        if(!text) continue;
-        const key = input.dataset.shipCommentKey;
-        const saved = await saveShipboardCommentKeepingHistory(report, key, text, currentFocusValues(container));
-        applyShipboardItemToReport(report, key, saved.item);
-        input.value = '';
-        appended++;
-      }
-
-      for(const input of [...container.querySelectorAll('[data-ship-focus-section]')]){
-        const text = input.value.trim();
-        if(!text) continue;
-        const sectionId = input.dataset.shipFocusSection;
-        const entries = [
-          ...focusEntriesFrom(report?.report_data?.shipFocusRequests?.[sectionId]),
-          { name: currentAuthUserEmail, text }
-        ];
-        await saveFocusEntries(sectionId, entries);
-        input.value = '';
-        appended++;
-      }
-      if(appended) rerenderShipboardDepartment(report, departmentId, null);
-      const freshStatus = document.querySelector('#report-overall-content [data-shipboard-save-status]');
-      if(freshStatus) freshStatus.textContent = 'Saved successfully';
-      else if(status) status.textContent = 'Saved successfully';
-    }catch(error){
-      console.error('Saving shipboard open updates failed:', error);
-      if(status) status.textContent = `Save failed: ${error?.message || 'Please try again.'}`;
-    }finally{
-      saveButtons.forEach(button => { button.disabled = false; button.textContent = 'SAVE SHIP COMMENTS AND FOCUS REQUEST'; });
-    }
-  };
-  saveButtons.forEach(button => button.addEventListener('click', handleShipboardSave));
-
-  container.querySelectorAll('[data-ship-comment-focus]').forEach(button => {
-    button.addEventListener('click', () => {
-      findByAttr('data-ship-comment-key', button.dataset.shipCommentFocus)?.focus();
-    });
-  });
-
-  /* ---------- PHOTO: same private bucket and same path logic as shoreside ---------- */
-  container.querySelectorAll('[data-ship-photo-notice]').forEach(button => {
-    button.addEventListener('click', () => {
-      const key = button.dataset.shipPhotoNotice;
-      const local = localStatusFor(key);
-      const picker = document.createElement('input');
-      picker.type = 'file';
-      picker.accept = 'image/jpeg,image/png,image/webp,image/gif';
-      picker.multiple = true;
-      picker.style.display = 'none';
-      document.body.appendChild(picker);
-
-      picker.addEventListener('change', async () => {
-        const files = Array.from(picker.files || []);
-        picker.remove();
-        if(!files.length) return;
-        try{
-          button.disabled = true;
-          for(let index = 0; index < files.length; index++){
-            const file = files[index];
-            if(local) local.textContent = `Uploading photo ${index + 1} of ${files.length}...`;
-            if(!/^image\/(jpeg|png|webp|gif)$/i.test(file.type)){
-              throw new Error(`${file.name}: choose a JPG, PNG, WEBP, or GIF image.`);
-            }
-            if(file.size > 12 * 1024 * 1024){
-              throw new Error(`${file.name}: each photo must be 12 MB or smaller.`);
-            }
-            const dataUrl = await new Promise((resolve, reject) => {
-              const reader = new FileReader();
-              reader.onload = () => resolve(String(reader.result || ''));
-              reader.onerror = () => reject(new Error(`Could not read ${file.name}.`));
-              reader.readAsDataURL(file);
-            });
-
-            const uploaded = await uploadPhotoDataUrl(report.id, key, dataUrl, file.name);
-            const photoRecord = {
-              storagePath: uploaded.storagePath,
-              path: uploaded.storagePath,
-              filename: `${currentAuthUserEmail}${SHIP_PHOTO_OWNER_MARK}${file.name}`.slice(0, 200),
-              contentType: uploaded.contentType || file.type,
-              uploadedAt: uploaded.uploadedAt || new Date().toISOString()
-            };
-
-            // Append (never replace) this photo to the point's shipboard photo list.
-            const saved = await saveShipboardOpenUpdates({
-              reportId: report.id,
-              comments: {},
-              focusRequests: currentFocusValues(container),
-              photos: { [key]: [photoRecord] }
-            });
-            if(!saved?.success) throw (saved?.error || new Error(`Uploaded ${file.name}, but could not attach it to the report.`));
-            // 1) show it immediately from what the save returned (or from what we just uploaded)
-            const existingItem = report?.report_data?.state?.[key] || {};
-            const returned = saved.data?.state?.[key];
-            let photoList = Array.isArray(returned?.shipPhotos) ? returned.shipPhotos : null;
-            if(!photoList){
-              photoList = [...(Array.isArray(existingItem.shipPhotos) ? existingItem.shipPhotos : []), photoRecord];
-            }
-            applyShipboardItemToReport(report, key, { shipComments: existingItem.shipComments || [], shipPhotos: photoList });
-            // 2) then read back exactly what the server stored, same as a reload would
-            await refreshShipboardPointFromServer(report, key);
-            // 3) safety net: the new file must be visible even if the server copy lags behind
-            const afterItem = report?.report_data?.state?.[key] || {};
-            const known = [...(afterItem.shipPhotos || []), ...(afterItem.photos || [])].map(photoPathOf);
-            if(!known.includes(photoRecord.storagePath)){
-              applyShipboardItemToReport(report, key, {
-                shipComments: afterItem.shipComments || [],
-                shipPhotos: [...(afterItem.shipPhotos || []), photoRecord]
-              });
-            }
-          }
-          rerenderShipboardDepartment(report, departmentId, null);
-          const freshLocal = document.querySelector(`#report-overall-content [data-ship-comment-local-status="${CSS.escape(key)}"]`);
-          if(freshLocal) freshLocal.textContent = files.length === 1 ? 'Photo added.' : `${files.length} photos added.`;
-        }catch(error){
-          console.error('Shipboard photo upload/save failed:', error);
-          if(local) local.textContent = `Photo upload failed: ${error?.message || 'Please try again.'}`;
-          button.disabled = false;
-        }
-      }, { once: true });
-
-      picker.click();
-    });
-  });
-
-  hydratePhotoElements(container);
-}
-
-
-function groupPoints(
-  points
-){
-
-  const groups =
-    [];
-
-
-  points.forEach(
-    point => {
-
-      let group =
-        groups.find(
-          entry =>
-            entry.section ===
-            point.section
-        );
-
-
-      if(
-        !group
-      ){
-
-        group = {
-
-          section:
-            point.section,
-
-          points:[]
-
-        };
-
-
-        groups.push(
-          group
-        );
-
-      }
-
-
-      group.points.push(
-        point
-      );
-
-    }
-  );
-
-
-  return groups;
-
-}
-
-
-function renderSummaryPoint(
-  point
-){
-
-  const completed =
-    point.followUpNeeded &&
-    point.shipComments.length >
-      0;
-
-  const pointChecked = Boolean(point.checked);
-  const markerBackground = pointChecked ? 'var(--vv-red)' : '#F0EDF3';
-  const markerColor = pointChecked ? '#FFFFFF' : '#655A70';
-
-
-  return `
-
-    <div
-      style="
-        margin-bottom:11px;
-        padding:12px;
-        border:1px solid var(--vv-line);
-        border-left:4px solid ${point.checked ? 'var(--vv-squid)' : '#9B91A2'};
-        border-radius:8px;
-        background:${point.checked ? '#FFFFFF' : '#F7F6F8'};
-      "
-    >
-
-      <div
-        style="
-          display:flex;
-          align-items:flex-start;
-          gap:8px;
-        "
-      >
-
-        <div
-          style="
-            width:22px;
-            height:22px;
-            flex:0 0 22px;
-            display:flex;
-            align-items:center;
-            justify-content:center;
-            border-radius:50%;
-            box-sizing:border-box;
-            border:${point.checked ? '0' : '2px solid #9B91A2'};
-            background:${point.checked ? 'var(--vv-red)' : '#FFFFFF'};
-            color:${point.checked ? '#FFFFFF' : '#9B91A2'};
-            font-size:11px;
-            font-weight:800;
-          "
-        >
-
-          ${point.checked ? '✓' : ''}
-
-        </div>
-
-
-        <div
-          style="
-            flex:1;
-            font-size:13px;
-            line-height:1.5;
-            font-weight:700;
-          "
-        >
-
-          ${escapeHtml(point.text)}
-          ${!point.checked ? '<span style="display:inline-block;margin-left:7px;padding:2px 6px;border-radius:4px;background:#ECE8F0;color:#6E6278;font-size:9px;font-weight:800;vertical-align:middle;">NOT CHECKED</span>' : ''}
-
-        </div>
-
-      </div>
-
-
-      ${
-        point.followUpNeeded
-          ? `
-
-            <div
-              style="
-                margin-top:9px;
-              "
-            >
-
-              <span
-                class="status ${
-                  completed
-                    ? 'green'
-                    : 'blue'
-                }"
-              >
-
-                ${
-                  completed
-                    ? 'SHIP FOLLOW-UP COMPLETED'
-                    : 'FOLLOW-UP NEEDED FROM SHIP'
-                }
-
-              </span>
-
-            </div>
-
-          `
-          : ''
-      }
-
-
-      ${
-        point.comments.length
-          ? `
-
-            <div
-              style="
-                margin-top:10px;
-              "
-            >
-
-              <div
-                class="response-label"
-              >
-
-                SHORESIDE COMMENTS
-
-              </div>
-
-
-              ${
-                point.comments
-                  .map(
-                    comment => `
-
-                      <div
-                        class="comment"
-                      >
-
-                        <strong>
-
-                          ${escapeHtml(
-                            comment.name ||
-                            'Reviewer'
-                          )}:
-
-                        </strong>
-
-
-                        <div
-                          style="
-                            margin-top:3px;
-                          "
-                        >
-
-                          ${escapeHtml(
-                            comment.text
-                          )}
-
-                        </div>
-
-                      </div>
-
-                    `
-                  )
-                  .join('')
-              }
-
-            </div>
-
-          `
-          : ''
-      }
-
-
-      ${
-        point.photos.length
-          ? `
-
-            <div
-              style="
-                margin-top:10px;
-              "
-            >
-
-              <div
-                class="response-label"
-              >
-
-                SHORESIDE PHOTOS
-
-              </div>
-
-
-              <div
-                class="response-photos"
-              >
-
-                ${
-                  point.photos
-                    .map(
-                      (photo, photoIndex) => `
-
-                        <div class="response-photo">
-                          <button type="button" class="response-photo-open" ${photoImageAttributes(photo, photoIndex)}>
-                            <span aria-hidden="true">▧</span>
-                            <span>${escapeHtml(responsePhotoFilename(photo, photoIndex))}</span>
-                            <span class="response-photo-hint">Click to preview</span>
-                          </button>
-                        </div>
-
-                      `
-                    )
-                    .join('')
-                }
-
-              </div>
-
-            </div>
-
-          `
-          : ''
-      }
-
-
-
-
-      ${
-        point.shipComments.length
-          ? `
-
-            <div
-              style="
-                margin-top:10px;
-              "
-            >
-
-              <div
-                class="response-label"
-                style="
-                  color:var(--status-green);
-                "
-              >
-
-                SHIPBOARD COMMENTS
-
-              </div>
-
-
-              ${
-                point.shipComments
-                  .map(
-                    (comment, commentIndex) => `
-
-                      <div
-                        class="ship-response-display"
-                        style="position:relative;padding-right:${isShipboard() && String(activeReportRecord?.status || 'open') === 'open' ? '38px' : '10px'};"
-                      >
-
-                        <strong>
-
-                          ${escapeHtml(
-                            comment.name
-                          )}:
-
-                        </strong>
-
-                        <div style="margin-top:3px;">
-                          ${escapeHtml(comment.text)}
-                        </div>
-                        ${isShipboard() && String(activeReportRecord?.status || 'open') === 'open' ? `
-                          <button type="button" data-delete-green-ship-comment-key="${escapeHtml(point.key)}" data-ship-comment-index="${commentIndex}"
-                            aria-label="Delete your ship comment" title="Delete your saved ship comment"
-                            style="position:absolute;top:7px;right:7px;width:24px;height:24px;border:1px solid #E4D8E8;border-radius:50%;background:#fff;color:#C41425;font-size:18px;line-height:1;font-weight:800;cursor:pointer;">×</button>
-                        ` : ''}
-                      </div>
-
-                    `
-                  )
-                  .join('')
-              }
-
-            </div>
-
-          `
-          : ''
-      }
-
-      ${
-        point.shipPhotos && point.shipPhotos.length
-          ? `
-            <div style="margin-top:10px;">
-              <div class="response-label" style="color:var(--status-green);">SHIPBOARD PHOTOS</div>
-              <div class="response-photos">
-                ${point.shipPhotos.map((photo, photoIndex) => {
-                  const mine = isShipboard() && isMyShipPhoto(photo) && String(activeReportRecord?.status || 'open') === 'open';
-                  return `
-                  <div class="response-photo" style="position:relative;">
-                    <button type="button" class="response-photo-open" ${mine ? 'style="padding-right:46px;"' : ''} ${photoImageAttributes(photo, photoIndex)}>
-                      <span aria-hidden="true">▧</span>
-                      <span>${escapeHtml(responsePhotoFilename(photo, photoIndex))}</span>
-                      <span class="response-photo-hint">Click to preview</span>
-                    </button>
-                    ${mine ? `
-                      <button type="button" data-delete-ship-photo-key="${escapeHtml(point.key)}" data-ship-photo-path="${escapeHtml(photoPathOf(photo))}"
-                        aria-label="Delete your photo" title="Delete your photo"
-                        style="position:absolute;top:50%;right:10px;transform:translateY(-50%);width:26px;height:26px;border:0;border-radius:50%;background:#E10A0A;color:#fff;font-size:17px;line-height:1;font-weight:800;cursor:pointer;">×</button>
-                    ` : ''}
-                  </div>
-                `;}).join('')}
-              </div>
-            </div>
-          `
-          : ''
-      }
-
-
-    </div>
-
-  `;
-
-}
-/* ============================================================
-   OPEN REPORTS
-============================================================ */
-
-async function loadOpenReportsScreen(){
-
-  const container =
-    document.getElementById(
-      'openList'
-    );
-
-
-  if(
-    !container
-  ){
-
-    return;
-
-  }
-
-
-  container.innerHTML = `
-
-    <div class="empty">
-
-      Loading open reports...
-
-    </div>
-
-  `;
-
-
-  try{
-
-    const result =
-      await withTimeout(
-        getOpenReports(),
-        15000,
-        'Loading open reports timed out.'
-      );
-
-
-    if(
-      !result ||
-      !result.success
-    ){
-
-      throw (
-        result?.error ||
-        new Error(
-          'Could not load open reports.'
-        )
-      );
-
-    }
-
-
-    const reports =
-      Array.isArray(
-        result.data
-      )
-        ? result.data
-        : [];
-
-
-    renderOpenReports(
-      container,
-      reports
-    );
-
-  }catch(error){
-
-    console.error(
-      'loadOpenReportsScreen:',
-      error
-    );
-
-
-    container.innerHTML = `
-
-      <div class="empty">
-
-        Could not load Open Reports.
-
-        <br><br>
-
-        ${escapeHtml(
-          error?.message ||
-          'Unknown error'
-        )}
-
-      </div>
-
-    `;
-
-  }
-
-}
-
-
-/* ============================================================
-   RENDER OPEN REPORTS
-============================================================ */
-
-function renderOpenReports(
-  container,
-  reports
-){
-
-  if(
-    reports.length ===
-    0
-  ){
-
-    container.innerHTML = `
-
-      <div class="empty">
-
-        No open reports.
-
-      </div>
-
-    `;
-
-
-    return;
-
-  }
-
-
-  container.innerHTML =
-    reports
-      .map(
-        report => `
-
-          <div
-            class="report-card red"
-          >
-
-            <h3>
-
-              ${escapeHtml(
-                report.ship ||
-                'Unnamed Ship'
-              )}
-
-            </h3>
-
-
-            <div
-              class="report-meta"
-              style="
-                line-height:1.7;
-              "
-            >
-
-              <b>Visit:</b>
-
-              ${escapeHtml(
-                report.date_on ||
-                ''
-              )}
-
-              ${
-                report.date_off
-                  ? ` → ${escapeHtml(
-                      report.date_off
-                    )}`
-                  : ''
-              }
-
-              <br>
-
-
-              <b>Reviewer:</b>
-
-              ${escapeHtml(
-                report.reviewer ||
-                ''
-              )}
-
-            </div>
-
-
-            <div
-              class="report-actions"
-            >
-
-              <button
-                type="button"
-                class="btn-primary"
-                data-open-report-id="${escapeHtml(
-                  report.id
-                )}"
-              >
-
-                ${canEditReport(report) ? 'OPEN REPORT' : 'VIEW REPORT'}
-
-              </button>
-
-            </div>
-
-            ${reportDeleteButton(
-              report
-            )}
-
-          </div>
-
-        `
-      )
-      .join('');
-
-
-  container
-    .querySelectorAll(
-      '[data-open-report-id]'
-    )
-    .forEach(
-      button => {
-
-        button.addEventListener(
-          'click',
-          async function(){
-
-            const report =
-              reports.find(
-                item =>
-                  String(
-                    item.id
-                  ) ===
-                  String(
-                    button.dataset.openReportId
-                  )
-              );
-
-
-            if(
-              report
-            ){
-
-              await openSavedReport(
-                report
-              );
-
-            }
-
-          }
-        );
-
-      }
-    );
-
-
-  bindAdminDeleteButtons();
-
-}
-
-
-/* ============================================================
-   READ-ONLY REPORT VIEW FOR STANDARD USERS
-============================================================ */
-
-async function openReadOnlyReport(report, returnScreen = 'submitted'){
-  try{
-    if(report?.id && !report?.report_data?.state){
-      const detailed = await withTimeout(
-        getReport(report.id),
-        60000,
-        'Loading report details timed out after 60 seconds.'
-      );
-      if(!detailed?.success || !detailed.data){
-        throw (detailed?.error || new Error('Could not load report details.'));
-      }
-      report = detailed.data;
-    }
-    currentSubmittedReport = report;
-    activeReportRecord = report;
-    // PDF/print templates can include the saved ship-side focus requests for this report.
-    window.__shipVisitShipFocusRequests = report?.report_data?.shipFocusRequests || {};
-  window.__shipVisitCanManageShipFocus = !isShipboard() && String(report?.status || 'open') === 'open';
-  window.__shipVisitActiveReportId = report?.id || null;
-    summaryReturnScreen = returnScreen;
-    loadReport(report);
-    const isShipboardOpenReport = isShipboard() && String(report?.status || 'open') === 'open';
-    if(isShipboardOpenReport){
-      // Normalize the report state against the active checklist without saving it.
-      // This ensures every current point is shown while preserving each stored checked flag.
-      const normalizedState = JSON.parse(JSON.stringify(getState() || {}));
-      const shipboardDisplayReport = {
-        ...report,
-        report_data: {
-          ...(report.report_data || {}),
-          state: normalizedState
-        }
-      };
-      renderShipboardOpenReportDepartments(shipboardDisplayReport);
-    }else{
-      renderCurrentReportSummary(report, false);
-    }
-    setSummaryMode(true);
-    const pdfBtn = document.getElementById('summaryPdfBtn');
-    if(pdfBtn){
-      pdfBtn.textContent = String(report?.status || 'open') === 'submitted' ? 'Save PDF' : 'Review Report';
-    }
-    showScreen('summary');
-  }catch(error){
-    console.error('openReadOnlyReport:', error);
-    showError('Could not open this report.', error);
-  }
-}
-
-
-/* ============================================================
-   OPEN SAVED REPORT
-============================================================ */
-
-async function openSavedReport(
-  report
-){
-
-  try{
-
-    if(report?.id && !report?.report_data?.state){
-      const detailed = await withTimeout(getReport(report.id), 60000, 'Loading report details timed out after 60 seconds.');
-      if(!detailed?.success || !detailed.data) throw (detailed?.error || new Error('Could not load report details.'));
-      report = detailed.data;
-    }
-
-    if(isShipboard() || isReviewer()){
-      await openReadOnlyReport(report, 'open');
-      return;
-    }
-
-    if(isReportUser() && !canEditReport(report)){
-      await openReadOnlyReport(report, 'open');
-      return;
-    }
-
-    activeReportRecord = report;
-    // Make the persisted ship focus requests available to checklist.js when
-    // a shoreside reviewer opens the report in the editable checklist view.
-    window.__shipVisitShipFocusRequests = report?.report_data?.shipFocusRequests || {};
-  window.__shipVisitCanManageShipFocus = !isShipboard() && String(report?.status || 'open') === 'open';
-  window.__shipVisitActiveReportId = report?.id || null;
-    loadReport(
-      report
-    );
-
-
-    currentSubmittedReport =
-      null;
-
-
-    checklistReturnScreen =
-      'open';
-
-
-    const checklist =
-      await getChecklistModule();
-
-
-    if(
-      !checklist
-    ){
-
-      return;
-
-    }
-
-
-    if(
-      typeof checklist.updateChecklistHeader ===
-      'function'
-    ){
-
-      checklist.updateChecklistHeader();
-
-    }
-
-
-    checklist.renderChecklist();
-
-
-    showScreen(
-      'checklist'
-    );
-
-  }catch(error){
-
-    console.error(
-      'openSavedReport:',
-      error
-    );
-
-
-    showError(
-      'Could not open this report.',
-      error
-    );
-
-  }
-
-}
-
-
-/* ============================================================
-   SHIP RESPONSE SCREEN
-============================================================ */
-
-async function loadShipResponsesScreen(){
-
-  const container =
-    document.getElementById(
-      'responseList'
-    );
-
-
-  if(
-    !container
-  ){
-
-    return;
-
-  }
-
-
-  /*
-    Render loading only inside the list.
-    Header and Back button remain fully active.
-  */
-
-  container.innerHTML = `
-
-    <div
-      class="empty"
-    >
-
-      Loading reports waiting for ship response...
-
-    </div>
-
-  `;
-
-
-  try{
-
-    const result =
-      await withTimeout(
-        getShipReviewReports(),
-        15000,
-        'Loading Ship Response reports timed out.'
-      );
-
-
-    if(
-      !result ||
-      !result.success
-    ){
-
-      throw (
-        result?.error ||
-        new Error(
-          'Could not load Ship Response reports.'
-        )
-      );
-
-    }
-
-
-    const reports =
-      Array.isArray(
-        result.data
-      )
-        ? result.data
-        : [];
-
-
-    renderShipResponseReports(
-      container,
-      reports
-    );
-
-  }catch(error){
-
-    console.error(
-      'loadShipResponsesScreen:',
-      error
-    );
-
-
-    container.innerHTML = `
-
-      <div
-        class="empty"
-      >
-
-        Could not load Ship Response reports.
-
-        <br><br>
-
-        ${escapeHtml(
-          error?.message ||
-          'Unknown error'
-        )}
-
-
-        <br><br>
-
-
-        <button
-          type="button"
-          class="btn-secondary"
-          id="retryShipResponsesBtn"
-        >
-
-          TRY AGAIN
-
-        </button>
-
-      </div>
-
-    `;
-
-
-    const retry =
-      document.getElementById(
-        'retryShipResponsesBtn'
-      );
-
-
-    if(
-      retry
-    ){
-
-      retry.addEventListener(
-        'click',
-        loadShipResponsesScreen
-      );
-
-    }
-
-  }
-
-}
-
-
-/* ============================================================
-   RENDER SHIP RESPONSE REPORTS
-============================================================ */
-
-function renderShipResponseReports(
-  container,
-  reports
-){
-
-  /*
-    The Ship Response landing page shows ONE CARD PER REPORT.
-    The full report is opened only after clicking OPEN REPORT.
-  */
-
-  /*
-    EVERY report sent to the ship must appear here.
-    A report does NOT need a Follow-Up Needed point
-    in order to require ship review and submission.
-  */
-
-  const waiting =
-    Array.isArray(reports)
-      ? reports
-      : [];
-
-
-  currentShipResponseReport =
+  currentDepartment =
     null;
 
 
-  if(
-    waiting.length ===
-    0
-  ){
-
-    container.innerHTML = `
-
-      <div class="empty">
-
-        No reports are currently waiting
-        for ship response.
-
-      </div>
-
-    `;
-
-
-    return;
-
-  }
-
-
-  container.innerHTML =
-    waiting
-      .map(
-        renderShipResponseReportCard
-      )
-      .join('');
-
-
-  bindShipResponseButtons();
-
-}
-
-
-/* ============================================================
-   SHIP RESPONSE REPORT CARD
-============================================================ */
-
-function renderShipResponseReportCard(
-  report
-){
-
-  return `
-
-    <div
-      class="report-card blue"
-    >
-
-      <h3>
-
-        ${escapeHtml(
-          report.ship ||
-          'Unnamed Ship'
-        )}
-
-      </h3>
-
-
-      <div
-        class="report-meta"
-        style="
-          line-height:1.7;
-        "
-      >
-
-        <b>Visit:</b>
-
-        ${escapeHtml(
-          report.date_on ||
-          ''
-        )}
-
-        ${
-          report.date_off
-            ? ` → ${escapeHtml(
-                report.date_off
-              )}`
-            : ''
-        }
-
-        <br>
-
-
-        <b>Reviewer:</b>
-
-        ${escapeHtml(
-          report.reviewer ||
-          ''
-        )}
-
-        <br>
-
-
-      </div>
-
-
-      <div
-        class="response-status"
-      >
-
-        ${isReportUser() ? 'IN REVIEW • READ ONLY' : 'IN REVIEW • OPEN TO ADD SHIP COMMENTS AND SUBMIT'}
-
-      </div>
-
-
-      <button
-        type="button"
-        class="btn-primary open-ship-response-report"
-        data-open-response-report-id="${escapeHtml(
-          report.id
-        )}"
-        style="
-          margin-top:12px;
-        "
-      >
-
-        ${isReportUser() ? 'VIEW REPORT' : 'OPEN REPORT'}
-
-      </button>
-
-
-      ${
-        canDeleteReport(report)
-          ? `
-
-            <button
-              type="button"
-              class="admin-delete"
-              data-response-delete-id="${escapeHtml(
-                report.id
-              )}"
-              style="
-                width:100%;
-                min-height:38px;
-                margin-top:8px;
-                padding:8px 10px;
-                border:1px solid #CC0000;
-                border-radius:7px;
-                background:#FFFFFF;
-                color:#CC0000;
-                font-family:inherit;
-                font-size:9px;
-                font-weight:800;
-                cursor:pointer;
-              "
-            >
-
-              DELETE REPORT
-
-            </button>
-
-          `
-          : ''
-      }
-
-    </div>
-
-  `;
-
-}
-
-
-/* ============================================================
-   OPEN FULL SHIP RESPONSE REPORT
-============================================================ */
-
-async function openShipResponseReport(
-  report
-){
-
-  if(report?.id && !report?.report_data?.state){
-    const detailed = await withTimeout(getReport(report.id), 60000, 'Loading report details timed out after 60 seconds.');
-    if(!detailed?.success || !detailed.data){
-      showError('Could not open the ship response report.', detailed?.error || null);
-      return;
-    }
-    report = detailed.data;
-  }
-
-  if(
-    !report
-  ){
-
-    return;
-
-  }
-
-
-  currentShipResponseReport =
-    report;
-
-
-  const container =
-    document.getElementById(
-      'responseList'
+  const progress =
+    getElement(
+      'progress'
     );
 
 
   if(
-    !container
+    progress
   ){
 
-    return;
+    progress.textContent =
+      '0 of 0 points reviewed';
 
   }
 
 
-  const points =
-    getReportPoints(
-      report,
-      true
-    );
-
-
-  container.innerHTML = `
-
-    <div
-      style="
-        margin-bottom:14px;
-      "
-    >
-
-      ${
-        shipResponseLinkMode
-          ? ''
-          : `
-            <button
-              type="button"
-              class="btn-secondary"
-              id="shipResponseListBackBtn"
-              style="
-                margin-bottom:12px;
-              "
-            >
-              ← Back to Reports
-            </button>
-          `
-      }
-
-
-      <div
-        class="report-card blue"
-        style="
-          margin-bottom:0;
-        "
-      >
-
-        <h3>
-
-          ${escapeHtml(
-            report.ship ||
-            'Unnamed Ship'
-          )}
-
-        </h3>
-
-
-        <div
-          class="report-meta"
-          style="
-            line-height:1.7;
-          "
-        >
-
-          <b>Visit:</b>
-
-          ${escapeHtml(
-            report.date_on ||
-            ''
-          )}
-
-          ${
-            report.date_off
-              ? ` → ${escapeHtml(
-                  report.date_off
-                )}`
-              : ''
-          }
-
-          <br>
-
-
-          <b>Reviewer:</b>
-
-          ${escapeHtml(
-            report.reviewer ||
-            ''
-          )}
-
-        </div>
-
-
-        <div
-          class="response-status"
-          style="
-            margin-top:9px;
-          "
-        >
-
-          FULL REPORT — SHIP RESPONSE
-
-        </div>
-
-      </div>
-
-    </div>
-
-
-    <div>
-
-      ${
-        SECTIONS
-          .map(
-            section => {
-
-              const sectionPoints =
-                points.filter(
-                  point =>
-                    point.section ===
-                    section.title
-                );
-
-
-              const generalComments =
-                getDepartmentGeneralCommentsFromReport(
-                  report,
-                  section.id
-                );
-
-
-              if(
-                sectionPoints.length === 0 &&
-                generalComments.length === 0
-              ){
-
-                return '';
-
-              }
-
-
-              return `
-
-                <div
-                  style="
-                    margin-top:20px;
-                  "
-                >
-
-                  <div
-                    style="
-                      margin-bottom:10px;
-                      padding-bottom:7px;
-                      border-bottom:2px solid var(--vv-red);
-                      color:var(--vv-squid);
-                      font-size:15px;
-                      font-weight:800;
-                    "
-                  >
-
-                    ${escapeHtml(
-                      section.title
-                    )}
-
-                  </div>
-
-
-                  ${
-                    generalComments.length
-                      ? `
-
-                        <div
-                          style="
-                            margin-bottom:10px;
-                            padding:10px 12px;
-                            border-left:4px solid var(--vv-squid);
-                            border-radius:8px;
-                            background:#F8F5FA;
-                          "
-                        >
-
-                          <div
-                            style="
-                              color:var(--vv-squid);
-                              font-size:9px;
-                              font-weight:800;
-                              letter-spacing:.04em;
-                            "
-                          >
-
-                            GENERAL COMMENTS
-
-                          </div>
-
-
-                          ${
-                            generalComments
-                              .map(
-                                comment => `
-
-                                  <div
-                                    style="
-                                      margin-top:7px;
-                                      font-size:11px;
-                                      line-height:1.5;
-                                      color:var(--vv-body);
-                                    "
-                                  >
-
-                                    <strong>
-                                      ${escapeHtml(
-                                        comment.name ||
-                                        'Reviewer'
-                                      )}:
-                                    </strong>
-
-                                    ${escapeHtml(
-                                      comment.text ||
-                                      ''
-                                    )}
-
-                                  </div>
-
-                                `
-                              )
-                              .join('')
-                          }
-
-                        </div>
-
-                      `
-                      : ''
-                  }
-
-
-                  ${
-                    sectionPoints
-                      .map(
-                        point =>
-                          renderShipResponsePoint(
-                            report.id,
-                            point
-                          )
-                      )
-                      .join('')
-                  }
-
-                </div>
-
-              `;
-
-            }
-          )
-          .join('')
-      }
-
-    </div>
-
-
-    <button
-      type="button"
-      class="btn-primary submit-ship-response"
-      data-response-report-id="${escapeHtml(
-        report.id
-      )}"
-      style="
-        margin-top:20px;
-      "
-    >
-
-      Submit Report
-
-    </button>
-
-
-    ${
-      isAdmin()
-        ? `
-
-          <button
-            type="button"
-            class="admin-delete"
-            data-response-delete-id="${escapeHtml(
-              report.id
-            )}"
-            style="
-              width:100%;
-              min-height:38px;
-              margin-top:8px;
-              padding:8px 10px;
-              border:1px solid #CC0000;
-              border-radius:7px;
-              background:#FFFFFF;
-              color:#CC0000;
-              font-family:inherit;
-              font-size:9px;
-              font-weight:800;
-              cursor:pointer;
-            "
-          >
-
-            DELETE REPORT
-
-          </button>
-
-        `
-        : ''
-    }
-
-  `;
-
-
-  const back =
-    document.getElementById(
-      'shipResponseListBackBtn'
+  const fill =
+    getElement(
+      'fill'
     );
 
 
   if(
-    back
+    fill
   ){
 
-    back.addEventListener(
-      'click',
-      async function(){
-
-        await loadShipResponsesScreen();
-
-      }
-    );
-
-  }
-
-
-  bindShipResponseButtons();
-
-  hydratePhotoElements(container);
-
-}
-
-
-/* ============================================================
-   SHIP RESPONSE POINT
-============================================================ */
-
-function renderShipResponsePoint(
-  reportId,
-  point
-){
-
-  return `
-
-    <div
-      class="response-point"
-      style="
-        margin-top:14px;
-        padding-top:14px;
-        border-top:1px solid var(--vv-line);
-      "
-    >
-
-      <div
-        class="response-section"
-      >
-
-        ${escapeHtml(
-          point.section
-        )}
-
-      </div>
-
-
-      <div
-        style="
-          margin-top:4px;
-          color:var(--vv-body);
-          font-size:13px;
-          line-height:1.45;
-          font-weight:700;
-        "
-      >
-
-        ${escapeHtml(
-          point.text
-        )}
-
-      </div>
-
-
-      <div
-        class="status ${
-          point.followUpNeeded
-            ? 'blue'
-            : 'green'
-        }"
-        style="
-          margin-top:7px;
-        "
-      >
-
-        ${
-          point.followUpNeeded
-            ? 'FOLLOW-UP NEEDED FROM SHIP'
-            : 'CHECKED — NO SHIP RESPONSE REQUIRED'
-        }
-
-      </div>
-
-
-      <!-- ORIGINAL REVIEWER COMMENT -->
-
-      ${
-        point.comments.length
-          ? `
-
-            <div
-              style="
-                margin-top:10px;
-              "
-            >
-
-              <div
-                class="response-label"
-              >
-
-                SHORESIDE COMMENTS
-
-              </div>
-
-
-              ${
-                point.comments
-                  .map(
-                    comment => `
-
-                      <div
-                        class="comment"
-                      >
-
-                        <strong>
-
-                          ${escapeHtml(
-                            comment.name ||
-                            'Reviewer'
-                          )}:
-
-                        </strong>
-
-
-                        <div
-                          style="
-                            margin-top:3px;
-                          "
-                        >
-
-                          ${escapeHtml(
-                            comment.text ||
-                            ''
-                          )}
-
-                        </div>
-
-                      </div>
-
-                    `
-                  )
-                  .join('')
-              }
-
-            </div>
-
-          `
-          : `
-
-            <div
-              style="
-                margin-top:8px;
-                color:var(--vv-gray);
-                font-size:9px;
-              "
-            >
-
-              No reviewer comment was entered.
-
-            </div>
-
-          `
-      }
-
-
-      <!-- ORIGINAL REVIEWER PHOTO -->
-
-      ${
-        point.photos.length
-          ? `
-
-            <div
-              style="
-                margin-top:10px;
-              "
-            >
-
-              <div
-                class="response-label"
-              >
-
-                SHORESIDE PHOTOS
-
-              </div>
-
-
-              <div
-                class="response-photos"
-              >
-
-                ${
-                  point.photos
-                    .map(
-                      (photo, photoIndex) => `
-
-                        <div class="response-photo">
-                          <button type="button" class="response-photo-open" ${photoImageAttributes(photo, photoIndex)}>
-                            <span aria-hidden="true">▧</span>
-                            <span>${escapeHtml(responsePhotoFilename(photo, photoIndex))}</span>
-                            <span class="response-photo-hint">Click to preview</span>
-                          </button>
-                        </div>
-
-                      `
-                    )
-                    .join('')
-                }
-
-              </div>
-
-            </div>
-
-          `
-          : ''
-      }
-
-
-
-
-      <!-- EXISTING SHIP RESPONSES -->
-
-      ${
-        point.shipComments.length
-          ? `
-
-            <div
-              style="
-                margin-top:10px;
-              "
-            >
-
-              <div
-                class="response-label"
-                style="
-                  color:var(--status-green);
-                "
-              >
-
-                SHIPBOARD COMMENTS
-
-              </div>
-
-
-              ${
-                point.shipComments
-                  .map(
-                    comment => `
-
-                      <div
-                        class="ship-response-display"
-                      >
-
-                        <strong>
-
-                          ${escapeHtml(
-                            comment.name ||
-                            'Ship'
-                          )}:
-
-                        </strong>
-
-
-                        <div
-                          style="
-                            margin-top:3px;
-                          "
-                        >
-
-                          ${escapeHtml(
-                            comment.text ||
-                            ''
-                          )}
-
-                        </div>
-
-                      </div>
-
-                    `
-                  )
-                  .join('')
-              }
-
-            </div>
-
-          `
-          : ''
-      }
-
-
-      ${
-        point.shipPhotos && point.shipPhotos.length
-          ? `
-            <div style="margin-top:10px;">
-              <div class="response-label">SHIPBOARD PHOTOS</div>
-              <div class="response-photos">
-                ${point.shipPhotos.map((photo, photoIndex) => `
-                  <div class="response-photo">
-                    <button type="button" class="response-photo-open" ${photoImageAttributes(photo, photoIndex)}>
-                      <span aria-hidden="true">▧</span>
-                      <span>${escapeHtml(responsePhotoFilename(photo, photoIndex))}</span>
-                      <span class="response-photo-hint">Click to preview</span>
-                    </button>
-                  </div>
-                `).join('')}
-              </div>
-            </div>
-          `
-          : ''
-      }
-
-
-      <!-- SHIP INPUT ONLY FOR FOLLOW-UP -->
-
-      ${
-        point.followUpNeeded
-          ? `
-
-            <div
-              class="field"
-              style="
-                margin-top:11px;
-                margin-bottom:0;
-              "
-            >
-
-              <label>
-
-                SHIP COMMENT
-
-              </label>
-
-
-              <textarea
-                class="ship-response-input"
-                data-response-report="${escapeHtml(
-                  reportId
-                )}"
-                data-response-key="${escapeHtml(
-                  point.key
-                )}"
-                placeholder="Enter ship response"
-              ></textarea>
-
-            </div>
-
-          `
-          : ''
-      }
-
-
-    </div>
-
-  `;
-
-}
-
-
-/* ============================================================
-   SHIP RESPONSE EVENTS
-============================================================ */
-
-function bindShipResponseButtons(){
-
-  document
-    .querySelectorAll(
-      '.open-ship-response-report'
-    )
-    .forEach(
-      button => {
-
-        if(
-          button.dataset.openResponseBound === 'true'
-        ){
-
-          return;
-
-        }
-
-
-        button.dataset.openResponseBound = 'true';
-
-        button.addEventListener(
-          'click',
-          async function(){
-
-            const reportId =
-              button.dataset.openResponseReportId;
-
-
-            const result =
-              await withTimeout(
-                getReport(reportId),
-                15000,
-                'Loading report timed out.'
-              );
-
-
-            if(
-              !result ||
-              !result.success ||
-              !result.data
-            ){
-
-              showError(
-                'Could not open this report.',
-                result?.error || null
-              );
-
-              return;
-
-            }
-
-
-            if(isReportUser()){
-              await openReadOnlyReport(result.data, 'responses');
-            }else{
-              openShipResponseReport(
-                result.data
-              );
-            }
-
-          }
-        );
-
-      }
-    );
-
-
-  document
-    .querySelectorAll(
-      '.submit-ship-response'
-    )
-    .forEach(
-      button => {
-
-        button.addEventListener(
-          'click',
-          async function(){
-
-            await submitShipResponseForReport(
-              button.dataset.responseReportId
-            );
-
-          }
-        );
-
-      }
-    );
-
-
-  document
-    .querySelectorAll(
-      '[data-response-delete-id]'
-    )
-    .forEach(
-      button => {
-
-        if(
-          button.dataset.adminDeleteBound === 'true'
-        ){
-
-          return;
-
-        }
-
-
-        button.dataset.adminDeleteBound = 'true';
-
-        button.addEventListener(
-          'click',
-          async function(
-            event
-          ){
-
-            event.stopPropagation();
-
-            await handleAdminDeleteReport(
-              button.dataset.responseDeleteId
-            );
-
-          }
-        );
-
-      }
-    );
-
-}
-
-
-/* ============================================================
-   DELETE SHIP RESPONSE REPORT
-============================================================ */
-
-async function deleteShipResponseReport(
-  reportId
-){
-
-  if(
-    !isAdmin()
-  ){
-
-    alert(
-      'Administrator access required.'
-    );
-
-
-    return;
-
-  }
-
-
-  if(
-    !reportId
-  ){
-
-    alert(
-      'Report ID is missing.'
-    );
-
-
-    return;
-
-  }
-
-
-  const confirmed =
-    window.confirm(
-      'Delete this report permanently?'
-    );
-
-
-  if(
-    !confirmed
-  ){
-
-    return;
-
-  }
-
-
-  try{
-
-    const module =
-      await import(
-        './supabase.js'
-      );
-
-
-    if(
-      typeof module.deleteReport !==
-      'function'
-    ){
-
-      throw new Error(
-        'deleteReport is not available in supabase.js.'
-      );
-
-    }
-
-
-    const result =
-      await withTimeout(
-        module.deleteReport(
-          reportId
-        ),
-        15000,
-        'Delete operation timed out.'
-      );
-
-
-    if(
-      !result ||
-      !result.success
-    ){
-
-      throw (
-        result?.error ||
-        new Error(
-          'Could not delete the report.'
-        )
-      );
-
-    }
-
-
-    showToast(
-      'REPORT DELETED'
-    );
-
-
-    await loadShipResponsesScreen();
-
-  }catch(error){
-
-    console.error(
-      'deleteShipResponseReport:',
-      error
-    );
-
-
-    showError(
-      'Could not delete the report.',
-      error
-    );
+    fill.style.width =
+      '0%';
 
   }
 
@@ -5688,1525 +3677,31 @@ async function deleteShipResponseReport(
 
 
 /* ============================================================
-   ADMIN DELETE HANDLER
+   EXPORT
 ============================================================ */
 
-function bindAdminDeleteButtons(){
+export default {
 
-  document
-    .querySelectorAll(
-      '[data-admin-delete]'
-    )
-    .forEach(
-      button => {
+  renderChecklist,
 
-        if(
-          button.dataset.adminDeleteBound === 'true'
-        ){
+  openDepartment,
 
-          return;
+  closeDepartment,
 
-        }
+  refreshChecklistUI,
 
+  updateChecklistHeader,
 
-        button.dataset.adminDeleteBound = 'true';
+  clearChecklistUI,
 
+  getChecklistCounts,
 
-        button.addEventListener(
-          'click',
-          async function(event){
+  getChecklistFollowUps,
 
-            event.stopPropagation();
+  getAllChecklistPoints,
 
-            await handleAdminDeleteReport(
-              button.dataset.adminDelete
-            );
+  saveChecklist,
 
-          }
-        );
-
-      }
-    );
-
-}
-
-
-async function handleAdminDeleteReport(
-  reportId
-){
-
-  if(!isAdmin() && !isReportUser()){
-    alert('You do not have permission to delete this report.');
-    return;
-  }
-
-
-  if(
-    !reportId
-  ){
-
-    alert(
-      'Report ID is missing.'
-    );
-
-    return;
-
-  }
-
-
-  if(
-    !window.confirm(
-      'Delete this report permanently?'
-    )
-  ){
-
-    return;
-
-  }
-
-
-  try{
-
-    const module =
-      await import(
-        './supabase.js'
-      );
-
-    if(!isAdmin()){
-      const ownerResult = await module.getReportOwnership(reportId);
-      const reportForAccessCheck = ownerResult?.data || null;
-      const isOwner = Boolean(
-        reportForAccessCheck?.created_by &&
-        String(reportForAccessCheck.created_by) === String(currentAuthUserId || '')
-      );
-      const isAssignedReviewer = isNamedReviewerForReport(reportForAccessCheck);
-      if(!ownerResult?.success || (!isOwner && !isAssignedReviewer)){
-        throw new Error('You can delete only a report you created or one assigned to you in the Reviewer field.');
-      }
-    }
-
-    if(
-      typeof module.deleteReport !==
-      'function'
-    ){
-
-      throw new Error(
-        'deleteReport is not available in supabase.js.'
-      );
-
-    }
-
-
-    const result =
-      await withTimeout(
-        module.deleteReport(reportId),
-        15000,
-        'Delete operation timed out.'
-      );
-
-
-    if(
-      !result ||
-      !result.success
-    ){
-
-      throw (
-        result?.error ||
-        new Error(
-          'Could not delete the report.'
-        )
-      );
-
-    }
-
-
-    showToast(
-      'REPORT DELETED'
-    );
-
-
-    await loadOpenReportsScreen();
-    await loadSubmittedReportsScreen();
-    await loadShipResponsesScreen();
-
-  }catch(error){
-
-    console.error(
-      'handleAdminDeleteReport:',
-      error
-    );
-
-
-    showError(
-      'Could not delete the report.',
-      error
-    );
-
-  }
-
-}
-
-
-/* ============================================================
-   SUBMIT SHIP RESPONSE
-============================================================ */
-
-async function submitShipResponseForReport(
-  reportId
-){
-
-  try{
-
-    const current =
-      await withTimeout(
-        getReport(
-          reportId
-        ),
-        15000,
-        'Loading report timed out.'
-      );
-
-
-    if(
-      !current ||
-      !current.success ||
-      !current.data
-    ){
-
-      throw (
-        current?.error ||
-        new Error(
-          'Could not load report.'
-        )
-      );
-
-    }
-
-
-    const newState =
-      JSON.parse(
-        JSON.stringify(
-          current.data
-            ?.report_data
-            ?.state ||
-          {}
-        )
-      );
-
-
-    const inputs =
-      document.querySelectorAll(
-        `[data-response-report="${cssEscape(
-          reportId
-        )}"]`
-      );
-
-
-    let added =
-      0;
-
-
-    inputs.forEach(
-      input => {
-
-        const text =
-          input.value.trim();
-
-
-        if(
-          !text
-        ){
-
-          return;
-
-        }
-
-
-        const key =
-          input.dataset.responseKey;
-
-
-        if(
-          !newState[key]
-        ){
-
-          return;
-
-        }
-
-
-        if(
-          !Array.isArray(
-            newState[key].shipComments
-          )
-        ){
-
-          newState[key].shipComments =
-            [];
-
-        }
-
-
-        newState[key].shipComments.push({
-
-          name:
-            'Ship',
-
-          text,
-
-          timestamp:
-            new Date().toISOString()
-
-        });
-
-
-        added++;
-
-      }
-    );
-
-
-    /*
-      Ship responses are required only for points
-      explicitly marked Follow-Up Needed.
-      A report with zero follow-ups can still be
-      submitted after the ship reviews the full report.
-    */
-
-    const incomplete =
-      Object.values(
-        newState
-      )
-      .filter(
-        item =>
-          item &&
-          item.checked &&
-          item.followUpNeeded &&
-          !(
-            Array.isArray(
-              item.shipComments
-            ) &&
-            item.shipComments.length >
-            0
-          )
-      );
-
-
-    if(
-      incomplete.length >
-      0
-    ){
-
-      alert(
-        `${incomplete.length} follow-up point(s) still need a ship response.`
-      );
-
-
-      return;
-
-    }
-
-
-    if(
-      !window.confirm(
-        'Submit Ship Response?\n\n' +
-        'The report will move to Submitted Reports.'
-      )
-    ){
-
-      return;
-
-    }
-
-
-    const result =
-      await withTimeout(
-        submitShipResponse({
-
-          reportId,
-
-          state:
-            newState
-
-        }),
-        15000,
-        'Submitting Ship Response timed out.'
-      );
-
-
-    if(
-      !result ||
-      !result.success
-    ){
-
-      throw (
-        result?.error ||
-        new Error(
-          'Could not submit Ship Response.'
-        )
-      );
-
-    }
-
-
-    showToast(
-      'SHIP RESPONSE SUBMITTED'
-    );
-
-
-    await loadShipResponsesScreen();
-
-  }catch(error){
-
-    console.error(
-      'submitShipResponseForReport:',
-      error
-    );
-
-
-    showError(
-      'Could not submit Ship Response.',
-      error
-    );
-
-  }
-
-}
-
-
-/* ============================================================
-   SUBMITTED REPORTS
-============================================================ */
-
-async function loadSubmittedReportsScreen(){
-
-  const container =
-    document.getElementById(
-      'reportList'
-    );
-
-
-  if(
-    !container
-  ){
-
-    return;
-
-  }
-
-
-  container.innerHTML = `
-
-    <div class="empty">
-
-      Loading submitted reports...
-
-    </div>
-
-  `;
-
-
-  try{
-
-    const result =
-      await withTimeout(
-        getSubmittedReports(),
-        15000,
-        'Loading submitted reports timed out.'
-      );
-
-
-    if(
-      !result ||
-      !result.success
-    ){
-
-      throw (
-        result?.error ||
-        new Error(
-          'Could not load submitted reports.'
-        )
-      );
-
-    }
-
-
-    const reports =
-      Array.isArray(
-        result.data
-      )
-        ? result.data
-        : [];
-
-
-    renderSubmittedReports(
-      container,
-      reports
-    );
-
-  }catch(error){
-
-    console.error(
-      'loadSubmittedReportsScreen:',
-      error
-    );
-
-
-    container.innerHTML = `
-
-      <div class="empty">
-
-        Could not load Submitted Reports.
-
-        <br><br>
-
-        ${escapeHtml(
-          error?.message ||
-          'Unknown error'
-        )}
-
-      </div>
-
-    `;
-
-  }
-
-}
-
-
-/* ============================================================
-   RENDER SUBMITTED REPORTS
-============================================================ */
-
-function renderSubmittedReports(
-  container,
-  reports
-){
-
-  if(
-    reports.length ===
-    0
-  ){
-
-    container.innerHTML = `
-
-      <div class="empty">
-
-        No submitted reports.
-
-      </div>
-
-    `;
-
-
-    return;
-
-  }
-
-
-  /*
-    Three cards across on desktop comes from
-    #reportList CSS.
-  */
-
-  container.innerHTML =
-    reports
-      .map(
-        report => `
-
-          <div
-            class="submitted-card"
-          >
-
-            <h2>
-
-              ${escapeHtml(
-                report.ship ||
-                'Unnamed Ship'
-              )}
-
-            </h2>
-
-
-            <p>
-
-              <b>Visit:</b>
-
-              ${escapeHtml(
-                report.date_on ||
-                ''
-              )}
-
-              ${
-                report.date_off
-                  ? ` → ${escapeHtml(
-                      report.date_off
-                    )}`
-                  : ''
-              }
-
-            </p>
-
-
-            <p>
-
-              <b>Reviewer:</b>
-
-              ${escapeHtml(
-                report.reviewer ||
-                ''
-              )}
-
-            </p>
-
-
-            <p>
-
-              <b>Submitted:</b>
-
-              ${formatSubmittedDate(
-                report.submitted_at ||
-                report.updated_at
-              )}
-
-            </p>
-
-
-            <div
-              class="submitted-status"
-              style="
-                margin-top:5px;
-              "
-            >
-
-              SUBMITTED
-
-            </div>
-
-
-            <button
-              type="button"
-              class="btn-primary"
-              data-submitted-review-id="${escapeHtml(
-                report.id
-              )}"
-              style="
-                margin-top:12px;
-              "
-            >
-
-              ${(isReportUser() || isShipboard()) ? 'VIEW REPORT' : 'REVIEW REPORT'}
-
-            </button>
-
-            ${reportDeleteButton(
-              report
-            )}
-
-          </div>
-
-        `
-      )
-      .join('');
-
-
-  container
-    .querySelectorAll(
-      '[data-submitted-review-id]'
-    )
-    .forEach(
-      button => {
-
-        button.addEventListener(
-          'click',
-          async function(){
-
-            const report =
-              reports.find(
-                item =>
-                  String(
-                    item.id
-                  ) ===
-                  String(
-                    button.dataset.submittedReviewId
-                  )
-              );
-
-
-            if(
-              report
-            ){
-
-              await openSubmittedReport(
-                report
-              );
-
-            }
-
-          }
-        );
-
-      }
-    );
-
-
-  bindAdminDeleteButtons();
-
-}
-
-
-/* ============================================================
-   OPEN SUBMITTED REPORT
-============================================================ */
-
-let submittedPdfUrl = '';
-let submittedPdfToken = 0;
-
-/* Submitted reports: the page is the finished PDF, with every comment and photo. */
-async function renderSubmittedReportPdf(container, report, opts = {}){
-  const token = ++submittedPdfToken;
-  container.innerHTML = `
-    <div style="padding:24px;text-align:center;color:var(--vv-squid);font-weight:800;font-size:14px;">
-      Preparing the report PDF with all photos…
-      <div style="margin-top:6px;font-weight:400;font-size:12px;color:var(--vv-gray);">
-        This can take a moment when the report has many photos.
-      </div>
-    </div>`;
-  try{
-    const pdf = await getPDFModule();
-    if(!pdf) throw new Error('The PDF module could not be loaded.');
-    const meta = {
-      ...(report?.report_data?.meta || {}),
-      ship: report?.ship || report?.report_data?.meta?.ship || '',
-      dateOn: report?.date_on || report?.report_data?.meta?.dateOn || '',
-      dateOff: report?.date_off || report?.report_data?.meta?.dateOff || '',
-      reviewer: report?.reviewer || report?.report_data?.meta?.reviewer || ''
-    };
-    const result = await pdf.generatePDF({
-      preview: true,
-      state: report?.report_data?.state || {},
-      meta
-    });
-    if(token !== submittedPdfToken) return;
-    if(!result || !result.url) throw new Error('The PDF could not be created.');
-    if(submittedPdfUrl) URL.revokeObjectURL(submittedPdfUrl);
-    submittedPdfUrl = result.url;
-    container.innerHTML = `
-      <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:10px;">
-        <div style="color:var(--vv-squid);font-size:15px;font-weight:800;">${escapeHtml(opts.title || 'SUBMITTED REPORT')} — ${escapeHtml(meta.ship)}</div>
-        <div style="display:flex;gap:8px;">
-          ${opts.onBack ? '<button type="button" id="reportPdfBackBtn" style="padding:8px 12px;border:1px solid #D9CFE0;border-radius:8px;background:#fff;color:var(--vv-squid);font-size:12px;font-weight:800;cursor:pointer;">← BACK TO POINTS</button>' : ''}
-          <a href="${submittedPdfUrl}" target="_blank" rel="noopener"
-             style="padding:8px 12px;border:1px solid #D9CFE0;border-radius:8px;background:#fff;color:var(--vv-squid);font-size:12px;font-weight:800;text-decoration:none;">OPEN IN NEW TAB</a>
-          <a href="${submittedPdfUrl}" download="${escapeHtml(result.fileName || 'Ship_Visit_Report.pdf')}"
-             style="padding:8px 12px;border:1px solid #D9CFE0;border-radius:8px;background:#fff;color:var(--vv-squid);font-size:12px;font-weight:800;text-decoration:none;">DOWNLOAD PDF</a>
-        </div>
-      </div>
-      <iframe src="${submittedPdfUrl}" title="Submitted report PDF"
-        style="width:100%;height:80vh;min-height:480px;border:1px solid #E7E1EA;border-radius:8px;background:#fff;"></iframe>`;
-    const backBtn = document.getElementById('reportPdfBackBtn');
-    if(backBtn && opts.onBack) backBtn.addEventListener('click', opts.onBack);
-  }catch(error){
-    console.error('Submitted report PDF failed:', error);
-    if(token !== submittedPdfToken) return;
-    container.innerHTML = `
-      <div style="padding:18px;border:1px solid #E10A0A;border-radius:8px;color:#C41425;font-size:13px;line-height:1.5;">
-        <b>The PDF could not be prepared.</b><br>${escapeHtml(error?.message || 'Unknown error')}
-      </div>`;
-  }
-}
-
-
-async function openSubmittedReport(
-  report
-){
-
-  try{
-
-    if(report?.id && !report?.report_data?.state){
-      const detailed = await withTimeout(getReport(report.id), 60000, 'Loading report details timed out after 60 seconds.');
-      if(!detailed?.success || !detailed.data) throw (detailed?.error || new Error('Could not load submitted report details.'));
-      report = detailed.data;
-    }
-
-    currentSubmittedReport =
-      report;
-
-
-    summaryReturnScreen =
-      'submitted';
-
-
-    loadReport(
-      report
-    );
-
-
-    const container =
-      document.getElementById(
-        'report-overall-content'
-      );
-
-
-    if(
-      container
-    ){
-
-      // Submitted reports are shown as the finished PDF only (all photos included).
-      renderSubmittedReportPdf(container, report);
-
-    }
-
-
-    setSummaryMode(
-      true
-    );
-
-
-    showScreen(
-      'summary'
-    );
-
-  }catch(error){
-
-    console.error(
-      'openSubmittedReport:',
-      error
-    );
-
-
-    showError(
-      'Could not open the submitted report.',
-      error
-    );
-
-  }
-
-}
-
-
-/* ============================================================
-   FOLLOW-UP VIEW
-============================================================ */
-
-async function openSubmittedFollowUps(
-  report
-){
-
-  try{
-
-    if(report?.id && !report?.report_data?.state){
-      const detailed = await withTimeout(getReport(report.id), 60000, 'Loading report details timed out after 60 seconds.');
-      if(!detailed?.success || !detailed.data) throw (detailed?.error || new Error('Could not load report details.'));
-      report = detailed.data;
-    }
-
-    currentSubmittedReport =
-      report;
-
-
-    loadReport(
-      report
-    );
-
-
-    const container =
-      document.getElementById(
-        'report-followups-content'
-      );
-
-
-    if(
-      !container
-    ){
-
-      return;
-
-    }
-
-
-    const points =
-      getReportPoints(
-        report,
-        true
-      )
-      .filter(
-        point =>
-          point.followUpNeeded
-      );
-
-
-    if(
-      points.length ===
-      0
-    ){
-
-      container.innerHTML = `
-
-        <div class="empty">
-
-          No Follow-Up Needed points.
-
-        </div>
-
-      `;
-
-
-      showScreen(
-        'followups'
-      );
-
-
-      return;
-
-    }
-
-
-    container.innerHTML =
-      points
-        .map(
-          renderSummaryPoint
-        )
-        .join('');
-
-
-    showScreen(
-      'followups'
-    );
-
-  }catch(error){
-
-    console.error(
-      'openSubmittedFollowUps:',
-      error
-    );
-
-
-    showError(
-      'Could not open follow-up points.',
-      error
-    );
-
-  }
-
-}
-
-
-/* ============================================================
-   FOLLOW-UP BUTTON
-============================================================ */
-
-function bindFollowUpButtons(){
-
-  bindClick(
-    'followupPdfBtn',
-    async function(){
-
-      if(
-        !currentSubmittedReport
-      ){
-
-        alert(
-          'No report selected.'
-        );
-
-
-        return;
-
-      }
-
-
-      const pdf =
-        await getPDFModule();
-
-
-      if(
-        !pdf
-      ){
-
-        return;
-
-      }
-
-
-      try{
-
-        pdf.generateFollowUpPDF(
-          currentSubmittedReport
-        );
-
-      }catch(error){
-
-        console.error(
-          'followupPdfBtn:',
-          error
-        );
-
-
-        showError(
-          'Could not save Follow-Up PDF.',
-          error
-        );
-
-      }
-
-    }
-  );
-
-}
-
-
-/* ============================================================
-   PDF
-============================================================ */
-
-function bindPDFButtons(){
-
-  bindClick(
-    'pdfBtn',
-    async function(){
-
-      const pdf =
-        await getPDFModule();
-
-
-      if(
-        !pdf
-      ){
-
-        return;
-
-      }
-
-
-      try{
-
-        await pdf.generatePDF();
-
-      }catch(error){
-
-        console.error(
-          'pdfBtn:',
-          error
-        );
-
-
-        showError(
-          'Could not save PDF.',
-          error
-        );
-
-      }
-
-    }
-  );
-
-}
-
-
-/* ============================================================
-   HEADER BACK BUTTONS
-============================================================ */
-
-function bindHeaderBackButtons(){
-
-  /*
-    These are bound during initial application startup.
-    They do NOT wait for database calls.
-  */
-
-  bindClick(
-    'setupHeaderBack',
-    function(){
-
-      showScreen(
-        'home'
-      );
-
-    }
-  );
-
-
-  bindClick(
-    'checklistHeaderBack',
-    async function(){
-
-      if(
-        checklistReturnScreen ===
-        'open'
-      ){
-
-        showScreen(
-          'open'
-        );
-
-
-        await loadOpenReportsScreen();
-
-
-        return;
-
-      }
-
-
-      showScreen(
-        'home'
-      );
-
-    }
-  );
-
-
-  bindClick(
-    'reviewHeaderBack',
-    async function(){
-
-      await returnToChecklist();
-
-    }
-  );
-
-
-  bindClick(
-    'summaryHeaderBack',
-    async function(){
-      if(summaryReturnScreen === 'submitted'){
-        showScreen('submitted');
-        await loadSubmittedReportsScreen();
-        return;
-      }
-      if(summaryReturnScreen === 'open'){
-        showScreen('open');
-        await loadOpenReportsScreen();
-        return;
-      }
-      if(summaryReturnScreen === 'responses'){
-        showScreen('responses');
-        await loadShipResponsesScreen();
-        return;
-      }
-      showScreen('checklist');
-    }
-  );
-
-
-  bindClick(
-    'followupsHeaderBack',
-    async function(){
-
-      showScreen(
-        'submitted'
-      );
-
-
-      await loadSubmittedReportsScreen();
-
-    }
-  );
-
-
-  /*
-    THIS IS THE RED BACK BUTTON IN SHIP RESPONSE.
-    It is deliberately bound directly during initialization.
-  */
-
-  bindClick(
-    'responsesHeaderBack',
-    function(){
-
-      if(
-        shipResponseLinkMode
-      ){
-
-        return;
-
-      }
-
-      showScreen(
-        'home'
-      );
-
-    }
-  );
-
-
-  bindClick(
-    'openHeaderBack',
-    function(){
-
-      showScreen(
-        'home'
-      );
-
-    }
-  );
-
-
-  bindClick(
-    'submittedHeaderBack',
-    function(){
-
-      showScreen(
-        'home'
-      );
-
-    }
-  );
-
-}
-
-
-/* ============================================================
-   ADMIN
-============================================================ */
-
-function bindAdminButton(){
-  const button = document.getElementById('adminButton');
-  if(!button || button.dataset.authBound === 'true') return;
-  button.dataset.authBound = 'true';
-  button.addEventListener('click', async function(){
-    if(!window.confirm('Sign out of Ship Visit Report?')) return;
-    try{ await signOutUser(); }
-    catch(error){ console.error('Sign out failed:', error); }
-    currentAppRole = null;
-    currentAuthUserId = null;
-    currentAuthUserEmail = '';
-    activeReportRecord = null;
-    adminMode = false;
-    shipResponseLinkMode = false;
-    currentSubmittedReport = null;
-    currentShipResponseReport = null;
-    const email = document.getElementById('loginEmail');
-    if(email) email.value = '';
-    const password = document.getElementById('loginPassword');
-    if(password) password.value = '';
-    showLoginMessage('');
-    showScreen('login');
-  });
-}
-
-function updateAdminButton(){
-  const button = document.getElementById('adminButton');
-  if(button){
-    button.textContent = 'SIGN OUT';
-    button.style.background = '#FFFFFF';
-    button.style.color = '#3C1053';
-    button.style.borderColor = '#3C1053';
-    button.style.display = currentAppRole ? '' : 'none';
-  }
-  applyRoleUI();
-}
-
-function restoreAdminMode(){
-  // Access is determined by Supabase Auth and app_user_roles, never sessionStorage.
-  adminMode = isAdmin();
-}
-
-function bindPhotoMigrationButton(){
-  const button = document.getElementById('migratePhotosButton');
-  if(!button || button.dataset.bound === 'true') return;
-  button.dataset.bound = 'true';
-  button.textContent = 'OPTIMIZE PHOTOS FOR CLICK-TO-LOAD';
-  button.addEventListener('click', async function(){
-    if(!isAdmin()){
-      alert('Administrator access required.');
-      return;
-    }
-    const defaultId = '9a36fd0b-2bfd-4ced-af6b-abbbd9e640f2';
-    const reportId = window.prompt('Enter the open report ID whose embedded photos should be optimized for click-to-load:', defaultId);
-    if(!reportId) return;
-    if(!window.confirm('Move embedded photos into private, access-controlled photo records and replace the large image data in the report with small references? After this, each photo is fetched only when clicked. This change is transactional; continue?')) return;
-    const oldText = button.textContent;
-    button.disabled = true;
-    button.textContent = 'OPTIMIZING PHOTOS…';
-    try{
-      const result = await migrateEmbeddedPhotosToStorage(reportId.trim(), progress => {
-        button.textContent = 'OPTIMIZING PHOTOS…';
-      });
-      if(!result?.success) throw (result?.error || new Error('Photo migration failed.'));
-      alert(`${result.migrated} photo(s) prepared for click-to-load. The report now stores small references rather than full image data. Reopen the report, click several photos, and verify the PDF before making other changes.`);
-      await loadOpenReportsScreen();
-    }catch(error){
-      console.error('Legacy photo migration failed:', error);
-      alert('Photo migration failed. The original report data was kept.\n\n' + (error?.message || 'Unknown error'));
-    }finally{
-      button.disabled = false;
-      button.textContent = 'OPTIMIZE PHOTOS FOR CLICK-TO-LOAD';
-    }
-  });
-}
-
-
-/* ============================================================
-   UTILITIES
-============================================================ */
-
-function formatSubmittedDate(
-  value
-){
-
-  if(
-    !value
-  ){
-
-    return '';
-
-  }
-
-
-  try{
-
-    return new Date(
-      value
-    ).toLocaleString();
-
-  }catch(
-    _error
-  ){
-
-    return String(
-      value
-    );
-
-  }
-
-}
-
-
-function cssEscape(
-  value
-){
-
-  const text =
-    String(
-      value ?? ''
-    );
-
-
-  if(
-    window.CSS &&
-    typeof window.CSS.escape ===
-    'function'
-  ){
-
-    return window.CSS.escape(
-      text
-    );
-
-  }
-
-
-  return text.replace(
-    /(["\\])/g,
-    '\\$1'
-  );
-
-}
-
-
-function withTimeout(
-  promise,
-  milliseconds,
-  message
-){
-
-  let timer = null;
-
-
-  const timeout =
-    new Promise(
-      (
-        _resolve,
-        reject
-      ) => {
-
-        timer =
-          setTimeout(
-            function(){
-
-              reject(
-                new Error(
-                  message
-                )
-              );
-
-            },
-            milliseconds
-          );
-
-      }
-    );
-
-
-  return Promise.race(
-    [
-      promise,
-      timeout
-
-    ]
-  )
-  .finally(
-    function(){
-
-      if(
-        timer
-      ){
-
-        clearTimeout(
-          timer
-        );
-
-      }
-
-    }
-  );
-
-}
-
-
-function escapeHtml(
-  value
-){
-
-  return String(
-    value ?? ''
-  ).replace(
-    /[&<>"']/g,
-    function(character){
-
-      const map = {
-
-        '&':'&amp;',
-
-        '<':'&lt;',
-
-        '>':'&gt;',
-
-        '"':'&quot;',
-
-        "'":'&#39;'
-
-      };
-
-
-      return map[
-        character
-      ];
-
-    }
-  );
-
-}
-
-
-function showError(
-  message,
-  error = null
-){
-
-  console.error(
-    message,
-    error
-  );
-
-
-  alert(
-    message +
-    (
-      error?.message
-        ? `\n\n${error.message}`
-        : ''
-    )
-  );
-
-}
-
-
-function showToast(
-  message
-){
-
-  if(
-    typeof window.showToast ===
-    'function'
-  ){
-
-    window.showToast(
-      message
-    );
-
-
-    return;
-
-  }
-
-
-  console.log(
-    message
-  );
-
-}
-
-
-/* ============================================================
-   GLOBAL ERROR LOGGING
-============================================================ */
-
-window.addEventListener(
-  'error',
-  function(
-    event
-  ){
-
-    console.error(
-      'Ship Visit Report error:',
-      event.error ||
-      event.message
-    );
-
-  }
-);
-
-
-window.addEventListener(
-  'unhandledrejection',
-  function(
-    event
-  ){
-
-    console.error(
-      'Ship Visit Report promise error:',
-      event.reason
-    );
-
-  }
-);
-
-
-/* ============================================================
-   EXPORTS
-============================================================ */
-
-export {
-
-  getChecklistModule,
-
-  getReviewModule,
-
-  getPDFModule,
-
-  saveCurrentReport,
-
-  loadOpenReportsScreen,
-
-  loadSubmittedReportsScreen,
-
-  loadShipResponsesScreen,
-
-  openSavedReport,
-
-  openSubmittedReport,
-
-  openSubmittedFollowUps
+  setChecklistChangedCallback
 
 };
