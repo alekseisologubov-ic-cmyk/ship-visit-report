@@ -6284,6 +6284,61 @@ function renderSubmittedReports(
    OPEN SUBMITTED REPORT
 ============================================================ */
 
+let submittedPdfUrl = '';
+let submittedPdfToken = 0;
+
+/* Submitted reports: the page is the finished PDF, with every comment and photo. */
+async function renderSubmittedReportPdf(container, report){
+  const token = ++submittedPdfToken;
+  container.innerHTML = `
+    <div style="padding:24px;text-align:center;color:var(--vv-squid);font-weight:800;font-size:14px;">
+      Preparing the report PDF with all photos…
+      <div style="margin-top:6px;font-weight:400;font-size:12px;color:var(--vv-gray);">
+        This can take a moment when the report has many photos.
+      </div>
+    </div>`;
+  try{
+    const pdf = await getPDFModule();
+    if(!pdf) throw new Error('The PDF module could not be loaded.');
+    const meta = {
+      ...(report?.report_data?.meta || {}),
+      ship: report?.ship || report?.report_data?.meta?.ship || '',
+      dateOn: report?.date_on || report?.report_data?.meta?.dateOn || '',
+      dateOff: report?.date_off || report?.report_data?.meta?.dateOff || '',
+      reviewer: report?.reviewer || report?.report_data?.meta?.reviewer || ''
+    };
+    const result = await pdf.generatePDF({
+      preview: true,
+      state: report?.report_data?.state || {},
+      meta
+    });
+    if(token !== submittedPdfToken) return;
+    if(!result || !result.url) throw new Error('The PDF could not be created.');
+    if(submittedPdfUrl) URL.revokeObjectURL(submittedPdfUrl);
+    submittedPdfUrl = result.url;
+    container.innerHTML = `
+      <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div style="color:var(--vv-squid);font-size:15px;font-weight:800;">SUBMITTED REPORT — ${escapeHtml(meta.ship)}</div>
+        <div style="display:flex;gap:8px;">
+          <a href="${submittedPdfUrl}" target="_blank" rel="noopener"
+             style="padding:8px 12px;border:1px solid #D9CFE0;border-radius:8px;background:#fff;color:var(--vv-squid);font-size:12px;font-weight:800;text-decoration:none;">OPEN IN NEW TAB</a>
+          <a href="${submittedPdfUrl}" download="${escapeHtml(result.fileName || 'Ship_Visit_Report.pdf')}"
+             style="padding:8px 12px;border:1px solid #D9CFE0;border-radius:8px;background:#fff;color:var(--vv-squid);font-size:12px;font-weight:800;text-decoration:none;">DOWNLOAD PDF</a>
+        </div>
+      </div>
+      <iframe src="${submittedPdfUrl}" title="Submitted report PDF"
+        style="width:100%;height:80vh;min-height:480px;border:1px solid #E7E1EA;border-radius:8px;background:#fff;"></iframe>`;
+  }catch(error){
+    console.error('Submitted report PDF failed:', error);
+    if(token !== submittedPdfToken) return;
+    container.innerHTML = `
+      <div style="padding:18px;border:1px solid #E10A0A;border-radius:8px;color:#C41425;font-size:13px;line-height:1.5;">
+        <b>The PDF could not be prepared.</b><br>${escapeHtml(error?.message || 'Unknown error')}
+      </div>`;
+  }
+}
+
+
 async function openSubmittedReport(
   report
 ){
@@ -6319,14 +6374,8 @@ async function openSubmittedReport(
       container
     ){
 
-      // FINAL SUBMITTED REPORTS show checked findings only.
-      // This keeps reviewer comments, attached photos, follow-up flags, and
-      // ship response comments attached to checked points, while fully omitting
-      // unchecked points and their point-level details from the final view.
-      renderCurrentReportSummary(
-        report,
-        false
-      );
+      // Submitted reports are shown as the finished PDF only (all photos included).
+      renderSubmittedReportPdf(container, report);
 
     }
 
