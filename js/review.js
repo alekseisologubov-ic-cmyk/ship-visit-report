@@ -33,6 +33,17 @@ import { generatePDF } from './pdf.js';
 
 let callbacks = { sentToShip: null };
 
+// Only the person who created the report may submit it.
+async function isReportCreator(createdBy){
+  try{
+    const { data } = await supabase.auth.getUser();
+    const uid = data?.user?.id || '';
+    return Boolean(uid && createdBy && String(createdBy) === String(uid));
+  }catch(_error){
+    return false;
+  }
+}
+
 export function setReviewCallbacks(newCallbacks = {}){
   callbacks = { ...callbacks, ...newCallbacks };
 }
@@ -150,18 +161,28 @@ export async function renderShipReview(){
         style="width:100%;height:78vh;min-height:480px;border:1px solid #E7E1EA;border-radius:8px;background:#fff;"></iframe>
     `;
 
+    const creator = await isReportCreator(stored?.created_by);
+    if(token !== renderToken) return;
+
     if(bottom){
-      bottom.innerHTML = `
+      bottom.innerHTML = creator ? `
         <div style="padding:14px;background:var(--vv-bg);border-radius:8px;">
           <div style="color:var(--vv-squid);font-size:14px;font-weight:800;">READY TO SUBMIT</div>
           <div style="margin-top:5px;color:var(--vv-gray);font-size:11px;line-height:1.5;">
             After submitting, this report leaves Open Reports and appears in Submitted Reports.
           </div>
         </div>
+      ` : `
+        <div style="padding:14px;background:var(--vv-bg);border-radius:8px;">
+          <div style="color:var(--vv-squid);font-size:14px;font-weight:800;">REVIEW ONLY</div>
+          <div style="margin-top:5px;color:var(--vv-gray);font-size:11px;line-height:1.5;">
+            Only the person who created this report can submit it.
+          </div>
+        </div>
       `;
     }
 
-    setSubmitButton(true, 'SUBMIT REPORT');
+    setSubmitButton(creator, creator ? 'SUBMIT REPORT' : 'ONLY THE CREATOR CAN SUBMIT');
 
   }catch(error){
 
@@ -224,6 +245,16 @@ export async function sendCurrentReportToShip(){
   const reportId = getReportId();
   if(!reportId){
     alert('No active report was found.');
+    return false;
+  }
+
+  const { data: ownerRow } = await supabase
+    .from('ship_visit_reports')
+    .select('created_by')
+    .eq('id', reportId)
+    .maybeSingle();
+  if(!(await isReportCreator(ownerRow?.created_by))){
+    alert('Only the person who created this report can submit it.');
     return false;
   }
 
