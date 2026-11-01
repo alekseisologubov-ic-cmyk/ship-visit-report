@@ -107,8 +107,6 @@ import {
   signOutUser,
   getPhotoDisplayUrl,
   uploadPhotoDataUrl,
-  deleteStoragePhoto,
-  supabase,
   migrateEmbeddedPhotosToStorage
 } from './supabase.js';
 
@@ -131,26 +129,6 @@ function splitShipCommentText(text){
     .split(SHIP_COMMENT_SEPARATOR)
     .map(part => part.trim())
     .filter(Boolean);
-}
-
-// Every entry carries the login email of the person who wrote it, so each comment keeps
-// its own author even though the database stores one combined text per point.
-const SHIP_AUTHOR_MARK = '\u2064';
-function encodeShipEntry(author, text){
-  return `${String(author || '').trim()}${SHIP_AUTHOR_MARK}${String(text || '').trim()}`;
-}
-function decodeShipEntry(part, fallbackName){
-  const at = part.indexOf(SHIP_AUTHOR_MARK);
-  if(at > 0){
-    return { name: part.slice(0, at).trim() || fallbackName, text: part.slice(at + 1).trim() };
-  }
-  return { name: fallbackName, text: part.trim() };
-}
-function isMyShipComment(comment){
-  return Boolean(
-    currentAuthUserEmail &&
-    String(comment?.name || '').trim().toLowerCase() === String(currentAuthUserEmail).trim().toLowerCase()
-  );
 }
 
 function responsePhotoFilename(photo, index = 0){
@@ -2509,12 +2487,10 @@ function getShipComments(
       )
       .flatMap(
         comment =>
-          splitShipCommentText(comment.text).map(part => {
-            const decoded = decodeShipEntry(part, comment.name);
-            return { ...comment, name: decoded.name, text: decoded.text };
-          })
-      )
-      .filter(comment => comment.text);
+          splitShipCommentText(comment.text).map(
+            part => ({ ...comment, text: part })
+          )
+      );
 
   }
 
@@ -2916,10 +2892,8 @@ function applyShipboardItemToReport(report, pointKey, item){
 // Returns the point's updated ship fields.
 async function saveShipboardCommentKeepingHistory(report, pointKey, newText, focusRequests){
   const existingItem = report?.report_data?.state?.[pointKey] || {};
-  const previous = getShipComments(existingItem)
-    .filter(c => String(c.text || '').trim())
-    .map(c => encodeShipEntry(c.name, c.text));
-  const combinedText = [...previous, encodeShipEntry(currentAuthUserEmail, newText)].join(SHIP_COMMENT_SEPARATOR);
+  const previous = getShipComments(existingItem).map(c => String(c.text || '').trim()).filter(Boolean);
+  const combinedText = [...previous, newText].join(SHIP_COMMENT_SEPARATOR);
   const result = await saveShipboardOpenUpdates({
     reportId: report.id,
     comments: { [pointKey]: combinedText },
@@ -2964,57 +2938,6 @@ async function refreshShipboardPointFromServer(report, pointKey){
     console.warn('Could not refresh point from server:', error);
     return false;
   }
-}
-
-/* ---------- WHO ADDED A SHIPBOARD PHOTO ----------
-   New photos carry uploadedBy = login e-mail. Photos added earlier from this browser are
-   recognised from a small per-user list kept in this browser. */
-function myShipPhotosStorageKey(){
-  return `ship-my-photos:${String(currentAuthUserEmail || '').toLowerCase()}`;
-}
-function readMyShipPhotoPaths(){
-  try{ return JSON.parse(localStorage.getItem(myShipPhotosStorageKey()) || '[]'); }catch(error){ return []; }
-}
-function rememberMyShipPhoto(path){
-  if(!path || !currentAuthUserEmail) return;
-  try{
-    const list = readMyShipPhotoPaths();
-    if(!list.includes(path)){ list.push(path); localStorage.setItem(myShipPhotosStorageKey(), JSON.stringify(list.slice(-500))); }
-  }catch(error){ /* optional convenience only */ }
-}
-function isMyShipPhoto(photo){
-  if(!photo || typeof photo !== 'object' || !currentAuthUserEmail) return false;
-  const me = String(currentAuthUserEmail).trim().toLowerCase();
-  const by = String(photo.uploadedBy || photo.uploaded_by || '').trim().toLowerCase();
-  if(by) return by === me;
-  // Older photos have no recorded owner: let shipboard users remove them so they are not stuck.
-  return true;
-}
-
-// Removes one photo record through the delete_report_photo_reference function, then the file itself.
-async function removeShipboardPhoto(report, pointKey, storagePath){
-  const { data: stored, error: readError } = await supabase
-    .from('ship_visit_reports')
-    .select('report_data')
-    .eq('id', report.id)
-    .eq('status', 'open')
-    .maybeSingle();
-  if(readError) throw readError;
-  const reportData = stored?.report_data;
-  const point = reportData?.state?.[pointKey];
-  if(!point || !Array.isArray(point.shipPhotos)) throw new Error('The photo was not found on this report.');
-  const photoIndex = point.shipPhotos.findIndex(photo => photoPathOf(photo) === storagePath);
-  if(photoIndex < 0) throw new Error('The photo was not found on this report.');
-
-  const { data: result, error: rpcError } = await supabase.rpc('delete_report_photo_reference', {
-    p_report_id: report.id,
-    p_point_key: pointKey,
-    p_photo_type: 'shipPhotos',
-    p_photo_index: photoIndex
-  });
-  if(rpcError) throw rpcError;
-  if(result && result.success === false) throw new Error('The photo could not be removed from the report.');
-  try{ await deleteStoragePhoto(storagePath); }catch(error){ console.warn('Photo file could not be removed from storage:', error); }
 }
 
 function photoPathOf(photo){
@@ -3253,18 +3176,14 @@ function renderShipboardOpenReportDepartment(report, departmentId){
       const item = report?.report_data?.state?.[key] || {};
       const entries = getShipComments(item);
       if(!Number.isInteger(index) || index < 0 || index >= entries.length) return;
-      if(!isMyShipComment(entries[index])){
-        alert('You can only delete comments that you added with your own login.');
-        return;
-      }
       if(!window.confirm('Delete this ship comment?')) return;
       button.disabled = true;
       button.style.opacity = '0.5';
       try{
         const remaining = entries
           .filter((_, i) => i !== index)
-          .filter(entry => String(entry.text || '').trim())
-          .map(entry => encodeShipEntry(entry.name, entry.text));
+          .map(entry => String(entry.text || '').trim())
+          .filter(Boolean);
         const result = await saveShipboardOpenUpdates({
           reportId: report.id,
           comments: { [key]: remaining.join(SHIP_COMMENT_SEPARATOR) },
@@ -3286,39 +3205,6 @@ function renderShipboardOpenReportDepartment(report, departmentId){
         button.disabled = false;
         button.style.opacity = '';
         alert(`Could not delete the comment: ${error?.message || 'Please try again.'}`);
-      }
-    });
-  });
-
-  /* ---------- DELETE ONE OF MY SHIPBOARD PHOTOS (the red X) ---------- */
-  container.querySelectorAll('[data-delete-ship-photo-key]').forEach(button => {
-    button.addEventListener('click', async event => {
-      event.stopPropagation();
-      const key = button.dataset.deleteShipPhotoKey;
-      const path = button.dataset.shipPhotoPath;
-      const item = report?.report_data?.state?.[key] || {};
-      const photos = Array.isArray(item.shipPhotos) ? item.shipPhotos : [];
-      const photo = photos.find(entry => photoPathOf(entry) === path);
-      if(!photo || !isMyShipPhoto(photo)){
-        alert('You can only delete photos that you added with your own login.');
-        return;
-      }
-      if(!window.confirm('Delete this photo?')) return;
-      button.disabled = true;
-      button.style.opacity = '0.5';
-      try{
-        await removeShipboardPhoto(report, key, path);
-        applyShipboardItemToReport(report, key, {
-          shipComments: item.shipComments || [],
-          shipPhotos: photos.filter(entry => photoPathOf(entry) !== path)
-        });
-        await refreshShipboardPointFromServer(report, key);
-        rerenderShipboardDepartment(report, departmentId, null);
-      }catch(error){
-        console.error('Deleting ship photo failed:', error);
-        button.disabled = false;
-        button.style.opacity = '';
-        alert(`Could not delete the photo: ${error?.message || 'Please try again.'}`);
       }
     });
   });
@@ -3419,10 +3305,8 @@ function renderShipboardOpenReportDepartment(report, departmentId){
               path: uploaded.storagePath,
               filename: uploaded.filename || file.name,
               contentType: uploaded.contentType || file.type,
-              uploadedAt: uploaded.uploadedAt || new Date().toISOString(),
-              uploadedBy: currentAuthUserEmail
+              uploadedAt: uploaded.uploadedAt || new Date().toISOString()
             };
-            rememberMyShipPhoto(photoRecord.storagePath);
 
             // Append (never replace) this photo to the point's shipboard photo list.
             const saved = await saveShipboardOpenUpdates({
@@ -3776,7 +3660,7 @@ function renderSummaryPoint(
 
                       <div
                         class="ship-response-display"
-                        style="position:relative;padding-right:${isShipboard() && isMyShipComment(comment) && String(activeReportRecord?.status || 'open') === 'open' ? '38px' : '10px'};"
+                        style="position:relative;padding-right:${isShipboard() && String(activeReportRecord?.status || 'open') === 'open' ? '38px' : '10px'};"
                       >
 
                         <strong>
@@ -3790,7 +3674,7 @@ function renderSummaryPoint(
                         <div style="margin-top:3px;">
                           ${escapeHtml(comment.text)}
                         </div>
-                        ${isShipboard() && isMyShipComment(comment) && String(activeReportRecord?.status || 'open') === 'open' ? `
+                        ${isShipboard() && String(activeReportRecord?.status || 'open') === 'open' ? `
                           <button type="button" data-delete-green-ship-comment-key="${escapeHtml(point.key)}" data-ship-comment-index="${commentIndex}"
                             aria-label="Delete your ship comment" title="Delete your saved ship comment"
                             style="position:absolute;top:7px;right:7px;width:24px;height:24px;border:1px solid #E4D8E8;border-radius:50%;background:#fff;color:#C41425;font-size:18px;line-height:1;font-weight:800;cursor:pointer;">×</button>
@@ -3814,22 +3698,15 @@ function renderSummaryPoint(
             <div style="margin-top:10px;">
               <div class="response-label" style="color:var(--status-green);">SHIPBOARD PHOTOS</div>
               <div class="response-photos">
-                ${point.shipPhotos.map((photo, photoIndex) => {
-                  const mine = isShipboard() && isMyShipPhoto(photo) && String(activeReportRecord?.status || 'open') === 'open';
-                  return `
-                  <div class="response-photo" style="position:relative;">
-                    <button type="button" class="response-photo-open" ${mine ? 'style="padding-right:46px;"' : ''} ${photoImageAttributes(photo, photoIndex)}>
+                ${point.shipPhotos.map((photo, photoIndex) => `
+                  <div class="response-photo">
+                    <button type="button" class="response-photo-open" ${photoImageAttributes(photo, photoIndex)}>
                       <span aria-hidden="true">▧</span>
                       <span>${escapeHtml(responsePhotoFilename(photo, photoIndex))}</span>
                       <span class="response-photo-hint">Click to preview</span>
                     </button>
-                    ${mine ? `
-                      <button type="button" data-delete-ship-photo-key="${escapeHtml(point.key)}" data-ship-photo-path="${escapeHtml(photoPathOf(photo))}"
-                        aria-label="Delete your photo" title="Delete your photo"
-                        style="position:absolute;top:50%;right:10px;transform:translateY(-50%);width:26px;height:26px;border:0;border-radius:50%;background:#E10A0A;color:#fff;font-size:17px;line-height:1;font-weight:800;cursor:pointer;">×</button>
-                    ` : ''}
                   </div>
-                `;}).join('')}
+                `).join('')}
               </div>
             </div>
           `
