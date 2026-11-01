@@ -1917,6 +1917,25 @@ function bindSummaryButtons(){
       }
 
 
+      // Open / in-review reports: REVIEW REPORT shows the full PDF (shipboard + shoreside,
+      // all points and photos) right here, with a way back to the points.
+      if(String(currentSubmittedReport?.status || 'open') !== 'submitted'){
+        try{
+          const fresh = currentSubmittedReport?.id ? await getReport(currentSubmittedReport.id) : null;
+          const reportForPdf = fresh?.success && fresh.data ? fresh.data : currentSubmittedReport;
+          loadReport(reportForPdf);
+          const container = document.getElementById('report-overall-content');
+          if(!container) return;
+          const back = () => openReadOnlyReport(reportForPdf, summaryReturnScreen);
+          await renderSubmittedReportPdf(container, reportForPdf, { title: 'REVIEW REPORT', onBack: back });
+        }catch(error){
+          console.error('summaryPdfBtn review:', error);
+          showError('Could not open the review.', error);
+        }
+        return;
+      }
+
+
       const pdf =
         await getPDFModule();
 
@@ -4205,6 +4224,10 @@ async function openReadOnlyReport(report, returnScreen = 'submitted'){
       renderCurrentReportSummary(report, false);
     }
     setSummaryMode(true);
+    const pdfBtn = document.getElementById('summaryPdfBtn');
+    if(pdfBtn){
+      pdfBtn.textContent = String(report?.status || 'open') === 'submitted' ? 'Save PDF' : 'Review Report';
+    }
     showScreen('summary');
   }catch(error){
     console.error('openReadOnlyReport:', error);
@@ -6288,7 +6311,7 @@ let submittedPdfUrl = '';
 let submittedPdfToken = 0;
 
 /* Submitted reports: the page is the finished PDF, with every comment and photo. */
-async function renderSubmittedReportPdf(container, report){
+async function renderSubmittedReportPdf(container, report, opts = {}){
   const token = ++submittedPdfToken;
   container.innerHTML = `
     <div style="padding:24px;text-align:center;color:var(--vv-squid);font-weight:800;font-size:14px;">
@@ -6318,8 +6341,9 @@ async function renderSubmittedReportPdf(container, report){
     submittedPdfUrl = result.url;
     container.innerHTML = `
       <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:10px;">
-        <div style="color:var(--vv-squid);font-size:15px;font-weight:800;">SUBMITTED REPORT — ${escapeHtml(meta.ship)}</div>
+        <div style="color:var(--vv-squid);font-size:15px;font-weight:800;">${escapeHtml(opts.title || 'SUBMITTED REPORT')} — ${escapeHtml(meta.ship)}</div>
         <div style="display:flex;gap:8px;">
+          ${opts.onBack ? '<button type="button" id="reportPdfBackBtn" style="padding:8px 12px;border:1px solid #D9CFE0;border-radius:8px;background:#fff;color:var(--vv-squid);font-size:12px;font-weight:800;cursor:pointer;">← BACK TO POINTS</button>' : ''}
           <a href="${submittedPdfUrl}" target="_blank" rel="noopener"
              style="padding:8px 12px;border:1px solid #D9CFE0;border-radius:8px;background:#fff;color:var(--vv-squid);font-size:12px;font-weight:800;text-decoration:none;">OPEN IN NEW TAB</a>
           <a href="${submittedPdfUrl}" download="${escapeHtml(result.fileName || 'Ship_Visit_Report.pdf')}"
@@ -6328,6 +6352,8 @@ async function renderSubmittedReportPdf(container, report){
       </div>
       <iframe src="${submittedPdfUrl}" title="Submitted report PDF"
         style="width:100%;height:80vh;min-height:480px;border:1px solid #E7E1EA;border-radius:8px;background:#fff;"></iframe>`;
+    const backBtn = document.getElementById('reportPdfBackBtn');
+    if(backBtn && opts.onBack) backBtn.addEventListener('click', opts.onBack);
   }catch(error){
     console.error('Submitted report PDF failed:', error);
     if(token !== submittedPdfToken) return;
