@@ -128,7 +128,26 @@ const pendingShipboardPhotos = new Map();
 const SHIP_COMMENT_SEPARATOR = '\n\u2063\n';
 // Shipboard photo file names are stored as  <login email> + mark + <file name>  so the
 // uploader survives the database save. The e-mail part is hidden when names are shown.
-const SHIP_PHOTO_OWNER_MARK = '\u2064';
+const SHIP_PHOTO_OWNER_MARK = '⁤';
+
+// Ship Focus Requests: several entries per department are kept in one text, separated by the
+// invisible comment separator, each starting with the login email of whoever wrote it.
+const SHIP_FOCUS_AUTHOR_MARK = '⁤';
+function focusEntriesFrom(value){
+  const text = typeof value === 'string' ? value : (value?.text || '');
+  const fallback = (value && typeof value === 'object') ? (value.email || value.name || 'Ship') : 'Ship';
+  return splitShipCommentText(text).map(part => {
+    const at = part.indexOf(SHIP_FOCUS_AUTHOR_MARK);
+    if(at > 0) return { name: part.slice(0, at).trim() || fallback, text: part.slice(at + 1).trim() };
+    return { name: fallback, text: part.trim() };
+  }).filter(entry => entry.text);
+}
+function focusDisplayText(value){
+  const raw = typeof value === 'string' ? value : (value?.text || '');
+  const entries = focusEntriesFrom(value);
+  if(entries.length === 1 && !raw.includes(SHIP_FOCUS_AUTHOR_MARK)) return entries[0].text;
+  return entries.map(entry => `${entry.name}: ${entry.text}`).join('\n');
+}
 function splitShipCommentText(text){
   return String(text ?? '')
     .split(SHIP_COMMENT_SEPARATOR)
@@ -2783,7 +2802,7 @@ function renderCurrentReportSummary(
       const entries = Object.entries(requests).map(([sectionId, value]) => ({
         sectionId,
         section: SECTIONS.find(item => item.id === sectionId)?.title || sectionId,
-        text: typeof value === 'string' ? value : (value?.text || ''),
+        text: focusDisplayText(value),
         name: typeof value === 'object' && value ? (value.name || value.email || 'Ship') : 'Ship'
       })).filter(item => String(item.text || '').trim());
       if(!entries.length) return '';
@@ -2912,11 +2931,8 @@ async function saveShipboardCommentKeepingHistory(report, pointKey, newText, foc
 }
 
 function currentFocusValues(container){
-  const focus = {};
-  container.querySelectorAll('[data-ship-focus-section]').forEach(input => {
-    focus[input.dataset.shipFocusSection] = input.value.trim();
-  });
-  return focus;
+  // The focus box is now only a draft for a NEW entry; stored requests are changed by Add / delete.
+  return {};
 }
 
 
@@ -3139,11 +3155,23 @@ function renderShipboardOpenReportDepartment(report, departmentId){
         <span style="display:inline-block;padding:6px 10px;border-radius:6px;background:#F0EDF3;color:#554760;font-size:11px;font-weight:800;">${uncheckedPoints.length} NOT YET CHECKED</span>
       </div>
       <div style="margin-top:12px;padding:12px;border:1px solid var(--vv-line);border-radius:9px;background:#FBFAFC;">
-        <label for="ship-focus-${escapeHtml(section.id)}" style="display:block;margin-bottom:6px;color:var(--vv-squid);font-size:11px;font-weight:800;">SHIP FOCUS REQUEST — ${escapeHtml(section.title)}</label>
+        <div style="margin-bottom:8px;color:var(--vv-squid);font-size:11px;font-weight:800;">SHIP FOCUS REQUEST — ${escapeHtml(section.title)}</div>
+        ${focusEntriesFrom(report?.report_data?.shipFocusRequests?.[section.id]).map((entry, entryIndex) => {
+          const mine = isShipboard() && String(entry.name || '').trim().toLowerCase() === String(currentAuthUserEmail || '').toLowerCase();
+          return `<div style="position:relative;margin-bottom:8px;padding:8px ${mine ? '38px' : '10px'} 8px 10px;border-left:3px solid #079455;border-radius:6px;background:#EAF8F0;">
+            <div style="font-size:11px;font-weight:800;color:#087443;">${escapeHtml(entry.name)}:</div>
+            <div style="margin-top:3px;font-size:12px;line-height:1.5;white-space:pre-wrap;">${escapeHtml(entry.text)}</div>
+            ${mine ? `<button type="button" data-delete-ship-focus="${escapeHtml(section.id)}" data-ship-focus-index="${entryIndex}"
+              aria-label="Delete your focus request" title="Delete your focus request"
+              style="position:absolute;top:7px;right:7px;width:24px;height:24px;border:1px solid #E4D8E8;border-radius:50%;background:#fff;color:#C41425;font-size:18px;line-height:1;font-weight:800;cursor:pointer;">×</button>` : ''}
+          </div>`;
+        }).join('')}
         <textarea id="ship-focus-${escapeHtml(section.id)}" data-ship-focus-section="${escapeHtml(section.id)}" rows="2" maxlength="3000"
           placeholder="Add a request or focus area for this department..."
-          style="width:100%;box-sizing:border-box;padding:9px;border:1px solid var(--vv-line);border-radius:6px;font:inherit;font-size:12px;resize:vertical;">${escapeHtml((() => { const v = report?.report_data?.shipFocusRequests?.[section.id]; return typeof v === 'string' ? v : (v?.text || ''); })())}</textarea>
-        <div style="margin-top:6px;color:var(--vv-gray);font-size:10px;">Only shipboard comments and focus requests are saved; reviewer findings remain unchanged.</div>
+          style="width:100%;box-sizing:border-box;padding:9px;border:1px solid var(--vv-line);border-radius:6px;font:inherit;font-size:12px;resize:vertical;"></textarea>
+        <button type="button" data-add-ship-focus="${escapeHtml(section.id)}"
+          style="margin-top:8px;width:100%;min-height:42px;border:0;border-radius:8px;background:#3C1053;color:#fff;font:inherit;font-size:13px;font-weight:800;cursor:pointer;">Add</button>
+        <div style="margin-top:6px;color:var(--vv-gray);font-size:10px;">Each request is saved as its own entry. Reviewer findings remain unchanged.</div>
       </div>
     </div>
 
@@ -3283,6 +3311,75 @@ function renderShipboardOpenReportDepartment(report, departmentId){
     });
   });
 
+  /* ---------- SHIP FOCUS REQUEST: add / delete entries ---------- */
+  const saveFocusEntries = async (sectionId, entries) => {
+    const encoded = entries.map(entry => `${entry.name}${SHIP_FOCUS_AUTHOR_MARK}${entry.text}`).join(SHIP_COMMENT_SEPARATOR);
+    if(encoded.length > 3000){
+      throw new Error('The focus request is too long (3000 characters in total). Delete an older entry first.');
+    }
+    const result = await saveShipboardOpenUpdates({
+      reportId: report.id,
+      comments: {},
+      focusRequests: { [sectionId]: entries.length ? encoded : '' },
+      photos: {}
+    });
+    if(!result?.success) throw (result?.error || new Error('Could not save the focus request.'));
+    const stored = { ...(report.report_data?.shipFocusRequests || {}) };
+    if(result.data?.shipFocusRequests){
+      report.report_data = { ...(report.report_data || {}), shipFocusRequests: result.data.shipFocusRequests };
+    }else{
+      if(entries.length) stored[sectionId] = { text: encoded, name: currentAuthUserEmail, email: currentAuthUserEmail };
+      else delete stored[sectionId];
+      report.report_data = { ...(report.report_data || {}), shipFocusRequests: stored };
+    }
+  };
+
+  container.querySelectorAll('[data-add-ship-focus]').forEach(button => {
+    button.addEventListener('click', async () => {
+      const sectionId = button.dataset.addShipFocus;
+      const input = container.querySelector(`[data-ship-focus-section="${CSS.escape(sectionId)}"]`);
+      const text = String(input?.value || '').trim();
+      if(!text) return;
+      button.disabled = true;
+      try{
+        const entries = [
+          ...focusEntriesFrom(report?.report_data?.shipFocusRequests?.[sectionId]),
+          { name: currentAuthUserEmail, text }
+        ];
+        await saveFocusEntries(sectionId, entries);
+        if(input) input.value = '';
+        rerenderShipboardDepartment(report, departmentId, null);
+      }catch(error){
+        console.error('Adding ship focus request failed:', error);
+        button.disabled = false;
+        alert(`Could not save the focus request: ${error?.message || 'Please try again.'}`);
+      }
+    });
+  });
+
+  container.querySelectorAll('[data-delete-ship-focus]').forEach(button => {
+    button.addEventListener('click', async () => {
+      const sectionId = button.dataset.deleteShipFocus;
+      const index = Number(button.dataset.shipFocusIndex);
+      const entries = focusEntriesFrom(report?.report_data?.shipFocusRequests?.[sectionId]);
+      if(!Number.isInteger(index) || index < 0 || index >= entries.length) return;
+      if(String(entries[index].name || '').trim().toLowerCase() !== String(currentAuthUserEmail || '').toLowerCase()){
+        alert('You can only delete focus requests that you added with your own login.');
+        return;
+      }
+      if(!window.confirm('Delete this focus request?')) return;
+      button.disabled = true;
+      try{
+        await saveFocusEntries(sectionId, entries.filter((_, i) => i !== index));
+        rerenderShipboardDepartment(report, departmentId, null);
+      }catch(error){
+        console.error('Deleting ship focus request failed:', error);
+        button.disabled = false;
+        alert(`Could not delete the focus request: ${error?.message || 'Please try again.'}`);
+      }
+    });
+  });
+
   /* ---------- BOTTOM SAVE BUTTON: sends any unsent comments + the focus request ---------- */
   const saveButtons = [...container.querySelectorAll('[data-save-shipboard-updates]')];
   const handleShipboardSave = async () => {
@@ -3301,24 +3398,17 @@ function renderShipboardOpenReportDepartment(report, departmentId){
         appended++;
       }
 
-      const storedFocus = report?.report_data?.shipFocusRequests || {};
-      const focusRequests = {};
-      let focusChanged = false;
-      container.querySelectorAll('[data-ship-focus-section]').forEach(input => {
-        const id = input.dataset.shipFocusSection;
-        const value = input.value.trim();
-        focusRequests[id] = value;
-        const old = storedFocus[id];
-        const oldText = typeof old === 'string' ? old : (old?.text || '');
-        if(String(oldText).trim() !== value) focusChanged = true;
-      });
-      if(focusChanged){
-        const result = await saveShipboardOpenUpdates({ reportId: report.id, comments: {}, focusRequests, photos: {} });
-        if(!result?.success) throw (result?.error || new Error('Could not save the focus request.'));
-        report.report_data = {
-          ...(report.report_data || {}),
-          shipFocusRequests: result.data?.shipFocusRequests || { ...storedFocus, ...focusRequests }
-        };
+      for(const input of [...container.querySelectorAll('[data-ship-focus-section]')]){
+        const text = input.value.trim();
+        if(!text) continue;
+        const sectionId = input.dataset.shipFocusSection;
+        const entries = [
+          ...focusEntriesFrom(report?.report_data?.shipFocusRequests?.[sectionId]),
+          { name: currentAuthUserEmail, text }
+        ];
+        await saveFocusEntries(sectionId, entries);
+        input.value = '';
+        appended++;
       }
       if(appended) rerenderShipboardDepartment(report, departmentId, null);
       const freshStatus = document.querySelector('#report-overall-content [data-shipboard-save-status]');
