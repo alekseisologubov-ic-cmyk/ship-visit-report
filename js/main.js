@@ -1020,6 +1020,11 @@ export function showScreen(
   );
 
 
+  if(target === 'checklist'){
+    const reviewBtn = document.getElementById('shipReviewBtn');
+    if(reviewBtn) reviewBtn.textContent = 'Review Report';
+  }
+
   window.scrollTo(
     0,
     0
