@@ -3080,6 +3080,44 @@ function renderShipboardOpenReportDepartments(report){
   const followUpCount = points.filter(point => Boolean(point.followUpNeeded)).length;
   const meta = report?.report_data?.meta || {};
 
+  // Read-only copies of what shoreside entered: Leaders Onboard and General Report Comments.
+  const shoreState = report?.report_data?.state || {};
+  const leaderRoles = [
+    ['fb_director', 'F&B Director'],
+    ['sr_exec_chef', 'Sr. Exec Chef'],
+    ['restaurant_ops_manager', 'Restaurant Operations Manager'],
+    ['beverage_ops_manager', 'Beverage Operations Manager'],
+    ['sanitation_officer', 'Sanitation Officer'],
+    ['procurement_manager', 'Procurement Manager'],
+    ['hotel_controller', 'Hotel Controller'],
+    ['public_health_director', 'Public Health Director']
+  ];
+  const leaderNames = shoreState.__leaders_onboard__?.names || {};
+  const leaderRows = leaderRoles.filter(([id]) => String(leaderNames[id] || '').trim());
+  const leadersHtml = leaderRows.length ? `
+    <div style="margin-bottom:16px;padding:14px;background:#FFFFFF;border:1px solid var(--vv-line);border-radius:10px;">
+      <div style="color:var(--vv-squid);font-size:15px;font-weight:800;margin-bottom:10px;">LEADERS ONBOARD</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;">
+        ${leaderRows.map(([id, label]) => `
+          <div>
+            <div style="font-size:10px;font-weight:800;color:var(--vv-gray);">${escapeHtml(label)}</div>
+            <div style="font-size:14px;color:var(--vv-squid);margin-top:2px;">${escapeHtml(String(leaderNames[id]).trim())}</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>` : '';
+  const generalComments = Array.isArray(shoreState.__report_general__?.comments) ? shoreState.__report_general__.comments : [];
+  const generalHtml = generalComments.length ? `
+    <div style="margin-bottom:16px;padding:14px;background:#FFFFFF;border:1px solid var(--vv-line);border-radius:10px;">
+      <div style="color:var(--vv-squid);font-size:15px;font-weight:800;margin-bottom:10px;">GENERAL REPORT COMMENTS</div>
+      ${generalComments.map(comment => `
+        <div style="margin-bottom:8px;padding:10px 12px;background:#F7F5F9;border-left:3px solid var(--vv-squid);border-radius:6px;">
+          <div style="font-size:12px;font-weight:800;color:#1B1B1B;">${escapeHtml(comment?.name || 'Reviewer')}:</div>
+          <div style="font-size:13px;color:#1B1B1B;white-space:pre-wrap;margin-top:2px;">${escapeHtml(comment?.text || '')}</div>
+        </div>
+      `).join('')}
+    </div>` : '';
+
   container.innerHTML = `
     <div style="margin-bottom:20px;">
       <div style="color:var(--vv-squid);font-size:16px;font-weight:800;">REPORT OVERALL</div>
@@ -3096,6 +3134,7 @@ function renderShipboardOpenReportDepartments(report){
       </div>
     </div>
 
+    ${leadersHtml}${generalHtml}
     <div style="margin-bottom:10px;color:var(--vv-squid);font-size:15px;font-weight:800;">DEPARTMENTS</div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;">
       ${SECTIONS.map(section => {
@@ -4229,9 +4268,15 @@ async function openReadOnlyReport(report, returnScreen = 'submitted'){
         ...report,
         report_data: {
           ...(report.report_data || {}),
-          state: normalizedState
+          state: {
+            ...normalizedState,
+            // Always show what shoreside saved, straight from the stored report.
+            ...(report.report_data?.state?.__leaders_onboard__ ? { __leaders_onboard__: report.report_data.state.__leaders_onboard__ } : {}),
+            ...(report.report_data?.state?.__report_general__ ? { __report_general__: report.report_data.state.__report_general__ } : {})
+          }
         }
       };
+      console.log('Shipboard overview: leaders/general loaded', Boolean(report.report_data?.state?.__leaders_onboard__), (report.report_data?.state?.__report_general__?.comments || []).length);
       renderShipboardOpenReportDepartments(shipboardDisplayReport);
     }else{
       renderCurrentReportSummary(report, false);
