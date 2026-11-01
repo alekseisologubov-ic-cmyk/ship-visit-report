@@ -3087,14 +3087,16 @@ function renderShipboardOpenReportDepartment(report, departmentId){
         picker.multiple = true;
         picker.style.display = 'none';
         document.body.appendChild(picker);
+
         picker.addEventListener('change', async () => {
           const files = Array.from(picker.files || []);
           picker.remove();
           if (!files.length) return;
-          const saved = pendingShipboardPhotos.get(key) || [];
+
           try {
             button.disabled = true;
             if (local) local.textContent = `Uploading ${files.length} photo(s)…`;
+
             for (const file of files) {
               if (!/^image\/(jpeg|png|webp|gif)$/i.test(file.type)) {
                 throw new Error(`${file.name}: choose a JPG, PNG, WEBP, or GIF image.`);
@@ -3102,29 +3104,57 @@ function renderShipboardOpenReportDepartment(report, departmentId){
               if (file.size > 12 * 1024 * 1024) {
                 throw new Error(`${file.name}: each photo must be 12 MB or smaller.`);
               }
+
               const dataUrl = await new Promise((resolve, reject) => {
                 const reader = new FileReader();
                 reader.onload = () => resolve(String(reader.result || ''));
                 reader.onerror = () => reject(new Error(`Could not read ${file.name}.`));
                 reader.readAsDataURL(file);
               });
+
+              // Upload the image to the existing private Supabase bucket.
               const uploaded = await uploadPhotoDataUrl(report.id, key, dataUrl, file.name);
-              saved.push({
+              const photoRecord = {
+                storagePath: uploaded.storagePath,
                 path: uploaded.storagePath,
                 filename: uploaded.filename || file.name,
                 contentType: uploaded.contentType || file.type,
                 uploadedAt: uploaded.uploadedAt || new Date().toISOString()
+              };
+
+              // Attach each photo immediately through the secure RPC. Do not wait for
+              // the separate "Save comments and focus request" button.
+              const saveResult = await saveShipboardOpenUpdates({
+                reportId: report.id,
+                comments: {},
+                focusRequests: {},
+                photos: { [key]: [photoRecord] }
               });
+              if (!saveResult?.success) {
+                throw (saveResult?.error || new Error(`Uploaded ${file.name}, but could not attach it to the report.`));
+              }
+
+              // Read the canonical saved report back so the shipboard screen and
+              // other authorized users render the same persistent photo reference.
+              const refreshed = await getReport(report.id);
+              if (!refreshed?.success || !refreshed.data) {
+                throw (refreshed?.error || new Error('Photo was saved, but the report could not be refreshed.'));
+              }
+              Object.assign(report, refreshed.data);
+
+              if (local) local.textContent = `Saved ${file.name}. Refreshing report…`;
             }
-            pendingShipboardPhotos.set(key, saved);
-            if (local) local.textContent = `${saved.length} photo(s) uploaded. Press SAVE SHIP COMMENTS AND FOCUS REQUEST to attach them to this report.`;
+
+            // Rerender the current department immediately using the latest saved report.
+            renderShipboardOpenReportDepartment(report, departmentId);
           } catch (error) {
-            console.error('Shipboard photo upload failed:', error);
+            console.error('Shipboard photo upload/save failed:', error);
             if (local) local.textContent = `Photo upload failed: ${error?.message || 'Please try again.'}`;
           } finally {
             button.disabled = false;
           }
         }, { once: true });
+
         picker.click();
       });
     });
