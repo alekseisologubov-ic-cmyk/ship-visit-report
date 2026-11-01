@@ -102,6 +102,7 @@ import {
   getReportByReference,
   submitShipResponse,
   saveShipboardOpenUpdates,
+  appendShipboardOpenComment,
   getAuthContext,
   signInWithPassword,
   signOutUser,
@@ -2920,11 +2921,12 @@ function renderShipboardOpenReportDepartments(report){
 ============================================================ */
 
 function renderShipboardShipCommentField(point){
-  // Existing saved comments are displayed once in the report summary
-  // under SHIP COMMENTS / RESPONSES. This panel is only for adding a NEW
-  // ship-side comment, so do not render the saved comment or prefill the
-  // textarea here (that caused the same comment to appear twice).
   if(!point.followUpNeeded) return '';
+  const comments = Array.isArray(point.shipComments) ? point.shipComments : [];
+  const current = comments.find(c =>
+    String(c?.email || '').toLowerCase() === String(currentAuthUserEmail || '').toLowerCase()
+  ) || comments[comments.length - 1] || null;
+  const text = current?.text || '';
   const key = escapeHtml(point.key);
   return `
     <section data-ship-comment-panel="${key}"
@@ -2938,8 +2940,15 @@ function renderShipboardShipCommentField(point){
             style="padding:8px 11px;border:1px solid #D9D3E0;border-radius:7px;background:#fff;color:var(--vv-squid);font:inherit;font-size:11px;font-weight:800;cursor:pointer;">Photo</button>
         </div>
       </div>
+      ${text ? `
+        <article style="position:relative;margin-bottom:10px;padding:11px 44px 11px 12px;border-left:3px solid var(--vv-squid);border-radius:7px;background:#F8F5FA;">
+          <strong style="display:block;margin-bottom:5px;font-size:11px;color:var(--vv-squid);">${escapeHtml(current?.name || 'Ship team')}</strong>
+          <div style="font-size:12px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere;">${escapeHtml(text)}</div>
+          <button type="button" data-delete-ship-comment-key="${key}" aria-label="Delete my saved ship comment" title="Delete comment"
+            style="position:absolute;top:8px;right:8px;width:29px;height:29px;border:1px solid #D9D3E0;border-radius:50%;background:#fff;color:#B4232D;font-size:20px;font-weight:800;cursor:pointer;">×</button>
+        </article>` : ''}
       <textarea data-ship-comment-key="${key}" rows="3" maxlength="3000"
-        placeholder="Add a new ship-side response for this follow-up..."
+        placeholder="Add the ship-side response for this follow-up..."
         style="display:block;width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--vv-line);border-radius:7px;font:inherit;font-size:12px;resize:vertical;"></textarea>
       <button type="button" data-add-ship-comment-key="${key}"
         style="display:block;width:100%;min-height:40px;margin-top:8px;padding:9px;border:0;border-radius:7px;background:var(--vv-squid);color:#fff;font:inherit;font-size:12px;font-weight:800;cursor:pointer;">Add</button>
@@ -3063,11 +3072,27 @@ function renderShipboardOpenReportDepartment(report, departmentId){
           input.focus();
           return;
         }
-        await handleShipboardSave();
-        // Refresh this report's saved representation after the secure RPC completes.
+        const commentText = input.value.trim();
         const local = container.querySelector(`[data-ship-comment-local-status="${CSS.escape(key)}"]`);
-        const status = container.querySelector('[data-shipboard-save-status]');
-        if(local && status) local.textContent = status.textContent;
+        button.disabled = true;
+        button.textContent = 'ADDING…';
+        if(local) local.textContent = 'Saving comment…';
+        try {
+          const result = await appendShipboardOpenComment({ reportId: report.id, pointKey: key, text: commentText });
+          if(!result?.success) throw (result?.error || new Error('Could not save comment.'));
+          input.value = '';
+          // Refresh from server so the new comment is displayed with prior history.
+          const refreshed = await getReport(report.id);
+          if(refreshed?.report_data) report.report_data = refreshed.report_data;
+          if(refreshed?.id) Object.assign(report, refreshed);
+          renderShipboardOpenReportDepartment(report, departmentId);
+        } catch(error) {
+          console.error('Appending shipboard comment failed:', error);
+          if(local) local.textContent = `Comment not saved: ${error?.message || 'Please try again.'}`;
+        } finally {
+          button.disabled = false;
+          button.textContent = 'Add';
+        }
       });
     });
     container.querySelectorAll('[data-ship-comment-focus]').forEach(button => {
@@ -3087,16 +3112,14 @@ function renderShipboardOpenReportDepartment(report, departmentId){
         picker.multiple = true;
         picker.style.display = 'none';
         document.body.appendChild(picker);
-
         picker.addEventListener('change', async () => {
           const files = Array.from(picker.files || []);
           picker.remove();
           if (!files.length) return;
-
+          const saved = pendingShipboardPhotos.get(key) || [];
           try {
             button.disabled = true;
             if (local) local.textContent = `Uploading ${files.length} photo(s)…`;
-
             for (const file of files) {
               if (!/^image\/(jpeg|png|webp|gif)$/i.test(file.type)) {
                 throw new Error(`${file.name}: choose a JPG, PNG, WEBP, or GIF image.`);
@@ -3104,57 +3127,41 @@ function renderShipboardOpenReportDepartment(report, departmentId){
               if (file.size > 12 * 1024 * 1024) {
                 throw new Error(`${file.name}: each photo must be 12 MB or smaller.`);
               }
-
               const dataUrl = await new Promise((resolve, reject) => {
                 const reader = new FileReader();
                 reader.onload = () => resolve(String(reader.result || ''));
                 reader.onerror = () => reject(new Error(`Could not read ${file.name}.`));
                 reader.readAsDataURL(file);
               });
-
-              // Upload the image to the existing private Supabase bucket.
               const uploaded = await uploadPhotoDataUrl(report.id, key, dataUrl, file.name);
-              const photoRecord = {
-                storagePath: uploaded.storagePath,
+              saved.push({
                 path: uploaded.storagePath,
                 filename: uploaded.filename || file.name,
                 contentType: uploaded.contentType || file.type,
                 uploadedAt: uploaded.uploadedAt || new Date().toISOString()
-              };
-
-              // Attach each photo immediately through the secure RPC. Do not wait for
-              // the separate "Save comments and focus request" button.
-              const saveResult = await saveShipboardOpenUpdates({
-                reportId: report.id,
-                comments: {},
-                focusRequests: {},
-                photos: { [key]: [photoRecord] }
               });
-              if (!saveResult?.success) {
-                throw (saveResult?.error || new Error(`Uploaded ${file.name}, but could not attach it to the report.`));
-              }
-
-              // Read the canonical saved report back so the shipboard screen and
-              // other authorized users render the same persistent photo reference.
-              const refreshed = await getReport(report.id);
-              if (!refreshed?.success || !refreshed.data) {
-                throw (refreshed?.error || new Error('Photo was saved, but the report could not be refreshed.'));
-              }
-              Object.assign(report, refreshed.data);
-
-              if (local) local.textContent = `Saved ${file.name}. Refreshing report…`;
             }
-
-            // Rerender the current department immediately using the latest saved report.
+            pendingShipboardPhotos.set(key, saved);
+            if (local) local.textContent = 'Photo uploaded. Saving it to the report…';
+            const photoResult = await saveShipboardOpenUpdates({
+              reportId: report.id,
+              comments: {},
+              focusRequests: {},
+              photos: { [key]: saved }
+            });
+            if(!photoResult?.success) throw (photoResult?.error || new Error('Photo uploaded but could not be attached to the report.'));
+            pendingShipboardPhotos.delete(key);
+            const refreshed = await getReport(report.id);
+            if(refreshed?.report_data) report.report_data = refreshed.report_data;
+            if(refreshed?.id) Object.assign(report, refreshed);
             renderShipboardOpenReportDepartment(report, departmentId);
           } catch (error) {
-            console.error('Shipboard photo upload/save failed:', error);
+            console.error('Shipboard photo upload failed:', error);
             if (local) local.textContent = `Photo upload failed: ${error?.message || 'Please try again.'}`;
           } finally {
             button.disabled = false;
           }
         }, { once: true });
-
         picker.click();
       });
     });
