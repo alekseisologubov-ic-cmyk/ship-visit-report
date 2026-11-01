@@ -68,9 +68,6 @@ function bindReviewPhotoPreview(root = document){
       #review-photo-preview img[hidden]{display:none!important}
       #review-photo-preview .review-photo-close{position:absolute;top:0;right:0;z-index:2;width:44px;height:44px;border-radius:50%;font-size:28px;background:#fff;color:#3C1053;border:1px solid #ddd;cursor:pointer}
       #review-photo-preview-status{color:white;text-align:center;padding:16px;max-width:80vw}
-      .response-photo-open{display:flex;width:100%;justify-content:space-between;align-items:center;gap:12px;padding:12px;margin:6px 0;border:1px solid #d8cde0;border-radius:10px;background:#fff;color:#3c1053;cursor:pointer;text-align:left;font:inherit}
-      .response-photo-open:hover{background:#f7f1fa;border-color:#3c1053}
-      .response-photo-hint{font-size:12px;opacity:.75;white-space:nowrap}
     `;
     document.head.appendChild(style);
   }
@@ -227,12 +224,10 @@ function escapeHtml(
    GET CHECKED POINTS
 ========================================================= */
 
-export function getCheckedReviewPoints(stateOverride = null){
+export function getCheckedReviewPoints(){
 
   const state =
-    stateOverride && typeof stateOverride === 'object'
-      ? stateOverride
-      : getState();
+    getState();
 
 
   const points = [];
@@ -318,7 +313,7 @@ export function getCheckedReviewPoints(stateOverride = null){
    RENDER SHIP REVIEW
 ========================================================= */
 
-export function renderShipReview(stateOverride = null){
+export function renderShipReview(){
 
   const container =
     document.getElementById(
@@ -340,7 +335,7 @@ export function renderShipReview(stateOverride = null){
 
 
   const points =
-    getCheckedReviewPoints(stateOverride);
+    getCheckedReviewPoints();
 
 
   const followUps =
@@ -896,14 +891,7 @@ export async function prepareShipReview(){
   }
 
 
-  // Use the exact state returned by Supabase after saving. The saved row's
-  // checklist state lives at report_data.state. Fall back only if absent.
-  const savedState = saved?.data?.report_data?.state;
-  renderShipReview(
-    savedState && typeof savedState === 'object'
-      ? savedState
-      : getState()
-  );
+  renderShipReview();
 
 
   return true;
