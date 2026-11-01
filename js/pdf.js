@@ -2215,6 +2215,32 @@ const pdfApi = { ensureSpace, getY: () => y, setY: value => { y = value; } };
     8;
 
 
+  /* LEADERS ONBOARD */
+
+  const leadersSource = state?.__leaders_onboard__?.names || {};
+  const leaderRows = [
+    ['fb_director', 'F&B Director'],
+    ['sr_exec_chef', 'Sr. Exec Chef'],
+    ['restaurant_ops_manager', 'Restaurant Operations Manager'],
+    ['beverage_ops_manager', 'Beverage Operations Manager'],
+    ['sanitation_officer', 'Sanitation Officer'],
+    ['procurement_manager', 'Procurement Manager'],
+    ['hotel_controller', 'Hotel Controller'],
+    ['public_health_director', 'Public Health Director']
+  ].filter(([id]) => String(leadersSource[id] || '').trim());
+
+  if(leaderRows.length){
+    addSectionTitle('LEADERS ONBOARD');
+    leaderRows.forEach(([id, label]) => {
+      addText(`${label}: ${String(leadersSource[id]).trim()}`, {
+        size:9, color:dark, bold:false,
+        x:margin, width:contentWidth, lineHeight:12
+      });
+    });
+    y += 8;
+  }
+
+
   /* POINTS */
 
   if(
