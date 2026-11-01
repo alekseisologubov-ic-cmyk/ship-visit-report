@@ -3188,9 +3188,6 @@ function renderShipboardOpenReportDepartment(report, departmentId){
       <div style="margin-top:12px;padding:12px;border:1px solid var(--vv-line);border-radius:9px;background:#FBFAFC;">
         ${renderFocusBox(report, section.id, 'SHIP FOCUS REQUEST — ' + section.title, 'Add a request or focus area for this department...')}
       </div>
-      <div style="margin-top:12px;padding:12px;border:1px solid var(--vv-line);border-radius:9px;background:#FBFAFC;">
-        ${renderFocusBox(report, section.id + '-general', 'GENERAL COMMENTS — ' + section.title, 'Add a general comment for this department...')}
-      </div>
     </div>
 
     ${generalComments.length ? `
