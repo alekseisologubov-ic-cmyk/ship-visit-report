@@ -24,7 +24,10 @@
 
 import {
   SECTIONS,
-  emptyState
+  emptyState,
+  CURRENT_CHECKLIST_VERSION,
+  setActiveChecklistVersion,
+  prepareReportForChecklist
 } from './data.js';
 
 
@@ -1565,6 +1568,8 @@ export function getStatusColor() {
 
 export function resetReport() {
 
+  setActiveChecklistVersion(CURRENT_CHECKLIST_VERSION);
+
   reportId =
     null;
 
@@ -1610,6 +1615,8 @@ export function startNewReport({
   dateOff,
   reviewer
 } = {}) {
+
+  setActiveChecklistVersion(CURRENT_CHECKLIST_VERSION);
 
   reportId =
     null;
@@ -1677,6 +1684,9 @@ export function loadReport(
 
   }
 
+
+  // Use the checklist this report was created with (new reports = newest).
+  prepareReportForChecklist(report);
 
   /*
     ID
