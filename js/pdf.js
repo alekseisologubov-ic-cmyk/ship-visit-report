@@ -2241,6 +2241,25 @@ const pdfApi = { ensureSpace, getY: () => y, setY: value => { y = value; } };
   }
 
 
+  /* GENERAL REPORT COMMENTS */
+
+  const reportGeneralComments = (Array.isArray(state?.__report_general__?.comments) ? state.__report_general__.comments : [])
+    .filter(comment => String(comment?.text || '').trim());
+
+  if(reportGeneralComments.length){
+    addSectionTitle('GENERAL REPORT COMMENTS');
+    reportGeneralComments.forEach(comment => {
+      const author = String(comment?.name || 'Reviewer').trim() || 'Reviewer';
+      addText(`${author}: ${String(comment.text).trim()}`, {
+        size:9, color:dark, bold:false,
+        x:margin, width:contentWidth, lineHeight:12
+      });
+      y += 3;
+    });
+    y += 8;
+  }
+
+
   /* POINTS */
 
   if(
