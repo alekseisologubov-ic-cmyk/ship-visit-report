@@ -2801,7 +2801,12 @@ function renderCurrentReportSummary(
       const requests = report?.report_data?.shipFocusRequests || {};
       const entries = Object.entries(requests).map(([sectionId, value]) => ({
         sectionId,
-        section: SECTIONS.find(item => item.id === sectionId)?.title || sectionId,
+        section: (() => {
+          const isGeneral = String(sectionId).endsWith('-general');
+          const baseId = isGeneral ? String(sectionId).slice(0, -8) : sectionId;
+          const title = SECTIONS.find(item => item.id === baseId)?.title || baseId;
+          return isGeneral ? `${title} — General comments` : title;
+        })(),
         text: focusDisplayText(value),
         name: typeof value === 'object' && value ? (value.name || value.email || 'Ship') : 'Ship'
       })).filter(item => String(item.text || '').trim());
@@ -3121,6 +3126,32 @@ function renderShipboardShipCommentField(point){
     </section>`;
 }
 
+/* One entry list + input + Add button, stored under shipFocusRequests[key].
+   Used for the Ship Focus Request and for the department General Comments. */
+function renderFocusBox(report, key, title, placeholder){
+  const entries = focusEntriesFrom(report?.report_data?.shipFocusRequests?.[key]);
+  const me = String(currentAuthUserEmail || '').toLowerCase();
+  return `
+    <div style="margin-bottom:8px;color:var(--vv-squid);font-size:11px;font-weight:800;">${escapeHtml(title)}</div>
+    ${entries.map((entry, entryIndex) => {
+      const mine = isShipboard() && String(entry.name || '').trim().toLowerCase() === me;
+      return `<div style="position:relative;margin-bottom:8px;padding:8px ${mine ? '38px' : '10px'} 8px 10px;border-left:3px solid #079455;border-radius:6px;background:#EAF8F0;">
+        <div style="font-size:11px;font-weight:800;color:#087443;">${escapeHtml(entry.name)}:</div>
+        <div style="margin-top:3px;font-size:12px;line-height:1.5;white-space:pre-wrap;">${escapeHtml(entry.text)}</div>
+        ${mine ? `<button type="button" data-delete-ship-focus="${escapeHtml(key)}" data-ship-focus-index="${entryIndex}"
+          aria-label="Delete your comment" title="Delete your comment"
+          style="position:absolute;top:7px;right:7px;width:24px;height:24px;border:1px solid #E4D8E8;border-radius:50%;background:#fff;color:#C41425;font-size:18px;line-height:1;font-weight:800;cursor:pointer;">×</button>` : ''}
+      </div>`;
+    }).join('')}
+    <textarea id="ship-focus-${escapeHtml(key)}" data-ship-focus-section="${escapeHtml(key)}" rows="2" maxlength="3000"
+      placeholder="${escapeHtml(placeholder)}"
+      style="width:100%;box-sizing:border-box;padding:9px;border:1px solid var(--vv-line);border-radius:6px;font:inherit;font-size:12px;resize:vertical;"></textarea>
+    <button type="button" data-add-ship-focus="${escapeHtml(key)}"
+      style="margin-top:8px;width:100%;min-height:42px;border:0;border-radius:8px;background:#3C1053;color:#fff;font:inherit;font-size:13px;font-weight:800;cursor:pointer;">Add</button>
+    <div style="margin-top:6px;color:var(--vv-gray);font-size:10px;">Each entry is saved separately. Reviewer findings remain unchanged.</div>
+  `;
+}
+
 function renderShipboardOpenReportDepartment(report, departmentId){
   const container = document.getElementById('report-overall-content');
   if(!container) return;
@@ -3155,23 +3186,10 @@ function renderShipboardOpenReportDepartment(report, departmentId){
         <span style="display:inline-block;padding:6px 10px;border-radius:6px;background:#F0EDF3;color:#554760;font-size:11px;font-weight:800;">${uncheckedPoints.length} NOT YET CHECKED</span>
       </div>
       <div style="margin-top:12px;padding:12px;border:1px solid var(--vv-line);border-radius:9px;background:#FBFAFC;">
-        <div style="margin-bottom:8px;color:var(--vv-squid);font-size:11px;font-weight:800;">SHIP FOCUS REQUEST — ${escapeHtml(section.title)}</div>
-        ${focusEntriesFrom(report?.report_data?.shipFocusRequests?.[section.id]).map((entry, entryIndex) => {
-          const mine = isShipboard() && String(entry.name || '').trim().toLowerCase() === String(currentAuthUserEmail || '').toLowerCase();
-          return `<div style="position:relative;margin-bottom:8px;padding:8px ${mine ? '38px' : '10px'} 8px 10px;border-left:3px solid #079455;border-radius:6px;background:#EAF8F0;">
-            <div style="font-size:11px;font-weight:800;color:#087443;">${escapeHtml(entry.name)}:</div>
-            <div style="margin-top:3px;font-size:12px;line-height:1.5;white-space:pre-wrap;">${escapeHtml(entry.text)}</div>
-            ${mine ? `<button type="button" data-delete-ship-focus="${escapeHtml(section.id)}" data-ship-focus-index="${entryIndex}"
-              aria-label="Delete your focus request" title="Delete your focus request"
-              style="position:absolute;top:7px;right:7px;width:24px;height:24px;border:1px solid #E4D8E8;border-radius:50%;background:#fff;color:#C41425;font-size:18px;line-height:1;font-weight:800;cursor:pointer;">×</button>` : ''}
-          </div>`;
-        }).join('')}
-        <textarea id="ship-focus-${escapeHtml(section.id)}" data-ship-focus-section="${escapeHtml(section.id)}" rows="2" maxlength="3000"
-          placeholder="Add a request or focus area for this department..."
-          style="width:100%;box-sizing:border-box;padding:9px;border:1px solid var(--vv-line);border-radius:6px;font:inherit;font-size:12px;resize:vertical;"></textarea>
-        <button type="button" data-add-ship-focus="${escapeHtml(section.id)}"
-          style="margin-top:8px;width:100%;min-height:42px;border:0;border-radius:8px;background:#3C1053;color:#fff;font:inherit;font-size:13px;font-weight:800;cursor:pointer;">Add</button>
-        <div style="margin-top:6px;color:var(--vv-gray);font-size:10px;">Each request is saved as its own entry. Reviewer findings remain unchanged.</div>
+        ${renderFocusBox(report, section.id, 'SHIP FOCUS REQUEST — ' + section.title, 'Add a request or focus area for this department...')}
+      </div>
+      <div style="margin-top:12px;padding:12px;border:1px solid var(--vv-line);border-radius:9px;background:#FBFAFC;">
+        ${renderFocusBox(report, section.id + '-general', 'GENERAL COMMENTS — ' + section.title, 'Add a general comment for this department...')}
       </div>
     </div>
 
