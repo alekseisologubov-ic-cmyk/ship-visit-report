@@ -926,6 +926,25 @@ export async function signOutUser(){
 
 
 /* =========================================================
+   DELETE PHOTO REFERENCE FROM THE SAVED REPORT
+========================================================= */
+export async function deleteReportPhotoReference({ reportId, pointKey, photoType, photoIndex }) {
+  if(!reportId || !pointKey) throw new Error('Report and checklist point are required.');
+  if(!['photos', 'shipPhotos'].includes(photoType)) throw new Error('Invalid photo type.');
+  if(!Number.isInteger(photoIndex) || photoIndex < 0) throw new Error('Invalid photo index.');
+  const { data, error } = await supabase.rpc('delete_report_photo_reference', {
+    p_report_id: reportId,
+    p_point_key: pointKey,
+    p_photo_type: photoType,
+    p_photo_index: photoIndex
+  });
+  if(error) throw error;
+  if(!data || data.success !== true) throw new Error('The saved photo reference was not deleted.');
+  return data;
+}
+
+
+/* =========================================================
    PRIVATE STORAGE PHOTO HELPERS
 ========================================================= */
 
