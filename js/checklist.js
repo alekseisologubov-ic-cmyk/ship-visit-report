@@ -56,6 +56,9 @@ import {
   addReportGeneralComment,
   removeReportGeneralComment,
   getReportGeneralComments,
+  LEADER_ROLES,
+  getLeaders,
+  setLeader,
   addPhoto,
   removePhoto,
   setFollowUp,
@@ -623,6 +626,64 @@ function renderDepartmentHome(){
 
 
       <!-- ================================================
+           LEADERS ONBOARD
+      ================================================= -->
+
+      <div
+        class="leaders-onboard"
+        style="
+          margin-top:18px;
+          padding:16px;
+          background:#FFFFFF;
+          border:1px solid var(--vv-line);
+          border-radius:10px;
+        "
+      >
+        <div
+          style="
+            color:var(--vv-squid);
+            font-size:15px;
+            font-weight:800;
+            margin-bottom:10px;
+          "
+        >
+          LEADERS ONBOARD
+        </div>
+
+        <div
+          style="
+            display:grid;
+            grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+            gap:10px;
+          "
+        >
+          ${LEADER_ROLES.map(role => `
+            <label style="display:flex;flex-direction:column;gap:4px;font-size:11px;font-weight:800;color:var(--vv-gray);">
+              ${escapeHtml(role.label)}
+              <input
+                type="text"
+                data-leader-role="${escapeHtml(role.id)}"
+                value="${escapeHtml(getLeaders()[role.id] || '')}"
+                placeholder="Name"
+                style="
+                  width:100%;
+                  box-sizing:border-box;
+                  padding:10px 12px;
+                  border:1px solid var(--vv-line);
+                  border-radius:8px;
+                  font:inherit;
+                  font-size:14px;
+                  font-weight:400;
+                  color:var(--vv-squid);
+                "
+              >
+            </label>
+          `).join('')}
+        </div>
+      </div>
+
+
+      <!-- ================================================
            REPORT GENERAL COMMENTS
       ================================================= -->
 
@@ -745,6 +806,7 @@ function renderDepartmentHome(){
 
   renderReportGeneralComments();
   bindReportGeneralComment();
+  bindLeaders();
   bindDepartmentButtons();
 
 }
@@ -820,6 +882,15 @@ function renderReportGeneralComments(){
         await saveCurrentReport();
       });
     });
+}
+
+function bindLeaders(){
+  document.querySelectorAll('[data-leader-role]').forEach(input => {
+    input.addEventListener('change', async function(){
+      if(!setLeader(input.dataset.leaderRole, input.value)) return;
+      await saveCurrentReport();
+    });
+  });
 }
 
 function bindReportGeneralComment(){
