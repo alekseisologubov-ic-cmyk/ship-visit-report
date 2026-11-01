@@ -56,6 +56,29 @@ let currentReviewer = '';
 
 const DEPARTMENT_GENERAL_PREFIX = '__department_general__';
 const REPORT_GENERAL_KEY = '__report_general__';
+const LEADERS_KEY = '__leaders_onboard__';
+
+export const LEADER_ROLES = [
+  { id: 'fb_director', label: 'F&B Director' },
+  { id: 'sr_exec_chef', label: 'Sr. Exec Chef' },
+  { id: 'restaurant_ops_manager', label: 'Restaurant Operations Manager' },
+  { id: 'beverage_ops_manager', label: 'Beverage Operations Manager' },
+  { id: 'sanitation_officer', label: 'Sanitation Officer' },
+  { id: 'procurement_manager', label: 'Procurement Manager' },
+  { id: 'hotel_controller', label: 'Hotel Controller' },
+  { id: 'public_health_director', label: 'Public Health Director' }
+];
+
+function normalizeLeaders(value){
+  const source = value && typeof value === 'object' && value.names && typeof value.names === 'object'
+    ? value.names
+    : {};
+  const names = {};
+  LEADER_ROLES.forEach(role => {
+    names[role.id] = cleanText(source[role.id] ?? '');
+  });
+  return { isLeaders: true, names };
+}
 
 let state = emptyState();
 
@@ -580,6 +603,8 @@ function normalizeState(
     comments: []
   };
 
+  base[LEADERS_KEY] = normalizeLeaders(incoming?.[LEADERS_KEY]);
+
   SECTIONS.forEach(section => {
     base[departmentGeneralKey(section.id)] = {
       isDepartmentGeneral: true,
@@ -601,6 +626,11 @@ function normalizeState(
     base
   ).forEach(
     key => {
+
+      if (key === LEADERS_KEY) {
+        base[key] = normalizeLeaders(source[key]);
+        return;
+      }
 
       if (key === REPORT_GENERAL_KEY) {
         base[key] = {
@@ -1246,6 +1276,23 @@ export function setShipComments(
       comments
     );
 
+}
+
+
+/* ============================================================
+   LEADERS ONBOARD
+============================================================ */
+
+export function getLeaders() {
+  return normalizeLeaders(state[LEADERS_KEY]).names;
+}
+
+export function setLeader(roleId, name) {
+  if (!LEADER_ROLES.some(role => role.id === roleId)) return false;
+  const current = normalizeLeaders(state[LEADERS_KEY]);
+  current.names[roleId] = cleanText(name);
+  state[LEADERS_KEY] = current;
+  return true;
 }
 
 
@@ -1925,7 +1972,7 @@ export function getSummaryCounts() {
   .forEach(
     item => {
 
-      if (item?.isDepartmentGeneral || item?.isReportGeneral) {
+      if (item?.isDepartmentGeneral || item?.isReportGeneral || item?.isLeaders) {
         return;
       }
 
