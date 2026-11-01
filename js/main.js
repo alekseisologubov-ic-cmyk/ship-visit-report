@@ -3167,6 +3167,48 @@ function renderShipboardOpenReportDepartment(report, departmentId){
     });
   });
 
+
+  /* ---------- DELETE ONE OF MY SHIPBOARD COMMENTS (the red X) ---------- */
+  container.querySelectorAll('[data-delete-green-ship-comment-key]').forEach(button => {
+    button.addEventListener('click', async () => {
+      const key = button.dataset.deleteGreenShipCommentKey;
+      const index = Number(button.dataset.shipCommentIndex);
+      const item = report?.report_data?.state?.[key] || {};
+      const entries = getShipComments(item);
+      if(!Number.isInteger(index) || index < 0 || index >= entries.length) return;
+      if(!window.confirm('Delete this ship comment?')) return;
+      button.disabled = true;
+      button.style.opacity = '0.5';
+      try{
+        const remaining = entries
+          .filter((_, i) => i !== index)
+          .map(entry => String(entry.text || '').trim())
+          .filter(Boolean);
+        const result = await saveShipboardOpenUpdates({
+          reportId: report.id,
+          comments: { [key]: remaining.join(SHIP_COMMENT_SEPARATOR) },
+          focusRequests: currentFocusValues(container),
+          photos: {}
+        });
+        if(!result?.success) throw (result?.error || new Error('Could not delete the comment.'));
+        // show the result straight away, then confirm with what the server really stored
+        applyShipboardItemToReport(report, key, {
+          shipComments: remaining.length
+            ? [{ name: entries[0]?.name || 'Ship', text: remaining.join(SHIP_COMMENT_SEPARATOR), timestamp: new Date().toISOString() }]
+            : [],
+          shipPhotos: item.shipPhotos || []
+        });
+        await refreshShipboardPointFromServer(report, key);
+        rerenderShipboardDepartment(report, departmentId, null);
+      }catch(error){
+        console.error('Deleting ship comment failed:', error);
+        button.disabled = false;
+        button.style.opacity = '';
+        alert(`Could not delete the comment: ${error?.message || 'Please try again.'}`);
+      }
+    });
+  });
+
   /* ---------- BOTTOM SAVE BUTTON: sends any unsent comments + the focus request ---------- */
   const saveButtons = [...container.querySelectorAll('[data-save-shipboard-updates]')];
   const handleShipboardSave = async () => {
@@ -3614,7 +3656,7 @@ function renderSummaryPoint(
               ${
                 point.shipComments
                   .map(
-                    comment => `
+                    (comment, commentIndex) => `
 
                       <div
                         class="ship-response-display"
@@ -3633,7 +3675,7 @@ function renderSummaryPoint(
                           ${escapeHtml(comment.text)}
                         </div>
                         ${isShipboard() && String(activeReportRecord?.status || 'open') === 'open' ? `
-                          <button type="button" data-delete-green-ship-comment-key="${escapeHtml(point.key)}"
+                          <button type="button" data-delete-green-ship-comment-key="${escapeHtml(point.key)}" data-ship-comment-index="${commentIndex}"
                             aria-label="Delete your ship comment" title="Delete your saved ship comment"
                             style="position:absolute;top:7px;right:7px;width:24px;height:24px;border:1px solid #E4D8E8;border-radius:50%;background:#fff;color:#C41425;font-size:18px;line-height:1;font-weight:800;cursor:pointer;">×</button>
                         ` : ''}
