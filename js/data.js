@@ -5,15 +5,133 @@
   data.js
   ============================================================
 
-  Checklist version 2 is used for new reports and existing OPEN reports.
-  Older Ship Review / Submitted reports without a version marker retain the
-  exact legacy checklist. SECTIONS is mutated in place so existing imports
-  continue to reference the active list.
+  Checklist versions
+    1 = original checklist (reports without a version marker)
+    2 = department checklist used until 31 Oct 2026
+    3 = Standard Department Checklists: a General step (12 standard
+        points) followed by the five departments with their own points.
+
+  Version 3 is used ONLY for newly created reports. Every existing report
+  keeps the checklist it was created with. SECTIONS is mutated in place so
+  existing imports continue to reference the active list.
 */
 
-export const CURRENT_CHECKLIST_VERSION = 2;
+export const CURRENT_CHECKLIST_VERSION = 3;
 
-const CURRENT_SECTIONS = [
+const SECTIONS_V3 = [
+  {
+    id: "general",
+    title: "GENERAL — STANDARD POINTS FOR EVERY DEPARTMENT",
+    items: [
+      "Crew Roundtable: Conducted a dedicated crew roundtable with the department team and captured their feedback.",
+      "Crew Appreciation: Verified recognition and crew appreciation initiatives for the department are actively in place.",
+      "Uniforms & Safety Gear: Checked that uniforms, name badges, and required safety shoes or PPE are clean, in good condition, and available for all crew.",
+      "Pre-Shift & Team Communication: Verified daily pre-shift meetings are held and alignment meetings take place with the F&B Director.",
+      "SOP Compliance: Confirmed all current VMS SOPs for the department are available to the team and followed in practice.",
+      "Training Records: Verified the monthly training file is regular and up to date, and that mandatory training (including Fire Safety and Food Safety) is complete for all crew.",
+      "AIMS Maintenance & Report Follow-up: Reviewed previous ship visit reports, meeting notes with the Hotel Service Engineer, and outstanding AIMS maintenance reports to ensure repeat findings are resolved.",
+      "Equipment & Area Condition: Checked that equipment, fixtures, and work areas are clean, fully operational, and in good repair.",
+      "Cleanliness & Housekeeping: Confirmed cleaning schedules are in place and followed, and that work areas are free of safety hazards.",
+      "Procurement Communication: Ensured missing item lists are updated and communicated to Procurement.",
+      "Crew Overtime & Rostering: Reviewed overtime usage and rosters to ensure they are managed within the department plan.",
+      "Promotions & Step-Ups: Reviewed promotion and step-up files and ensured proper follow-up."
+    ]
+  },
+  {
+    id: "culinary",
+    title: "CULINARY & GALLEY OPERATIONS",
+    items: [
+      "Recipe Compliance: Verified that recipe tablets and matrices are accessible and actively used in all venues.",
+      "Food Quality: Checked menu execution and general food quality across all culinary outlets.",
+      "Tasting Spoons: Confirmed tasting spoons are available and routinely used in all kitchens.",
+      "Venue Operations: Checked line-ups and Galley walk-up manning to ensure service SOPs are met.",
+      "Daily Special Tastings: Verified daily special tastings and explanations are held in the galley as part of pre-shift meetings.",
+      "Butcher Operations: Audited meat allocation for venues (including The Kitchen Table) and verified the meat ordering sheet.",
+      "Equipment Safety: Inspected the butcher bandsaw for proper operating condition and verified all safety guards are in place.",
+      "Freezer Loading: Inspected walk-in freezers to ensure they are not overloaded.",
+      "Galley Equipment Budget & Spending: Conducted a budget review covering overall Galley equipment spending and equipment cost-reduction feedback.",
+      "Kitchen Table – Food Variety, Vegan Options & Sea Day Lunch Specials: Verified that the minimum food variety matrix is followed, vegan options are available as required by the matrix, and specials are actively implemented during sea-day lunch.",
+      "Allergen Management: Verified allergen procedures are followed in the galley, including separation, labelling, and clear communication to service teams.",
+      "Mise en Place & Station Readiness: Checked that stations are fully prepped, labelled, and dated before service.",
+      "Food Waste & Portion Control: Reviewed portion standards and food waste practices across the galley and outlets."
+    ]
+  },
+  {
+    id: "bar",
+    title: "BEVERAGE OPERATIONS (BARS)",
+    items: [
+      "FOH Setup: Audited Front-of-House bar setups against current SOPs.",
+      "Hours of Operation: Reviewed operating hours across all bar venues.",
+      "Equipment Status: Verified all bar equipment is fully operational and in place.",
+      "Recipe Adherence & Stock Availability: Verified that all drink recipes are strictly followed by bartending staff and that all required beverage ingredients are fully available and in stock.",
+      "“Raise the Bar” Program: Confirmed compliance with the “Raise the Bar” program.",
+      "Glassware & Garnish Standards: Checked that glassware is clean and correct for each drink, and that garnishes are fresh, prepared, and labelled.",
+      "Bar Stock & PAR Levels: Verified bar stock levels match the required PAR levels and that stock counts are completed and recorded.",
+      "Pouring & Cost Control: Checked pouring standards, measures, spillage, and complimentary drink records.",
+      "Menu & POS Accuracy: Verified beverage menus, prices, and POS items are correct and consistent across all bars.",
+      "Responsible Alcohol Service: Confirmed age checks and responsible service procedures are followed by all bar crew.",
+      "Ice, Dispensers & Lines: Inspected ice machines, dispensers, and draught or soda lines to ensure they are clean and cleaning is logged."
+    ]
+  },
+  {
+    id: "restaurant",
+    title: "RESTAURANT & SERVICE OPERATIONS",
+    items: [
+      "FOH Setups & Flow: Audited restaurant FOH setups, operating hours, and general Sailor flow.",
+      "Service Knowledge: Assessed waiter menu knowledge, culinary program understanding, and waiter tasting meetings.",
+      "Operating Supplies & Plateware Condition: Inspected plateware condition to ensure items are free of chips, cracks, or heavy wear.",
+      "Plateware Stock & PAR Levels: Verified plateware inventory stock levels match the required quantities per the restaurant plateware file.",
+      "Furniture Condition: Audited restaurant furniture to ensure chairs, tables, and booths are clean, sturdy, and in good repair.",
+      "Flooring & Carpet Condition: Checked carpets and floor surfaces throughout the restaurant to confirm they are clean, well-maintained, and clear of trip hazards.",
+      "Specialty Equipment (Gunbae Grills): Audited Gunbae grills to ensure all units are clean, fully functional, and in good operating condition.",
+      "“Treat Yourself” Revenue & Execution: Verified proper waiter explanations, upselling, proper charging, and correct entry in the Chargeable Tracker for the “Treat Yourself” program.",
+      "Ship Eats (Room Service): Checked food quality, preparation, and presentation for Ship Eats orders.",
+      "Venue Standards: Audited menu variety, overall station cleanliness, and proper labeling in The Kitchen Table area.",
+      "Kitchen Table – Labels, Allergens & Dietary Identification: Verified that Kitchen Table labelling requirements are followed, allergen information is visible on labels, and vegan and vegetarian items are clearly identified.",
+      "Glassware, Cutlery & Linen: Inspected glassware, cutlery, and table linen to ensure items are clean, polished, and free of damage or stains.",
+      "Menus & Signage: Checked that menus and venue signage are clean, current, and correct.",
+      "Allergen & Dietary Requests: Verified waiters handle allergen and dietary requests correctly, from order taking through to delivery at the table.",
+      "Table Setting & Service Standards: Checked that table settings, service sequence, and Sailor greeting meet VMS service standards.",
+      "Sailor Feedback & Complaints: Reviewed recent Sailor feedback and complaints for the venue and confirmed follow-up actions are in place."
+    ]
+  },
+  {
+    id: "procurement",
+    title: "PROVISIONING & PROCUREMENT",
+    items: [
+      "Storage Compliance: Verified proper storage standards for all food items, fresh fish, seafood, and high-value flagged items (e.g., caviar).",
+      "Produce Management: Checked Fruit & Vegetable rooms for strict First-In, First-Out (FIFO) rotation and box maintenance.",
+      "Inventory Checks: Performed spot checks and completed the Deck 2 galley equipment inventory per SOP.",
+      "Stock Monitoring: Reviewed expiry dates alongside non-moving and slow-moving stock lists.",
+      "Ordering & System Usage: Audited future orders and confirmed proper usage of ERP templates.",
+      "Receiving & Quality Checks: Verified incoming goods are checked for temperature, damage, and expiry dates, and discrepancies are recorded.",
+      "Store Room Temperatures & Cold Chain: Checked that chiller, freezer, and dry store temperatures are monitored, recorded, and within limits.",
+      "Store Organisation & Labelling: Confirmed stores are organised, shelving is clear of the floor, and items are labelled and dated.",
+      "Stores Security & Access: Verified high-value items are secured and access to stores is controlled.",
+      "Write-offs & Waste: Reviewed write-offs and spoilage records to ensure reasons are documented and trends are followed up."
+    ]
+  },
+  {
+    id: "sanitation",
+    title: "PUBLIC HEALTH & SANITATION",
+    items: [
+      "Logs & Tracking: Confirmed Shellfish logs, Cooling logs, and updated/approved Time Control Plans are actively maintained.",
+      "Thermometers: Inspected walk-in, reach-in, and food thermometers to ensure they are in place and actively used.",
+      "Hygiene Systems: Verified the 3-bucket sanitation system is properly set up with active chemical concentration testing.",
+      "Chemical Safety: Audited chemical storage areas to ensure correct segregation and safety protocols.",
+      "Inspections: Conducted systematic inspections using the inspection grid, ensuring findings are logged and followed up.",
+      "Personal Hygiene & Handwashing: Checked handwashing stations are stocked and accessible, and that crew follow personal hygiene and illness reporting procedures.",
+      "Pest Control: Reviewed pest control monitoring and records, and checked for any signs of pest activity.",
+      "Allergen & Cross-Contamination Controls: Verified procedures to prevent allergen cross-contact and cross-contamination are in place and followed.",
+      "Waste Handling: Checked that waste is segregated, stored, and removed in line with procedure.",
+      "External Inspection Follow-up: Reviewed findings from official public health inspections and confirmed corrective actions are closed.",
+      "Cooking & Holding Temperatures: Verified hot and cold holding temperatures are monitored and recorded during service."
+    ]
+  }
+];
+
+// Previous department checklist (version 2) — kept for reports already created with it.
+const SECTIONS_V2 = [
   {
     id: 'culinary',
     title: 'CULINARY & GALLEY OPERATIONS',
@@ -94,8 +212,9 @@ const CURRENT_SECTIONS = [
   }
 ];
 
-// Original checklist kept for reports already in Ship Review or Submitted.
-const LEGACY_SECTIONS = [
+
+// Original checklist (version 1).
+const SECTIONS_V1 = [
   {
     id: 'culinary', title: 'CULINARY', items: [
       'All recipe tablets in place in the venues',
@@ -201,6 +320,13 @@ const LEGACY_SECTIONS = [
   }
 ];
 
+
+const CHECKLISTS = {
+  1: SECTIONS_V1,
+  2: SECTIONS_V2,
+  3: SECTIONS_V3
+};
+
 function cloneSections(source) {
   return source.map(section => ({
     ...section,
@@ -209,14 +335,14 @@ function cloneSections(source) {
 }
 
 // Keep this array object stable. Other modules import this reference once.
-export const SECTIONS = cloneSections(CURRENT_SECTIONS);
+export const SECTIONS = cloneSections(SECTIONS_V3);
 let activeChecklistVersion = CURRENT_CHECKLIST_VERSION;
 let legacyChecklistArchive = null;
 
 export function setActiveChecklistVersion(version) {
-  activeChecklistVersion = Number(version) >= CURRENT_CHECKLIST_VERSION ? CURRENT_CHECKLIST_VERSION : 1;
-  const source = activeChecklistVersion === CURRENT_CHECKLIST_VERSION ? CURRENT_SECTIONS : LEGACY_SECTIONS;
-  SECTIONS.splice(0, SECTIONS.length, ...cloneSections(source));
+  const number = Math.floor(Number(version));
+  activeChecklistVersion = CHECKLISTS[number] ? number : 1;
+  SECTIONS.splice(0, SECTIONS.length, ...cloneSections(CHECKLISTS[activeChecklistVersion]));
   return activeChecklistVersion;
 }
 
@@ -232,131 +358,12 @@ export function getLegacyChecklistArchive() {
   return legacyChecklistArchive ? JSON.parse(JSON.stringify(legacyChecklistArchive)) : null;
 }
 
-function hasSavedPointData(item) {
-  return Boolean(
-    item && typeof item === 'object' && (
-      item.checked ||
-      item.followUpNeeded ||
-      item.follow_up_needed ||
-      item.shoreFollowUpNeeded ||
-      item.shore_follow_up_needed ||
-      (Array.isArray(item.comments) && item.comments.length) ||
-      (Array.isArray(item.photos) && item.photos.length) ||
-      (Array.isArray(item.shipComments) && item.shipComments.length) ||
-      (Array.isArray(item.ship_comments) && item.ship_comments.length)
-    )
-  );
-}
-
-function mergePointData(target, source) {
-  if (!target || !source || typeof source !== 'object') return;
-  target.checked = Boolean(target.checked || source.checked);
-  target.followUpNeeded = Boolean(target.followUpNeeded || source.followUpNeeded || source.follow_up_needed);
-  target.shoreFollowUpNeeded = Boolean(target.shoreFollowUpNeeded || source.shoreFollowUpNeeded || source.shore_follow_up_needed);
-  for (const [targetKey, sourceKeys] of Object.entries({
-    comments: ['comments'],
-    photos: ['photos'],
-    shipComments: ['shipComments', 'ship_comments']
-  })) {
-    const existing = Array.isArray(target[targetKey]) ? target[targetKey] : [];
-    const incoming = sourceKeys.flatMap(key => Array.isArray(source[key]) ? source[key] : []);
-    target[targetKey] = [...existing, ...incoming];
-  }
-}
-
-// Only move legacy point data when its meaning clearly matches a corrected point.
-// Unmatched findings are archived in the report payload instead of being discarded.
-const LEGACY_TO_CURRENT = {
-  culinary: {
-    0: ['culinary__0'], 1: ['culinary__1'], 2: ['culinary__2'],
-    4: ['procurement__5'], 6: ['culinary__7'], 7: ['restaurant__7'],
-    8: ['culinary__0'], 9: ['culinary__3'], 11: ['culinary__9'],
-    12: ['culinary__10'], 13: ['culinary__11'], 14: ['culinary__12'],
-    15: ['culinary__13'], 16: ['culinary__13'], 17: ['culinary__14'],
-    18: ['culinary__14'], 19: ['culinary__14'], 21: ['culinary__8'],
-    22: ['culinary__8'], 23: ['culinary__8'], 25: ['culinary__15'],
-    26: ['culinary__15'], 27: ['culinary__15']
-  },
-  bar: {
-    0: ['bar__0'], 1: ['bar__2'], 2: ['bar__4'], 3: ['bar__1'],
-    4: ['bar__7'], 5: ['bar__6'], 6: ['bar__6'], 7: ['bar__5']
-  },
-  restaurant: {
-    0: ['restaurant__0'], 1: ['restaurant__0'], 2: ['restaurant__0'],
-    3: ['restaurant__8'], 4: ['restaurant__7'], 5: ['restaurant__1'],
-    6: ['culinary__0'], 7: ['culinary__1'], 8: ['restaurant__9'],
-    10: ['restaurant__9'], 11: ['restaurant__9']
-  },
-  procurement: {
-    0: ['procurement__4'], 1: ['procurement__0'], 2: ['procurement__4'],
-    3: ['procurement__1'], 4: ['procurement__1'], 5: ['procurement__2'],
-    6: ['procurement__0'], 7: ['procurement__3'], 8: ['procurement__2'],
-    9: ['culinary__5'], 10: ['culinary__5'], 11: ['restaurant__7'],
-    12: ['restaurant__7'], 13: ['procurement__0'], 14: ['procurement__5']
-  },
-  sanitation: {
-    0: ['sanitation__0'], 1: ['sanitation__0'], 2: ['sanitation__0'],
-    3: ['sanitation__2'], 4: ['sanitation__4'], 5: ['sanitation__4'],
-    6: ['sanitation__4'], 7: ['sanitation__1'], 8: ['sanitation__1'],
-    9: ['sanitation__5'], 10: ['procurement__0'], 11: ['culinary__6']
-  }
-};
-
-function migrateLegacyStateToCurrent(incomingState) {
-  setActiveChecklistVersion(CURRENT_CHECKLIST_VERSION);
-  const source = incomingState && typeof incomingState === 'object' ? incomingState : {};
-  const migrated = emptyState();
-  const mappedSourceKeys = new Set();
-
-  // Keep report-level and department-level comments verbatim.
-  for (const [key, value] of Object.entries(source)) {
-    if (key === '__report_general__' || key.startsWith('__department_general__')) {
-      migrated[key] = JSON.parse(JSON.stringify(value));
-    }
-  }
-
-  for (const legacySection of LEGACY_SECTIONS) {
-    legacySection.items.forEach((text, index) => {
-      const sourceKey = `${legacySection.id}__${index}`;
-      const targets = LEGACY_TO_CURRENT[legacySection.id]?.[index];
-      const point = source[sourceKey];
-      if (!targets || !hasSavedPointData(point)) return;
-      mappedSourceKeys.add(sourceKey);
-      for (const targetKey of targets) mergePointData(migrated[targetKey], point);
-    });
-  }
-
-  const archivedItems = [];
-  for (const legacySection of LEGACY_SECTIONS) {
-    legacySection.items.forEach((text, index) => {
-      const sourceKey = `${legacySection.id}__${index}`;
-      const point = source[sourceKey];
-      if (mappedSourceKeys.has(sourceKey) || !hasSavedPointData(point)) return;
-      archivedItems.push({
-        key: sourceKey,
-        section: legacySection.title,
-        point: text,
-        data: JSON.parse(JSON.stringify(point))
-      });
-    });
-  }
-
-  return {
-    state: migrated,
-    archive: archivedItems.length ? {
-      sourceChecklistVersion: 1,
-      note: 'Stored for reference because these findings do not have a direct equivalent in checklist version 2.',
-      items: archivedItems
-    } : null
-  };
-}
-
 /*
-  Prepare one report for display without rewriting the database.
-  - Legacy OPEN reports are displayed with checklist v2; matched annotations/photos
-    are carried to corresponding new points, and nonmatching findings are archived.
-  - Older Ship Review and Submitted reports remain on the legacy checklist.
-  - A report already stamped v2 stays on v2 through later statuses.
+  Select the checklist that belongs to one stored report.
+  - Report with a stored version marker -> exactly that checklist.
+  - Report without a marker -> the original checklist (version 1).
+  - No report (a brand-new one) -> the newest checklist (version 3).
+  Nothing is rewritten in the database.
 */
 export function prepareReportForChecklist(report) {
   if (!report || typeof report !== 'object') {
@@ -365,28 +372,12 @@ export function prepareReportForChecklist(report) {
     return report;
   }
 
-  const storedVersion = Number(report.report_data?.checklistVersion || report.report_data?.checklist_version || 0);
-  if (storedVersion >= CURRENT_CHECKLIST_VERSION) {
-    setActiveChecklistVersion(CURRENT_CHECKLIST_VERSION);
-    legacyChecklistArchive = report.report_data?.legacyChecklistArchive
-      ? JSON.parse(JSON.stringify(report.report_data.legacyChecklistArchive))
-      : null;
-    return report;
-  }
-
-  if (String(report.status || '').toLowerCase() === 'open') {
-    const result = migrateLegacyStateToCurrent(report.report_data?.state || {});
-    legacyChecklistArchive = result.archive ? JSON.parse(JSON.stringify(result.archive)) : null;
-    const reportData = {
-      ...(report.report_data || {}),
-      checklistVersion: CURRENT_CHECKLIST_VERSION,
-      state: result.state
-    };
-    if (result.archive) reportData.legacyChecklistArchive = result.archive;
-    return { ...report, report_data: reportData };
-  }
-
-  setActiveChecklistVersion(1);
+  const storedVersion = Number(
+    report.report_data?.checklistVersion ||
+    report.report_data?.checklist_version ||
+    1
+  );
+  setActiveChecklistVersion(storedVersion);
   legacyChecklistArchive = report.report_data?.legacyChecklistArchive
     ? JSON.parse(JSON.stringify(report.report_data.legacyChecklistArchive))
     : null;
