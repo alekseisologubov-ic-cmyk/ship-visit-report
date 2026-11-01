@@ -3487,7 +3487,7 @@ function renderSummaryPoint(
                 class="response-label"
               >
 
-                REVIEWER COMMENTS
+                SHORESIDE COMMENTS
 
               </div>
 
@@ -3551,7 +3551,7 @@ function renderSummaryPoint(
                 class="response-label"
               >
 
-                ATTACHED PHOTOS
+                SHORESIDE PHOTOS
 
               </div>
 
@@ -3587,26 +3587,6 @@ function renderSummaryPoint(
       }
 
 
-      ${
-        point.shipPhotos && point.shipPhotos.length
-          ? `
-            <div style="margin-top:10px;">
-              <div class="response-label" style="color:var(--status-green);">SHIPBOARD PHOTOS</div>
-              <div class="response-photos">
-                ${point.shipPhotos.map((photo, photoIndex) => `
-                  <div class="response-photo">
-                    <button type="button" class="response-photo-open" ${photoImageAttributes(photo, photoIndex)}>
-                      <span aria-hidden="true">▧</span>
-                      <span>${escapeHtml(responsePhotoFilename(photo, photoIndex))}</span>
-                      <span class="response-photo-hint">Click to preview</span>
-                    </button>
-                  </div>
-                `).join('')}
-              </div>
-            </div>
-          `
-          : ''
-      }
 
 
       ${
@@ -3626,7 +3606,7 @@ function renderSummaryPoint(
                 "
               >
 
-                SHIP COMMENTS / RESPONSES
+                SHIPBOARD COMMENTS
 
               </div>
 
@@ -3666,6 +3646,27 @@ function renderSummaryPoint(
 
             </div>
 
+          `
+          : ''
+      }
+
+      ${
+        point.shipPhotos && point.shipPhotos.length
+          ? `
+            <div style="margin-top:10px;">
+              <div class="response-label" style="color:var(--status-green);">SHIPBOARD PHOTOS</div>
+              <div class="response-photos">
+                ${point.shipPhotos.map((photo, photoIndex) => `
+                  <div class="response-photo">
+                    <button type="button" class="response-photo-open" ${photoImageAttributes(photo, photoIndex)}>
+                      <span aria-hidden="true">▧</span>
+                      <span>${escapeHtml(responsePhotoFilename(photo, photoIndex))}</span>
+                      <span class="response-photo-hint">Click to preview</span>
+                    </button>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
           `
           : ''
       }
@@ -4873,7 +4874,7 @@ function renderShipResponsePoint(
                 class="response-label"
               >
 
-                REVIEWER COMMENTS
+                SHORESIDE COMMENTS
 
               </div>
 
@@ -4954,7 +4955,7 @@ function renderShipResponsePoint(
                 class="response-label"
               >
 
-                REVIEWER PHOTOS
+                SHORESIDE PHOTOS
 
               </div>
 
@@ -4990,26 +4991,6 @@ function renderShipResponsePoint(
       }
 
 
-      ${
-        point.shipPhotos && point.shipPhotos.length
-          ? `
-            <div style="margin-top:10px;">
-              <div class="response-label">SHIPBOARD PHOTOS</div>
-              <div class="response-photos">
-                ${point.shipPhotos.map((photo, photoIndex) => `
-                  <div class="response-photo">
-                    <button type="button" class="response-photo-open" ${photoImageAttributes(photo, photoIndex)}>
-                      <span aria-hidden="true">▧</span>
-                      <span>${escapeHtml(responsePhotoFilename(photo, photoIndex))}</span>
-                      <span class="response-photo-hint">Click to preview</span>
-                    </button>
-                  </div>
-                `).join('')}
-              </div>
-            </div>
-          `
-          : ''
-      }
 
 
       <!-- EXISTING SHIP RESPONSES -->
@@ -5031,7 +5012,7 @@ function renderShipResponsePoint(
                 "
               >
 
-                PREVIOUS SHIP RESPONSE
+                SHIPBOARD COMMENTS
 
               </div>
 
@@ -5077,6 +5058,28 @@ function renderShipResponsePoint(
 
             </div>
 
+          `
+          : ''
+      }
+
+
+      ${
+        point.shipPhotos && point.shipPhotos.length
+          ? `
+            <div style="margin-top:10px;">
+              <div class="response-label">SHIPBOARD PHOTOS</div>
+              <div class="response-photos">
+                ${point.shipPhotos.map((photo, photoIndex) => `
+                  <div class="response-photo">
+                    <button type="button" class="response-photo-open" ${photoImageAttributes(photo, photoIndex)}>
+                      <span aria-hidden="true">▧</span>
+                      <span>${escapeHtml(responsePhotoFilename(photo, photoIndex))}</span>
+                      <span class="response-photo-hint">Click to preview</span>
+                    </button>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
           `
           : ''
       }
