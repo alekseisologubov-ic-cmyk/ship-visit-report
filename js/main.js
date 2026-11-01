@@ -391,12 +391,8 @@ function isNamedReviewerForReport(report){
 
 function canEditReport(report){
   if(isAdmin()) return true;
-  if(!isReportUser() || String(report?.status || 'open') !== 'open') return false;
-  const isOwner = Boolean(
-    currentAuthUserId && report?.created_by &&
-    String(report.created_by) === String(currentAuthUserId)
-  );
-  return isOwner || isNamedReviewerForReport(report);
+  // Open reports can be edited by every shoreside user.
+  return isReportUser() && String(report?.status || 'open') === 'open';
 }
 
 function canEditActiveReport(){
@@ -1692,16 +1688,16 @@ async function openShipReview(){
           async function(){
 
             showToast(
-              'REPORT SENT TO SHIP'
+              'REPORT SUBMITTED'
             );
 
 
             showScreen(
-              'responses'
+              'submitted'
             );
 
 
-            await loadShipResponsesScreen();
+            await loadSubmittedReportsScreen();
 
           }
 
