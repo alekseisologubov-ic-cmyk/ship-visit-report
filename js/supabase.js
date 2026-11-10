@@ -822,6 +822,30 @@ export async function appendShipboardOpenComment({ reportId, pointKey, text }) {
   }
 }
 
+
+/* =========================================================
+   SET (REPLACE / CLEAR) ONE POINT'S SHIPBOARD COMMENT TEXT
+   Used for deleting a comment. Empty text clears the comments.
+   Requires the SQL function public.set_shipboard_open_comment.
+========================================================= */
+export async function setShipboardOpenComment({ reportId, pointKey, text = '' }) {
+  try {
+    if (!reportId) throw new Error('Report ID is required.');
+    if (!pointKey) throw new Error('Checklist point is required.');
+    const { data, error } = await supabase.rpc('set_shipboard_open_comment', {
+      p_report_id: reportId,
+      p_point_key: pointKey,
+      p_text: String(text || '')
+    });
+    if (error) throw error;
+    return { success: true, data, error: null };
+  } catch (error) {
+    console.error('setShipboardOpenComment:', error);
+    return { success: false, data: null, error };
+  }
+}
+
+
 /* =========================================================
    SHIP SUBMITS FINAL RESPONSE
 ========================================================= */
@@ -1391,57 +1415,6 @@ export function reportNeedsFollowUp(
 
 
 /* =========================================================
-   DEFAULT EXPORT
-========================================================= */
-
-export default {
-
-  supabase,
-
-  createOpenReport,
-
-  updateOpenReport,
-
-  saveOpenReport,
-
-  sendToShipReview,
-
-  getOpenReports,
-
-  getShipReviewReports,
-
-  getSubmittedReports,
-
-  getReport,
-
-  submitShipResponse,
-
-  sendShipReportEmail,
-
-  deleteReport,
-  getReportOwnership,
-
-  getReportColor,
-
-  getReportStatusText,
-
-  countFollowUps,
-
-  countCompletedFollowUps,
-
-  reportNeedsFollowUp,
-  getAuthContext,
-  signInWithPassword,
-  signOutUser,
-  getPhotoDisplayUrl,
-  getPhotoDataUrl,
-  uploadPhotoDataUrl,
-  deleteStoragePhoto,
-  migrateEmbeddedPhotosToStorage
-
-};
-
-/* =========================================================
    SHORESIDE / ADMIN SHIP FOCUS REQUEST MANAGEMENT
 ========================================================= */
 
@@ -1483,3 +1456,63 @@ export async function manageShipFocusRequest({
     };
   }
 }
+
+
+/* =========================================================
+   DEFAULT EXPORT
+========================================================= */
+
+export default {
+
+  supabase,
+
+  createOpenReport,
+
+  updateOpenReport,
+
+  saveOpenReport,
+
+  sendToShipReview,
+
+  getOpenReports,
+
+  getShipReviewReports,
+
+  getSubmittedReports,
+
+  getReport,
+
+  submitShipResponse,
+
+  saveShipboardOpenUpdates,
+
+  appendShipboardOpenComment,
+
+  setShipboardOpenComment,
+
+  manageShipFocusRequest,
+
+  sendShipReportEmail,
+
+  deleteReport,
+  getReportOwnership,
+
+  getReportColor,
+
+  getReportStatusText,
+
+  countFollowUps,
+
+  countCompletedFollowUps,
+
+  reportNeedsFollowUp,
+  getAuthContext,
+  signInWithPassword,
+  signOutUser,
+  getPhotoDisplayUrl,
+  getPhotoDataUrl,
+  uploadPhotoDataUrl,
+  deleteStoragePhoto,
+  migrateEmbeddedPhotosToStorage
+
+};
