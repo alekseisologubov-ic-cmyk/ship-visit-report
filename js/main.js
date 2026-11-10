@@ -102,6 +102,7 @@ import {
   getReportByReference,
   submitShipResponse,
   saveShipboardOpenUpdates,
+  setShipboardOpenComment,
   getAuthContext,
   signInWithPassword,
   signOutUser,
@@ -3339,11 +3340,12 @@ function renderShipboardOpenReportDepartment(report, departmentId){
           .filter((_, i) => i !== index)
           .map(entry => String(entry.text || '').trim())
           .filter(Boolean);
-        const result = await saveShipboardOpenUpdates({
+        // Dedicated RPC: replaces the point's comment text, and an empty string clears it
+        // (the generic save RPC ignores empty text, so the comment used to come back).
+        const result = await setShipboardOpenComment({
           reportId: report.id,
-          comments: { [key]: remaining.join(SHIP_COMMENT_SEPARATOR) },
-          focusRequests: currentFocusValues(container),
-          photos: {}
+          pointKey: key,
+          text: remaining.join(SHIP_COMMENT_SEPARATOR)
         });
         if(!result?.success) throw (result?.error || new Error('Could not delete the comment.'));
         // show the result straight away, then confirm with what the server really stored
