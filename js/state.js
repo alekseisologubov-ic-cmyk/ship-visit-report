@@ -312,6 +312,31 @@ function normalizeReviewerComments(
    NORMALIZE SHIP COMMENTS
 ============================================================ */
 
+// Shipboard comments of one checklist point are saved as a single database entry, joined with
+// this invisible separator. Each part starts with  <login email> + mark  so the real author is
+// kept. They are split back into separate comments here so every screen shows the right name.
+const SHIP_COMMENT_SEPARATOR = '\n\u2063\n';
+const SHIP_COMMENT_AUTHOR_MARK = '\u2064';
+
+function expandShipComment(entry) {
+  return String(entry.text)
+    .split(SHIP_COMMENT_SEPARATOR)
+    .map(part => part.trim())
+    .filter(Boolean)
+    .map(part => {
+      const at = part.indexOf(SHIP_COMMENT_AUTHOR_MARK);
+      if (at > 0) {
+        return {
+          name: part.slice(0, at).trim() || entry.name,
+          text: part.slice(at + 1).trim(),
+          timestamp: entry.timestamp
+        };
+      }
+      return { name: entry.name, text: part, timestamp: entry.timestamp };
+    })
+    .filter(item => item.text);
+}
+
 function normalizeShipComments(
   value
 ) {
@@ -406,6 +431,9 @@ function normalizeShipComments(
     )
     .filter(
       Boolean
+    )
+    .flatMap(
+      expandShipComment
     );
 
 }
