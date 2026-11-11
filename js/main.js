@@ -156,6 +156,21 @@ function splitShipCommentText(text){
     .filter(Boolean);
 }
 
+// The database keeps ONE entry per checklist point and labels it with whoever saved last.
+// So every shipboard comment is stored as  <login email> + mark + <text>  inside that entry,
+// and the real author is read back from the mark when the comments are displayed.
+function encodeShipCommentPart(comment){
+  const name = String(comment?.name || '').trim() || 'Ship';
+  return `${name}${SHIP_FOCUS_AUTHOR_MARK}${String(comment?.text || '').trim()}`;
+}
+function parseShipCommentPart(part, fallbackName){
+  const at = part.indexOf(SHIP_FOCUS_AUTHOR_MARK);
+  if(at > 0){
+    return { name: part.slice(0, at).trim() || fallbackName, text: part.slice(at + 1).trim() };
+  }
+  return { name: fallbackName, text: part.trim() };
+}
+
 function responsePhotoFilename(photo, index = 0){
   let name = '';
   if(photo && typeof photo === 'object'){
@@ -2543,7 +2558,7 @@ function getShipComments(
       .flatMap(
         comment =>
           splitShipCommentText(comment.text).map(
-            part => ({ ...comment, text: part })
+            part => ({ ...comment, ...parseShipCommentPart(part, comment.name) })
           )
       );
 
@@ -2952,8 +2967,15 @@ function applyShipboardItemToReport(report, pointKey, item){
 // Returns the point's updated ship fields.
 async function saveShipboardCommentKeepingHistory(report, pointKey, newText, focusRequests){
   const existingItem = report?.report_data?.state?.[pointKey] || {};
-  const previous = getShipComments(existingItem).map(c => String(c.text || '').trim()).filter(Boolean);
-  const combinedText = [...previous, newText].join(SHIP_COMMENT_SEPARATOR);
+  // Earlier comments are sent again WITH their own author, followed by the new one under the
+  // signed-in login, so nobody's comment is relabeled with the email of the last person to save.
+  const previous = getShipComments(existingItem)
+    .filter(c => String(c.text || '').trim())
+    .map(encodeShipCommentPart);
+  const combinedText = [
+    ...previous,
+    encodeShipCommentPart({ name: currentAuthUserEmail || 'Ship', text: newText })
+  ].join(SHIP_COMMENT_SEPARATOR);
   const result = await saveShipboardOpenUpdates({
     reportId: report.id,
     comments: { [pointKey]: combinedText },
@@ -3338,8 +3360,8 @@ function renderShipboardOpenReportDepartment(report, departmentId){
       try{
         const remaining = entries
           .filter((_, i) => i !== index)
-          .map(entry => String(entry.text || '').trim())
-          .filter(Boolean);
+          .filter(entry => String(entry.text || '').trim())
+          .map(encodeShipCommentPart);
         // Dedicated RPC: replaces the point's comment text, and an empty string clears it
         // (the generic save RPC ignores empty text, so the comment used to come back).
         const result = await setShipboardOpenComment({
